@@ -1,0 +1,39 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Navigate to the project directory
+            cd /var/www/bnstransports_prod
+            
+            # Pull latest changes from production branch
+            git fetch origin production
+            git reset --hard origin/production
+            
+            # Restart docker containers with prod profile
+            docker compose -p bsv_prod up -d --build
+            
+            # Run database migrations
+            docker compose -p bsv_prod exec -T backend php artisan migrate --force
+            
+            # Clear caches
+            docker compose -p bsv_prod exec -T backend php artisan cache:clear
+            docker compose -p bsv_prod exec -T backend php artisan config:clear

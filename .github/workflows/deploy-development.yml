@@ -1,0 +1,39 @@
+name: Deploy Development
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Navigate to the project directory
+            cd /var/www/bnstransports_dev
+            
+            # Pull latest changes from development branch
+            git fetch origin development
+            git reset --hard origin/development
+            
+            # Restart docker containers with dev profile
+            docker compose -p bsv_dev up -d --build
+            
+            # Run database migrations
+            docker compose -p bsv_dev exec -T backend php artisan migrate --force
+            
+            # Clear caches
+            docker compose -p bsv_dev exec -T backend php artisan cache:clear
+            docker compose -p bsv_dev exec -T backend php artisan config:clear
