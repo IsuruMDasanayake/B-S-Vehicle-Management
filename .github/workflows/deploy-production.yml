@@ -33,6 +33,9 @@ jobs:
             # Restart docker containers with prod profile
             docker compose -p bsv_prod up -d --build
             
+            # Install PHP Dependencies (since host mount overwrites vendor folder)
+            docker compose -p bsv_prod exec -T backend composer install --no-dev --optimize-autoloader --no-interaction
+            
             # Run database migrations
             docker compose -p bsv_prod exec -T backend php artisan migrate --force
             
