@@ -36,6 +36,9 @@ jobs:
             # Install PHP Dependencies (since host mount overwrites vendor folder)
             docker compose -p bsv_prod exec -T backend composer install --no-dev --optimize-autoloader --no-interaction
             
+            # Install Node Dependencies for frontend
+            docker compose -p bsv_prod exec -T frontend npm install
+            
             # Run database migrations
             docker compose -p bsv_prod exec -T backend php artisan migrate --force
             
