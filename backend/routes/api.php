@@ -22,8 +22,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
     Route::get('/auth/me', [\App\Http\Controllers\Api\AuthController::class, 'me']);
     
-    // Dashboard & Reports
+    // Dashboard & Settings
     Route::get('/dashboard/stats', [\App\Http\Controllers\Api\DashboardController::class, 'stats']);
+    Route::get('settings', [\App\Http\Controllers\SettingController::class, 'index']);
+    Route::post('settings/batch', [\App\Http\Controllers\SettingController::class, 'updateBatch']);
     Route::get('/reports/summary', [\App\Http\Controllers\Api\ReportController::class, 'summary']);
     
     // Resource Routes

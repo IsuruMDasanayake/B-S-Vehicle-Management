@@ -12,6 +12,7 @@ import BreakdownsList from './pages/Breakdowns/BreakdownsList';
 import GpsTracking from './pages/Gps/GpsTracking';
 import GpsHistory from './pages/Gps/GpsHistory';
 import GpsGeofencing from './pages/Gps/GpsGeofencing';
+import GpsSettings from './pages/Gps/GpsSettings';
 import GpsLayout from './pages/Gps/GpsLayout';
 import ReportsDashboard from './pages/Reports/ReportsDashboard';
 import SettingsPage from './pages/Settings/SettingsPage';
@@ -115,6 +116,7 @@ function App() {
         <Route index element={<GpsTracking />} />
         <Route path="history" element={<GpsHistory />} />
         <Route path="geofences" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><GpsGeofencing /></RoleProtectedRoute>} />
+        <Route path="settings" element={<RoleProtectedRoute allowedRoles={['super_admin']}><GpsSettings /></RoleProtectedRoute>} />
       </Route>
 
       {/* Dedicated Performance Dashboard */}
