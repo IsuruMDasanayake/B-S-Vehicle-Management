@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\VehicleRequest;
+use Illuminate\Http\Request;
+
+class VehicleRequestController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = VehicleRequest::with(['requester:id,name', 'approver:id,name', 'vehicle:id,vehicle_number', 'department:id,name']);
+        if ($request->has('approval_status')) $query->where('approval_status', $request->approval_status);
+        return response()->json($query->latest()->paginate(15));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'department_id' => 'nullable|exists:departments,id',
+            'vehicle_id' => 'nullable|exists:vehicles,id',
+            'request_date' => 'required|date',
+            'return_date' => 'nullable|date|after_or_equal:request_date',
+            'purpose' => 'required|string',
+            'destination' => 'nullable|string',
+            'approval_status' => 'required|in:pending,approved,rejected',
+        ]);
+        $validated['requester_id'] = $request->user()->id;
+        $vehicle_request = VehicleRequest::create($validated);
+
+        if ($request->hasFile('attachments')) {
+            $vehicle_request->saveAttachments($request->file('attachments'));
+        }
+
+        return response()->json(['message' => 'Vehicle request submitted', 'data' => $vehicle_request], 201);
+    }
+
+    public function show(VehicleRequest $vehicle_request)
+    {
+        $vehicle_request->load(['requester', 'approver', 'vehicle', 'department']);
+        return response()->json($vehicle_request);
+    }
+
+    public function update(Request $request, VehicleRequest $vehicle_request)
+    {
+        $validated = $request->validate([
+            'vehicle_id' => 'nullable|exists:vehicles,id',
+            'department_id' => 'nullable|exists:departments,id',
+            'request_date' => 'sometimes|required|date',
+            'return_date' => 'nullable|date',
+            'purpose' => 'sometimes|required|string',
+            'destination' => 'nullable|string',
+            'approval_status' => 'sometimes|required|in:pending,approved,rejected',
+            'rejection_reason' => 'nullable|string',
+        ]);
+
+        // Set approver when approving/rejecting
+        if (isset($validated['approval_status']) && $validated['approval_status'] !== 'pending') {
+            $validated['approved_by'] = $request->user()->id;
+            $validated['approved_at'] = now();
+        }
+
+        $vehicle_request->update($validated);
+
+        if ($request->hasFile('attachments')) {
+            $vehicle_request->saveAttachments($request->file('attachments'));
+        }
+
+        return response()->json(['message' => 'Vehicle request updated', 'data' => $vehicle_request]);
+    }
+
+    public function destroy(VehicleRequest $vehicle_request)
+    {
+        $vehicle_request->delete();
+        return response()->json(['message' => 'Request deleted']);
+    }
+}

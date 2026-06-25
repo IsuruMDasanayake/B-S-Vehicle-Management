@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+  # ─── MySQL Database ─────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: bs_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - bs_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # ─── Redis Cache & Queue ─────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: bs_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bs_network
+
+  # ─── Laravel Backend (PHP-FPM) ───────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bs_backend
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      APP_NAME: "B&S Vehicle Management"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: noreply@bstransport.lk
+      MAIL_FROM_NAME: "B&S Transport"
+      SANCTUM_STATEFUL_DOMAINS: localhost
+      FILESYSTEM_DISK: public
+    volumes:
+      - ./backend:/var/www/html
+      - backend_storage:/var/www/html/storage/app/public
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - bs_network
+
+  # ─── Laravel Queue Worker ────────────────────────────────────────────────────
+  queue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bs_queue
+    restart: unless-stopped
+    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+    environment:
+      APP_ENV: local
+      DB_HOST: mysql
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      QUEUE_CONNECTION: redis
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - backend
+    networks:
+      - bs_network
+
+  # ─── Laravel Scheduler ───────────────────────────────────────────────────────
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bs_scheduler
+    restart: unless-stopped
+    command: >
+      sh -c "while true; do php artisan schedule:run; sleep 60; done"
+    environment:
+      APP_ENV: local
+      DB_HOST: mysql
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - backend
+    networks:
+      - bs_network
+
+  # ─── React Frontend (Nginx) ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bs_frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - bs_network
+
+  # ─── Nginx Reverse Proxy ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: bs_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./backend:/var/www/html
+      - backend_storage:/var/www/html/storage/app/public
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - bs_network
+
+  # ─── Mailpit (Local Email Testing) ───────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: bs_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - bs_network
+
+  # ─── phpMyAdmin ──────────────────────────────────────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: bs_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USERNAME}
+      PMA_PASSWORD: ${DB_PASSWORD}
+      UPLOAD_LIMIT: 50M
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - bs_network
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+  redis_data:
+  backend_storage:
+
+# ─── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  bs_network:
+    driver: bridge
