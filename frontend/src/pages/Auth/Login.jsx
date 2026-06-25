@@ -38,7 +38,7 @@ const Login = () => {
           }}>
             <CarFront size={32} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>B&S Transport</h1>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>B&S Transport Services</h1>
           <p style={{ color: 'var(--text-muted)' }}>Sign in to your account</p>
         </div>
 
