@@ -30,11 +30,11 @@ jobs:
             git reset --hard origin/production
             
             # Restart docker containers with prod profile
-            docker compose -p bsv_prod up -d --build
+            docker-compose -p bsv_prod up -d --build
             
             # Run database migrations
-            docker compose -p bsv_prod exec -T backend php artisan migrate --force
+            docker-compose -p bsv_prod exec -T backend php artisan migrate --force
             
             # Clear caches
-            docker compose -p bsv_prod exec -T backend php artisan cache:clear
-            docker compose -p bsv_prod exec -T backend php artisan config:clear
+            docker-compose -p bsv_prod exec -T backend php artisan cache:clear
+            docker-compose -p bsv_prod exec -T backend php artisan config:clear
