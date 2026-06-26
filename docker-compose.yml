@@ -129,6 +129,30 @@ services:
     networks:
       - bs_network
 
+  # ─── Laravel Reverb (WebSockets) ─────────────────────────────────────────────
+  reverb:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    environment:
+      APP_ENV: local
+      DB_HOST: mysql
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - bs_network
+
   # ─── React Frontend (Nginx) ──────────────────────────────────────────────────
   frontend:
     build:
