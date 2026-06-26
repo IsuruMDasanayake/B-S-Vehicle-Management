@@ -84,7 +84,7 @@ const OwnerPaymentsModal = ({ isOpen, onClose, vehicle }) => {
               ) : (
                 payments.map(p => {
                   const receiptAttachment = p.attachments && p.attachments.length > 0 ? p.attachments[0] : null;
-                  const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost';
+                  let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
                   const receiptUrl = receiptAttachment ? `${baseUrl}/storage/${receiptAttachment.file_path}` : null;
                   
                   return (

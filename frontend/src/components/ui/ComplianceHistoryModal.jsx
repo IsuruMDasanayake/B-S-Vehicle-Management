@@ -65,7 +65,7 @@ const ComplianceHistoryModal = ({ isOpen, onClose, vehicle, type, onEdit }) => {
           </thead>
           <tbody>
             {data.map(p => {
-              const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost';
+              let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
               const docUrl = p.attachments?.length > 0 ? `${baseUrl}/storage/${p.attachments[0].file_path}` : null;
               return (
               <tr key={p.id}>
@@ -117,7 +117,7 @@ const ComplianceHistoryModal = ({ isOpen, onClose, vehicle, type, onEdit }) => {
           </thead>
           <tbody>
             {data.map(l => {
-              const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost';
+              let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
               const docUrl = l.attachments?.length > 0 ? `${baseUrl}/storage/${l.attachments[0].file_path}` : null;
               return (
               <tr key={l.id}>
@@ -168,7 +168,7 @@ const ComplianceHistoryModal = ({ isOpen, onClose, vehicle, type, onEdit }) => {
           </thead>
           <tbody>
             {data.map(e => {
-              const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost';
+              let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
               const docUrl = e.attachments?.length > 0 ? `${baseUrl}/storage/${e.attachments[0].file_path}` : null;
               return (
               <tr key={e.id}>

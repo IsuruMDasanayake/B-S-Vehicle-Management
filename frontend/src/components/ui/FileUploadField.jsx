@@ -48,7 +48,7 @@ const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExisting
   const getFileUrl = (path) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    const baseUrl = api?.defaults?.baseURL?.replace('/api', '') || 'http://localhost';
+    let baseUrl = api?.defaults?.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
     return `${baseUrl}/storage/${path}`;
   };
 

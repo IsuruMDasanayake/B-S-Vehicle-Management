@@ -160,7 +160,8 @@ const VehiclesList = () => {
           {filteredVehicles.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles found.</div>
           ) : filteredVehicles.map(v => {
-            const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost';
+            let baseUrl = api.defaults.baseURL?.replace('/api', '');
+            if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
             const vehicleImage = v.attachments && v.attachments.length > 0 
               ? `${baseUrl}/storage/${v.attachments[0].file_path}`
               : null;

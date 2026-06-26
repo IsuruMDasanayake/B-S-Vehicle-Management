@@ -7,7 +7,7 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
 
   const { hired_details } = vehicle;
   
-  const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost';
+  let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
   const vehicleImage = vehicle.attachments && vehicle.attachments.length > 0 
     ? `${baseUrl}/storage/${vehicle.attachments[0].file_path}`
     : null;
