@@ -485,7 +485,7 @@ const GpsTracking = () => {
         </div>
 
         {/* Map Area */}
-        <div className="card" style={{ overflow: 'hidden', border: '1px solid var(--surface-2)', padding: 0, position: 'relative' }}>
+        <div className="card gps-map-panel" style={{ overflow: 'hidden', border: '1px solid var(--surface-2)', padding: 0, position: 'relative' }}>
           <MapContainer ref={mapRef} center={defaultCenter} zoom={10} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

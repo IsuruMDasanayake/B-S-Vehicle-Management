@@ -5,7 +5,7 @@ import {
 
 import useAuthStore from '../../store/authStore';
 
-const GpsSidebar = () => {
+const GpsSidebar = ({ isMobileOpen, closeMobileOpen }) => {
   const location = useLocation();
   const user = useAuthStore(state => state.user);
 
@@ -32,7 +32,7 @@ const GpsSidebar = () => {
   ];
 
   return (
-    <aside className="sidebar no-scrollbar" style={{ 
+    <aside className={`sidebar no-scrollbar ${isMobileOpen ? 'open' : ''}`} style={{ 
       display: 'flex', flexDirection: 'column', 
       borderRight: '1px solid var(--dark-2)',
       height: '100%',
