@@ -200,6 +200,43 @@ a:hover { color: var(--primary-dark); }
   flex: 1;
 }
 
+/* Portal Cards Base Styles */
+.portal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  gap: 1.5rem;
+}
+.portal-card-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.portal-card-content h2 {
+  margin-bottom: 0.5rem;
+}
+.portal-card-content p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* GPS Dashboard Desktop Styles */
+.gps-stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.gps-stat-filters {
+  display: contents;
+}
+
 /* Responsive Layout */
 @media (max-width: 1024px) {
   .sidebar {
@@ -302,22 +339,9 @@ a:hover { color: var(--primary-dark); }
     color: var(--text-muted);
     font-size: 0.95rem;
     margin: 0;
-  }
-
-  /* GPS Dashboard Desktop */
+  /* GPS Dashboard Responsive */
   .gps-stats-container {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 1rem;
-  }
-  .gps-stat-filters {
-    display: contents;
-  }
-
-  @media (max-width: 1024px) {
-    /* GPS Dashboard Responsive */
-    .gps-stats-container {
-      grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
       gap: 0.5rem;
     }
     .gps-stat-filters {
@@ -400,7 +424,6 @@ a:hover { color: var(--primary-dark); }
     .portal-card-content p {
       font-size: 0.85rem;
     }
-  }
 
   /* Responsive Grids */
   .grid-cols-2, .grid-cols-3, .grid-cols-4,
@@ -578,3 +601,4 @@ a:hover { color: var(--primary-dark); }
 }
 .icon-btn.edit:hover { color: var(--info); background: var(--info-alpha); }
 .icon-btn.delete:hover { color: var(--danger); background: var(--danger-alpha); }
+
