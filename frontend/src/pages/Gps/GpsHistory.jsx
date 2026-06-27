@@ -294,7 +294,8 @@ const GpsHistory = () => {
             <button type="button" onClick={() => setQuickFilter('week')} style={{ flex: 1, padding: '0.25rem', background: '#f39c12', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Week</button>
           </div>
           
-          <div className="gps-history-datetime-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* Mobile Combined Date/Time */}
+          <div className="gps-history-datetime-row hide-desktop" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
                 <Calendar size={12} /> From <span style={{ color: 'var(--danger)' }}>*</span>
@@ -302,7 +303,7 @@ const GpsHistory = () => {
               <input 
                 type="datetime-local" 
                 className="form-control"
-                style={{ padding: '0.25rem', fontSize: '0.75rem' }}
+                style={{ padding: '0.25rem', fontSize: '0.75rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
                 value={fromDate && fromTime ? `${fromDate}T${fromTime}` : fromDate ? `${fromDate}T00:00` : ''}
                 onChange={(e) => {
                   if (e.target.value) {
@@ -325,7 +326,7 @@ const GpsHistory = () => {
               <input 
                 type="datetime-local" 
                 className="form-control"
-                style={{ padding: '0.25rem', fontSize: '0.75rem' }}
+                style={{ padding: '0.25rem', fontSize: '0.75rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
                 value={toDate && toTime ? `${toDate}T${toTime}` : toDate ? `${toDate}T00:00` : ''}
                 onChange={(e) => {
                   if (e.target.value) {
@@ -338,6 +339,61 @@ const GpsHistory = () => {
                   }
                 }}
                 required
+              />
+            </div>
+          </div>
+
+          {/* Desktop Separated Date/Time */}
+          <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Calendar size={14} /> From Date <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <input 
+                type="date" 
+                className="form-control"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Calendar size={14} /> To Date <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <input 
+                type="date" 
+                className="form-control"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Clock size={14} /> From Time
+              </label>
+              <input 
+                type="time" 
+                className="form-control"
+                value={fromTime}
+                onChange={(e) => setFromTime(e.target.value)}
+              />
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Clock size={14} /> To Time
+              </label>
+              <input 
+                type="time" 
+                className="form-control"
+                value={toTime}
+                onChange={(e) => setToTime(e.target.value)}
               />
             </div>
           </div>

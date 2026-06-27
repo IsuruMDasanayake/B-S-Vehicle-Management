@@ -157,6 +157,9 @@ a:hover { color: var(--primary-dark); }
     top: 0;
     align-self: start;
   }
+  .hide-desktop {
+    display: none !important;
+  }
 }
 
 .no-scrollbar {
