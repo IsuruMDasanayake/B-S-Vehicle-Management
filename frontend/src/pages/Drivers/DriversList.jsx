@@ -33,12 +33,12 @@ const DriversList = () => {
 
   return (
     <div>
-      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
         <div>
-          <h1>Drivers</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Manage your fleet drivers</p>
+          <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>Drivers</h1>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Manage your fleet drivers</p>
         </div>
-        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button className="btn btn-primary" onClick={openAdd} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}>
             <Plus size={18} /> <span className="hide-mobile">Add Driver</span>
           </button>

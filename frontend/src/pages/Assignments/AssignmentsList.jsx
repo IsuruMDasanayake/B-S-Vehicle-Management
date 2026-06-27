@@ -32,12 +32,12 @@ const AssignmentsList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
         <div>
-          <h1>Vehicle Assignments</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Manage vehicle to driver allocations</p>
+          <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>Vehicle Assignments</h1>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Manage vehicle to driver allocations</p>
         </div>
-        <div className="header-actions-mobile" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button className="btn btn-primary" onClick={openAdd} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}>
             <Plus size={18} /> <span className="hide-mobile">New Assignment</span>
           </button>
