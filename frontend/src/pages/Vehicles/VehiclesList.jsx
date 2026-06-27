@@ -75,23 +75,23 @@ const VehiclesList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1>Vehicles</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage your fleet vehicles</p>
         </div>
-        <div className="header-actions-mobile" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 auto', minWidth: '150px' }}>
+        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div>
             <input 
               type="text" 
               className="form-control" 
               placeholder="Search vehicles..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: '100%' }}
+              style={{ width: '250px' }}
             />
           </div>
-          <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem', flexShrink: 0 }}>
+          <div className="view-mode-toggle" style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem', flexShrink: 0 }}>
             <button 
               className={`icon-btn ${viewMode === 'grid' ? 'active' : ''}`} 
               onClick={() => setViewMode('grid')}

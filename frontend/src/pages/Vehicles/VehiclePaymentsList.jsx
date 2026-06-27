@@ -47,19 +47,19 @@ const VehiclePaymentsList = () => {
 
   return (
     <div>
-      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1>Rental Income</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage payments received from parties who have rented our vehicles.</p>
         </div>
-        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <input 
             type="text" 
             className="form-control" 
             placeholder="Search vehicles..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', maxWidth: '250px' }}
+            style={{ width: '250px' }}
           />
           <div className="view-mode-toggle" style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem' }}>
             <button 

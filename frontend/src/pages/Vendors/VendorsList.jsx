@@ -21,9 +21,9 @@ const VendorsList = () => {
 
   return (
     <div>
-      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><h1>Vendors</h1><p style={{ color: 'var(--text-muted)' }}>Fuel stations, workshops, suppliers and partners</p></div>
-        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> Add Vendor</button>
         </div>
       </div>
