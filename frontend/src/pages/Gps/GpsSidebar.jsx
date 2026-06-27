@@ -76,6 +76,7 @@ const GpsSidebar = ({ isMobileOpen, closeMobileOpen }) => {
                     <li key={item.path} style={{ padding: '0.15rem 1rem' }}>
                       <Link 
                         to={item.path}
+                        onClick={closeMobileOpen}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '0.75rem',
                           padding: '0.6rem 1rem', borderRadius: 'var(--radius-md)',
@@ -101,6 +102,7 @@ const GpsSidebar = ({ isMobileOpen, closeMobileOpen }) => {
       <div style={{ padding: '1.5rem', borderTop: '1px solid var(--dark-2)', marginTop: 'auto' }}>
         <Link 
           to="/"
+          onClick={closeMobileOpen}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
             padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
