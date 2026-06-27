@@ -262,10 +262,10 @@ const GpsHistory = () => {
   }
 
   return (
-    <div className="gps-history-root" style={{ height: 'calc(100vh - 130px)' }}>
+    <div className="gps-history-root no-scrollbar" style={{ height: 'calc(100vh - 130px)' }}>
       <div className="gps-history-layout" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem', height: '100%' }}>
         {/* Filters Sidebar (Left 30%) */}
-        <div className="card gps-history-sidebar" style={{ padding: '1rem', overflowY: 'auto' }}>
+        <div className="card gps-history-sidebar no-scrollbar" style={{ padding: '1rem', overflowY: 'auto' }}>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Map color="var(--info)" /> Route History
         </h2>
@@ -294,56 +294,58 @@ const GpsHistory = () => {
             <button type="button" onClick={() => setQuickFilter('week')} style={{ flex: 1, padding: '0.25rem', background: '#f39c12', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Week</button>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="gps-history-datetime-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.5rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Calendar size={14} /> From Date <span style={{ color: 'var(--danger)' }}>*</span>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                <Calendar size={12} /> From Date <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <input 
                 type="date" 
                 className="form-control"
-                value={fromDate} 
-                onChange={(e) => setFromDate(e.target.value)} 
+                style={{ padding: '0.25rem', fontSize: '0.75rem' }}
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                <Calendar size={12} /> To Date <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <input 
+                type="date" 
+                className="form-control"
+                style={{ padding: '0.25rem', fontSize: '0.75rem' }}
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
                 required
               />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Calendar size={14} /> To Date <span style={{ color: 'var(--danger)' }}>*</span>
-              </label>
-              <input 
-                type="date" 
-                className="form-control"
-                value={toDate} 
-                onChange={(e) => setToDate(e.target.value)} 
-                required
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Clock size={14} /> From Time
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                <Clock size={12} /> From Time
               </label>
               <input 
                 type="time" 
                 className="form-control"
-                value={fromTime} 
-                onChange={(e) => setFromTime(e.target.value)} 
+                style={{ padding: '0.25rem', fontSize: '0.75rem' }}
+                value={fromTime}
+                onChange={(e) => setFromTime(e.target.value)}
               />
             </div>
-
+            
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Clock size={14} /> To Time
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                <Clock size={12} /> To Time
               </label>
               <input 
                 type="time" 
                 className="form-control"
-                value={toTime} 
-                onChange={(e) => setToTime(e.target.value)} 
+                style={{ padding: '0.25rem', fontSize: '0.75rem' }}
+                value={toTime}
+                onChange={(e) => setToTime(e.target.value)}
               />
             </div>
           </div>
@@ -379,11 +381,11 @@ const GpsHistory = () => {
 
       {/* Map Area */}
       <div className="card gps-history-map-area" style={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative', border: '1px solid var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: 1, position: 'relative', minHeight: '400px' }}>
           <MapContainer 
             center={positions.length > 0 ? positions[0] : defaultCenter} 
             zoom={12} 
-            style={{ height: '100%', width: '100%', zIndex: 10 }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
