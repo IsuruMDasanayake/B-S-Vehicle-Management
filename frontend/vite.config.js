@@ -10,5 +10,8 @@ export default defineConfig({
     watch: {
       usePolling: true
     }
+  },
+  build: {
+    target: 'es2015'
   }
 })
