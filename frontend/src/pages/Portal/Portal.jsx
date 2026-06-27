@@ -66,13 +66,15 @@ const Portal = () => {
           Choose a module below to access your workspace.
         </p>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isDriver ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-          gap: '2rem',
-          maxWidth: '1000px',
-          width: '100%'
-        }}>
+        <div 
+          className={isDriver ? 'grid-cols-2' : 'grid-cols-3'}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isDriver ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: '2rem',
+            maxWidth: '1000px',
+            width: '100%'
+          }}>
           {/* Dashboard Card */}
           <div 
             className="card portal-card" 
