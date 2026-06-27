@@ -7,21 +7,6 @@
     <title>B&S Transport Management System</title>
   </head>
   <body>
-    <div id="error-container" style="color: red; padding: 20px; font-family: monospace; z-index: 9999; position: absolute; top: 0; left: 0; background: white;"></div>
-    <script>
-      window.addEventListener('error', function(event) {
-        const errorContainer = document.getElementById('error-container');
-        if (errorContainer) {
-          errorContainer.innerHTML += '<p><strong>Error:</strong> ' + event.message + '<br>Line: ' + event.lineno + ' Col: ' + event.colno + '<br>File: ' + event.filename + '</p>';
-        }
-      });
-      window.addEventListener('unhandledrejection', function(event) {
-        const errorContainer = document.getElementById('error-container');
-        if (errorContainer) {
-          errorContainer.innerHTML += '<p><strong>Promise Rejection:</strong> ' + (event.reason ? (event.reason.message || event.reason) : 'Unknown') + '</p>';
-        }
-      });
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

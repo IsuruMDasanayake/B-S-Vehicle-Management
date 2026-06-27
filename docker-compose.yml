@@ -159,6 +159,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
+    command: ${FRONTEND_CMD:-npm run dev -- --host 0.0.0.0}
     volumes:
       - ./frontend:/app
       - /app/node_modules
