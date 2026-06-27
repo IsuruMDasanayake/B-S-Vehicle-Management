@@ -425,11 +425,11 @@ const GpsHistory = () => {
 
       {/* Map Area */}
       <div className="card gps-history-map-area" style={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative', border: '1px solid var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, position: 'relative', minHeight: '400px' }}>
+        <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
           <MapContainer 
             center={positions.length > 0 ? positions[0] : defaultCenter} 
             zoom={12} 
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}
+            style={{ flex: 1, width: '100%', height: '100%', zIndex: 10 }}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
