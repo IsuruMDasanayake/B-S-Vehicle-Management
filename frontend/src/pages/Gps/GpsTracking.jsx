@@ -309,15 +309,15 @@ const GpsTracking = () => {
         </button>
       </div>
 
+      {/* Right Sidebar Overlay for Mobile */}
+      <div 
+        className={`sidebar-overlay ${isRightSidebarOpen ? 'active' : ''}`} 
+        onClick={() => setIsRightSidebarOpen(false)} 
+        style={{ zIndex: 1040 }} 
+      />
+
       {/* Main Layout */}
       <div className="gps-main-layout" style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '1rem', flex: 1, minHeight: 0 }}>
-        
-        {/* Right Sidebar Overlay for Mobile */}
-        <div 
-          className={`sidebar-overlay ${isRightSidebarOpen ? 'active' : ''}`} 
-          onClick={() => setIsRightSidebarOpen(false)} 
-          style={{ zIndex: 1040 }} 
-        />
 
         {/* Sidebar List */}
         <div className={`card gps-list-panel ${isRightSidebarOpen ? 'mobile-open' : ''}`} style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
