@@ -341,6 +341,13 @@ a:hover { color: var(--primary-dark); }
     margin: 0;
   }
 
+  .gps-mobile-fleet-toggle {
+    display: none;
+  }
+  .gps-mobile-close-btn {
+    display: none;
+  }
+
   /* GPS Dashboard Responsive */
   .gps-stats-container {
     grid-template-columns: 1fr 1fr;
@@ -388,19 +395,39 @@ a:hover { color: var(--primary-dark); }
     }
 
 
+
+    .gps-mobile-fleet-toggle {
+      display: block;
+    }
+    .gps-mobile-close-btn {
+      display: inline-block;
+    }
+
     .gps-tracking-root {
-      height: auto !important;
+      height: 100vh !important;
+      overflow: hidden;
     }
     .gps-main-layout {
-      display: flex !important;
-      flex-direction: column-reverse !important;
+      display: block !important;
     }
     .gps-list-panel {
-      height: 400px !important;
-      overflow-y: auto !important;
+      position: fixed !important;
+      top: 0;
+      right: -100%;
+      width: 85% !important;
+      max-width: 400px;
+      height: 100vh !important;
+      z-index: 1050;
+      transition: right 0.3s ease;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+    }
+    .gps-list-panel.mobile-open {
+      right: 0 !important;
     }
     .gps-map-panel {
-      height: 50vh !important;
+      height: calc(100vh - 280px) !important;
       min-height: 400px !important;
     }
 

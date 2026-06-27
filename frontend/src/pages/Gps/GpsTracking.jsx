@@ -110,6 +110,7 @@ const GpsTracking = () => {
   const [activeFilter, setActiveFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   
   const mapRef = useRef(null);
 
@@ -295,28 +296,53 @@ const GpsTracking = () => {
           <StatCard className="stat-card-filter" title="Parked" value={liveStats.parked} icon={<MapPin size={24} color="var(--text-muted)" />} isActive={activeFilter === 'parked'} isFaded={activeFilter !== null && activeFilter !== 'parked'} onClick={() => setActiveFilter(prev => prev === 'parked' ? null : 'parked')} />
           <StatCard className="stat-card-filter" title="Offline" value={liveStats.offline} icon={<AlertTriangle size={24} color="var(--danger)" />} isActive={activeFilter === 'offline'} isFaded={activeFilter !== null && activeFilter !== 'offline'} onClick={() => setActiveFilter(prev => prev === 'offline' ? null : 'offline')} />
         </div>
+      {/* Mobile Fleet Toggle */}
+      <div className="gps-mobile-fleet-toggle" style={{ margin: '0.5rem 0' }}>
+        <button 
+          className="btn btn-primary" 
+          style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '0.75rem' }}
+          onClick={() => setIsRightSidebarOpen(true)}
+        >
+          <Car size={18} /> View Live Fleet Status
+        </button>
       </div>
 
       {/* Main Layout */}
       <div className="gps-main-layout" style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '1rem', flex: 1, minHeight: 0 }}>
         
+        {/* Right Sidebar Overlay for Mobile */}
+        <div 
+          className={`sidebar-overlay ${isRightSidebarOpen ? 'active' : ''}`} 
+          onClick={() => setIsRightSidebarOpen(false)} 
+          style={{ zIndex: 1040 }} 
+        />
+
         {/* Sidebar List */}
-        <div className="card gps-list-panel" style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className={`card gps-list-panel ${isRightSidebarOpen ? 'mobile-open' : ''}`} style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
               <Car color="var(--info)" /> Live Fleet Status
             </h2>
-            <button 
-              className="btn btn-primary"
-              style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: '4px' }}
-              onClick={() => {
-                setActiveFilter(null);
-                setSearchQuery('');
-                setSelectedVehicleId(null);
-              }}
-            >
-              Reset
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button 
+                className="btn btn-primary"
+                style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: '4px' }}
+                onClick={() => {
+                  setActiveFilter(null);
+                  setSearchQuery('');
+                  setSelectedVehicleId(null);
+                }}
+              >
+                Reset
+              </button>
+              <button 
+                className="gps-mobile-close-btn"
+                onClick={() => setIsRightSidebarOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', lineHeight: 1, cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                &times;
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
