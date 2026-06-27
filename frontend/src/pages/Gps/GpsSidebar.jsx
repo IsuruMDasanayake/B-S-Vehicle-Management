@@ -32,7 +32,7 @@ const GpsSidebar = ({ isMobileOpen, closeMobileOpen }) => {
   ];
 
   return (
-    <aside className={`sidebar no-scrollbar ${isMobileOpen ? 'open' : ''}`} style={{ 
+    <aside className={`sidebar no-scrollbar ${isMobileOpen ? 'mobile-open' : ''}`} style={{ 
       display: 'flex', flexDirection: 'column', 
       borderRight: '1px solid var(--dark-2)',
       height: '100%',
