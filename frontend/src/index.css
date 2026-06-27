@@ -237,6 +237,13 @@ a:hover { color: var(--primary-dark); }
   display: contents;
 }
 
+.gps-mobile-fleet-toggle {
+  display: none;
+}
+.gps-mobile-close-btn {
+  display: none;
+}
+
 /* Responsive Layout */
 @media (max-width: 1024px) {
   .sidebar {
@@ -341,12 +348,7 @@ a:hover { color: var(--primary-dark); }
     margin: 0;
   }
 
-  .gps-mobile-fleet-toggle {
-    display: none;
-  }
-  .gps-mobile-close-btn {
-    display: none;
-  }
+
 
   /* GPS Dashboard Responsive */
   .gps-stats-container {
