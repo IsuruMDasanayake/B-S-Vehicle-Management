@@ -17,7 +17,7 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
       <div className="grid-layout-1-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
         
         {/* Left Side: Image & Quick Stats */}
-        <div style={{ position: 'sticky', top: 0, alignSelf: 'start' }}>
+        <div className="sticky-desktop">
           <div style={{
             width: '100%',
             height: '200px',

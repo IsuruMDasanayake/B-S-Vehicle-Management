@@ -241,16 +241,23 @@ a:hover { color: var(--primary-dark); }
     align-items: stretch !important;
   }
   .header-controls {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    width: 100%;
   }
-  .header-controls > input.form-control,
-  .header-controls > .btn {
-    flex: 1 1 100%;
+  .header-controls > input.form-control {
+    flex: 1 1 auto;
     width: 100% !important;
-    max-width: none !important;
+    min-width: 0; /* Allow shrinking */
+  }
+  .header-controls > .btn {
+    flex-shrink: 0;
+    padding: 0.5rem; /* Make button compact on mobile */
   }
   .header-controls > .view-mode-toggle {
-    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .hide-mobile {
+    display: none !important;
   }
 
   /* Responsive Grids */

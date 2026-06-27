@@ -43,7 +43,7 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Rental Income: ${vehicle.vehicle_number}`} size="xl">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h3 style={{ margin: 0 }}>Payment History</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -51,16 +51,18 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
             Ownership: <strong style={{ textTransform: 'capitalize' }}>{vehicle.ownership}</strong>
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setActiveAction('add')}>
-          <Plus size={18} /> Record Payment
-        </button>
+        <div className="header-controls">
+          <button className="btn btn-primary" onClick={() => setActiveAction('add')}>
+            <Plus size={18} /> <span className="hide-mobile">Record Payment</span>
+          </button>
+        </div>
       </div>
 
-      <div className="card table-container" style={{ padding: 0 }}>
+      <div className="card table-container" style={{ padding: 0, overflowX: 'auto' }}>
         {isLoading ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading payments...</div>
         ) : (
-          <table className="table">
+          <table className="table" style={{ minWidth: '600px' }}>
             <thead>
               <tr>
                 <th>Payment Month</th>

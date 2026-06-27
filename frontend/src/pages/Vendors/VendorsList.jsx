@@ -24,7 +24,7 @@ const VendorsList = () => {
       <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><h1>Vendors</h1><p style={{ color: 'var(--text-muted)' }}>Fuel stations, workshops, suppliers and partners</p></div>
         <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> Add Vendor</button>
+          <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> <span className="hide-mobile">Add Vendor</span></button>
         </div>
       </div>
       <div className="card table-container" style={{ padding: 0, overflowX: 'auto' }}>

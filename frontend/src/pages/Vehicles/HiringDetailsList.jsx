@@ -108,7 +108,7 @@ const HiringDetailsList = () => {
             </button>
           </div>
           <button className="btn btn-primary" onClick={() => setModal('add')}>
-            <Plus size={18} /> Add Hired Vehicle
+            <Plus size={18} /> <span className="hide-mobile">Add Hired Vehicle</span>
           </button>
         </div>
       </div>
