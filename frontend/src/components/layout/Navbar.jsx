@@ -9,10 +9,27 @@ const Navbar = ({ toggleMobileOpen }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handleResize);
+    
+    const handleScroll = () => {
+      if (window.innerWidth > 1024) {
+        if (!isVisible) setIsVisible(true);
+        return;
+      }
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY.current && currentScrollY > 70) {
+        setIsVisible(false); // Scroll down past header height
+      } else {
+        setIsVisible(true);  // Scroll up
+      }
+      lastScrollY.current = currentScrollY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
     
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000); // Poll every minute
@@ -40,6 +57,7 @@ const Navbar = ({ toggleMobileOpen }) => {
     
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll);
       clearInterval(interval);
       window.removeEventListener('notifications_updated', handleUpdateEvent);
       if (window.Echo) {
@@ -90,7 +108,7 @@ const Navbar = ({ toggleMobileOpen }) => {
   };
 
   return (
-    <header className="header">
+    <header className="header" style={{ transform: !isVisible && isMobile ? 'translateY(-100%)' : 'translateY(0)', transition: 'transform 0.3s ease, left 0.3s ease' }}>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {isMobile && (
           <button 

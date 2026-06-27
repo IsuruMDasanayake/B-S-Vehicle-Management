@@ -511,8 +511,8 @@ a:hover { color: var(--primary-dark); }
   }
 
   .gps-history-root {
-    height: 100vh !important;
-    overflow-y: auto !important;
+    height: auto !important;
+    overflow-y: visible !important;
   }
   .gps-history-layout {
     display: flex !important;
