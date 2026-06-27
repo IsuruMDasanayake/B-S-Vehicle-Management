@@ -300,46 +300,42 @@ const GpsHistory = () => {
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
                 <Calendar size={12} /> From <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
-              <input 
-                type="datetime-local" 
-                className="form-control"
-                style={{ padding: '0.25rem', fontSize: '0.75rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-                value={fromDate && fromTime ? `${fromDate}T${fromTime}` : fromDate ? `${fromDate}T00:00` : ''}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const [d, t] = e.target.value.split('T');
-                    setFromDate(d);
-                    setFromTime(t || '');
-                  } else {
-                    setFromDate('');
-                    setFromTime('');
-                  }
-                }}
-                required
-              />
+              <div className="form-control" style={{ padding: '0.25rem 0.5rem', height: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <input 
+                  type="date" 
+                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0 }}
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  required
+                />
+                <input 
+                  type="time" 
+                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0, color: 'var(--text-muted)' }}
+                  value={fromTime}
+                  onChange={(e) => setFromTime(e.target.value)}
+                />
+              </div>
             </div>
             
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
                 <Calendar size={12} /> To <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
-              <input 
-                type="datetime-local" 
-                className="form-control"
-                style={{ padding: '0.25rem', fontSize: '0.75rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-                value={toDate && toTime ? `${toDate}T${toTime}` : toDate ? `${toDate}T00:00` : ''}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const [d, t] = e.target.value.split('T');
-                    setToDate(d);
-                    setToTime(t || '');
-                  } else {
-                    setToDate('');
-                    setToTime('');
-                  }
-                }}
-                required
-              />
+              <div className="form-control" style={{ padding: '0.25rem 0.5rem', height: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <input 
+                  type="date" 
+                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0 }}
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  required
+                />
+                <input 
+                  type="time" 
+                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0, color: 'var(--text-muted)' }}
+                  value={toTime}
+                  onChange={(e) => setToTime(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
