@@ -80,15 +80,17 @@ const VehiclesList = () => {
           <h1>Vehicles</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage your fleet vehicles</p>
         </div>
-        <div className="header-actions-mobile" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <input 
-            type="text" 
-            className="form-control" 
-            placeholder="Search vehicles..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', minWidth: '120px' }}
-          />
+        <div className="header-actions-mobile" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 auto', minWidth: '150px' }}>
+            <input 
+              type="text" 
+              className="form-control" 
+              placeholder="Search vehicles..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%' }}
+            />
+          </div>
           <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem', flexShrink: 0 }}>
             <button 
               className={`icon-btn ${viewMode === 'grid' ? 'active' : ''}`} 
