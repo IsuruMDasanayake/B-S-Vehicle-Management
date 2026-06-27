@@ -362,6 +362,7 @@ const GpsTracking = () => {
                 setSelectedVehicleId(id);
                 if (id && vehicles[id] && mapRef.current) {
                   mapRef.current.flyTo([vehicles[id].latitude, vehicles[id].longitude], 16, { animate: true, duration: 1 });
+                  setIsRightSidebarOpen(false);
                 }
               }}
               style={{ padding: '0.5rem', fontSize: '0.875rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%' }}
@@ -387,6 +388,7 @@ const GpsTracking = () => {
                         setSelectedVehicleId(v.vehicle_id);
                         if (mapRef.current) {
                           mapRef.current.flyTo([v.latitude, v.longitude], 16, { animate: true, duration: 1 });
+                          setIsRightSidebarOpen(false);
                         }
                       }
                     }}
