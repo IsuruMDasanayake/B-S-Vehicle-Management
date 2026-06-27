@@ -75,21 +75,21 @@ const HiringDetailsList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1>Hiring Details</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage hired vehicles and owner information</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input 
             type="text" 
             className="form-control" 
             placeholder="Search hiring details..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '250px' }}
+            style={{ width: '100%', maxWidth: '250px' }}
           />
-          <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem' }}>
+          <div className="view-mode-toggle" style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem' }}>
             <button 
               className={`icon-btn ${viewMode === 'grid' ? 'active' : ''}`} 
               onClick={() => setViewMode('grid')}
@@ -118,8 +118,8 @@ const HiringDetailsList = () => {
       ) : filteredVehicles.length === 0 ? (
         <div className="card table-container" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No hired vehicles found.</div>
       ) : viewMode === 'table' ? (
-        <div className="card table-container" style={{ padding: 0 }}>
-          <table className="table">
+        <div className="card table-container" style={{ padding: 0, overflowX: 'auto' }}>
+          <table className="table" style={{ minWidth: '800px' }}>
             <thead>
               <tr>
                 <th>Vehicle No.</th>
@@ -159,7 +159,7 @@ const HiringDetailsList = () => {
           </table>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div className="grid-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
           {filteredVehicles.map(v => {
             let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
             const vehicleImage = v.attachments && v.attachments.length > 0 

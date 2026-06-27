@@ -21,13 +21,15 @@ const VendorsList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div><h1>Vendors</h1><p style={{ color: 'var(--text-muted)' }}>Fuel stations, workshops, suppliers and partners</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> Add Vendor</button>
+        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> Add Vendor</button>
+        </div>
       </div>
-      <div className="card table-container" style={{ padding: 0 }}>
+      <div className="card table-container" style={{ padding: 0, overflowX: 'auto' }}>
         {isLoading ? <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div> : (
-          <table className="table">
+          <table className="table" style={{ minWidth: '800px' }}>
             <thead><tr><th>Name</th><th>Type</th><th>Contact Person</th><th>Phone</th><th>Email</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
             <tbody>
               {items.length === 0 ? <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No vendors found.</td></tr>
