@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Calendar, Search, Clock, Filter, Map, Play, Pause, FastForward, Navigation, Settings, MapPin } from 'lucide-react';
+import { Calendar, Search, Clock, Filter, Map, Play, Pause, FastForward, Navigation, Settings, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import L from 'leaflet';
 import api from '../../services/api';
@@ -94,6 +94,7 @@ const GpsHistory = () => {
   const [eventsData, setEventsData] = useState([]);
   const [distanceKm, setDistanceKm] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [isMobileFormExpanded, setIsMobileFormExpanded] = useState(true);
 
   const [vehiclesList, setVehiclesList] = useState([]);
 
@@ -164,6 +165,7 @@ const GpsHistory = () => {
         setDistanceKm(response.data.distance_km || 0);
         setCurrentIndex(0);
         setIsPlaying(false);
+        setIsMobileFormExpanded(false);
         toast.success(`Loaded ${response.data.path.length} coordinates.`);
       } else {
         setRouteData([]);
@@ -266,11 +268,19 @@ const GpsHistory = () => {
       <div className="gps-history-layout" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem', height: '100%' }}>
         {/* Filters Sidebar (Left 30%) */}
         <div className="card gps-history-sidebar no-scrollbar" style={{ padding: '1rem', overflowY: 'auto' }}>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Map color="var(--info)" /> Route History
+        <h2 
+          style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          onClick={() => setIsMobileFormExpanded(!isMobileFormExpanded)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Map color="var(--info)" /> Route History
+          </div>
+          <div className="hide-desktop">
+            {isMobileFormExpanded ? <ChevronUp size={20} color="var(--text-muted)" /> : <ChevronDown size={20} color="var(--text-muted)" />}
+          </div>
         </h2>
         
-        <form onSubmit={fetchHistory} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <form onSubmit={fetchHistory} className={!isMobileFormExpanded ? 'hide-mobile' : ''} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">Select Vehicle <span style={{ color: 'var(--danger)' }}>*</span></label>
