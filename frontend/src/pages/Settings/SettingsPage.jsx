@@ -163,7 +163,7 @@ const SettingsPage = () => {
                     <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Download a complete SQL dump of the current database.</p>
                   </div>
                   <button type="button" className="btn btn-primary" onClick={(e) => { e.preventDefault(); toast.success('Backup started. Download will begin shortly.'); }}>
-                    <Database size={16} /> Generate Backup
+                    <Database size={16} /> <span className="hide-mobile">Generate Backup</span>
                   </button>
                 </div>
 
