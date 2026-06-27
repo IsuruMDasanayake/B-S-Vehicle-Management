@@ -93,7 +93,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+        <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
 
           <div className="form-group">
             <label className="form-label">Vehicle *</label>
@@ -161,7 +161,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
 
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dark-2)' }}>
+        <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dark-2)' }}>
           <button type="button" className="btn btn-ghost" onClick={handleCancel} style={{ border: '1px solid var(--surface-2)' }}>Cancel</button>
           <button type="submit" className="btn btn-primary" disabled={isLoading}>
             <Save size={16} /> {isLoading ? 'Saving…' : isEditMode ? 'Update Assignment' : 'Create Assignment'}

@@ -22,10 +22,10 @@ const SettingsPage = () => {
         <p style={{ color: 'var(--text-muted)' }}>Manage your application preferences and configurations</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="settings-layout" style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '2rem', alignItems: 'start' }}>
         {/* Settings Navigation */}
         <div className="card" style={{ padding: '0.5rem' }}>
-          <ul style={{ listStyle: 'none' }}>
+          <ul className="settings-nav-list" style={{ listStyle: 'none' }}>
             {[
               { id: 'general', label: 'General', icon: Globe },
               { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -50,7 +50,7 @@ const SettingsPage = () => {
                   }}
                 >
                   <tab.icon size={18} />
-                  {tab.label}
+                  <span className="hide-mobile">{tab.label}</span>
                 </button>
               </li>
             ))}
@@ -163,7 +163,7 @@ const SettingsPage = () => {
                     <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Download a complete SQL dump of the current database.</p>
                   </div>
                   <button type="button" className="btn btn-primary" onClick={(e) => { e.preventDefault(); toast.success('Backup started. Download will begin shortly.'); }}>
-                    <Database size={16} /> Generate Backup
+                    <Database size={16} /> <span className="hide-mobile">Generate Backup</span>
                   </button>
                 </div>
 

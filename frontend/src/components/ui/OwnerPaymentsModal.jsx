@@ -46,24 +46,24 @@ const OwnerPaymentsModal = ({ isOpen, onClose, vehicle }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Owner Payments: ${vehicle.vehicle_number}`} size="xl">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
         <div>
-          <h3 style={{ margin: 0 }}>Payment History</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            Owner: <strong>{vehicle.hired_details?.owner_name || 'N/A'}</strong> • 
-            Agreed Monthly Rate: <strong>LKR {Number(vehicle.hired_details?.monthly_amount || 0).toLocaleString()}</strong>
-          </p>
+          <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Payment History</h3>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            <div style={{ marginBottom: '0.25rem' }}>Owner: <strong>{vehicle.hired_details?.owner_name || 'N/A'}</strong></div>
+            <div>Agreed Monthly Rate: <strong>LKR {Number(vehicle.hired_details?.monthly_amount || 0).toLocaleString()}</strong></div>
+          </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setActiveAction('add')}>
-          <Plus size={18} /> Record Payment
+        <button className="btn btn-primary" onClick={() => setActiveAction('add')} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}>
+          <Plus size={18} /> <span className="hide-mobile">Record Payment</span>
         </button>
       </div>
 
-      <div className="card table-container" style={{ padding: 0 }}>
+      <div className="card table-container" style={{ padding: 0, overflowX: 'auto' }}>
         {isLoading ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading payments...</div>
         ) : (
-          <table className="table">
+          <table className="table" style={{ minWidth: '600px' }}>
             <thead>
               <tr>
                 <th>Payment Month</th>

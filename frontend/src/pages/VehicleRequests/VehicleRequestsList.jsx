@@ -19,9 +19,11 @@ const VehicleRequestsList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><h1>Vehicle Requests</h1><p style={{ color: 'var(--text-muted)' }}>Manage employee vehicle requests</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> Request Vehicle</button>
+        <div className="header-actions-mobile" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}><Plus size={18} /> <span className="hide-mobile">Request Vehicle</span></button>
+        </div>
       </div>
       <div className="card table-container" style={{ padding: 0 }}>
         {isLoading ? <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div> : (

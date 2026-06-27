@@ -34,10 +34,12 @@ const AssignmentsList = () => {
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1>Vehicle Assignments</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Manage vehicle to driver allocations</p>
+          <h1 style={{ margin: 0 }}>Vehicle Assignments</h1>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Manage vehicle to driver allocations</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> New Assignment</button>
+        <button className="btn btn-primary" onClick={openAdd}>
+          <Plus size={18} /> <span className="hide-mobile">New Assignment</span>
+        </button>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>

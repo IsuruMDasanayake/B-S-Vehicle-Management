@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, User, Search, AlertTriangle, Shield, CheckCircle, FileText, Check } from 'lucide-react';
+import { Bell, User, Search, AlertTriangle, Shield, CheckCircle, FileText, Check, Menu } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-const Navbar = () => {
+const Navbar = ({ toggleMobileOpen }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
 
   useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+    window.addEventListener('resize', handleResize);
+    
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000); // Poll every minute
     
@@ -35,6 +39,7 @@ const Navbar = () => {
     document.addEventListener('mousedown', handleClickOutside);
     
     return () => {
+      window.removeEventListener('resize', handleResize);
       clearInterval(interval);
       window.removeEventListener('notifications_updated', handleUpdateEvent);
       if (window.Echo) {
@@ -86,13 +91,23 @@ const Navbar = () => {
 
   return (
     <header className="header">
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {isMobile && (
+          <button 
+            onClick={toggleMobileOpen}
+            className="icon-btn"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            <Menu size={24} />
+          </button>
+        )}
+        
         <div style={{ 
           display: 'flex', alignItems: 'center', 
           background: 'var(--surface-2)',
           padding: '0.5rem 1rem',
           borderRadius: 'var(--radius-full)',
-          width: '300px',
+          width: isMobile ? '200px' : '300px',
           color: 'var(--text-muted)'
         }}>
           <Search size={18} style={{ marginRight: '0.5rem' }} />
@@ -132,8 +147,8 @@ const Navbar = () => {
           {/* Notification Dropdown */}
           {showDropdown && (
             <div className="card" style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '1rem',
-              width: '350px', padding: 0, overflow: 'hidden',
+              position: 'absolute', top: '100%', right: isMobile ? '-3.5rem' : 0, marginTop: '1rem',
+              width: isMobile ? '320px' : '350px', padding: 0, overflow: 'hidden',
               boxShadow: 'var(--shadow-xl)', zIndex: 9999,
               animation: 'slideUp 0.2s ease forwards'
             }}>
@@ -188,10 +203,12 @@ const Navbar = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Super Admin</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Administrator</div>
-          </div>
+          {!isMobile && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Super Admin</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Administrator</div>
+            </div>
+          )}
           <div style={{
             width: '36px', height: '36px',
             background: 'var(--primary-alpha)',

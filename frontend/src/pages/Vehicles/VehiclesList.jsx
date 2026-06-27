@@ -75,12 +75,12 @@ const VehiclesList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1>Vehicles</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage your fleet vehicles</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <input 
             type="text" 
             className="form-control" 
@@ -89,7 +89,7 @@ const VehiclesList = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ width: '250px' }}
           />
-          <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem' }}>
+          <div className="view-mode-toggle" style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem', flexShrink: 0 }}>
             <button 
               className={`icon-btn ${viewMode === 'grid' ? 'active' : ''}`} 
               onClick={() => setViewMode('grid')}
@@ -107,8 +107,8 @@ const VehiclesList = () => {
               <List size={18} />
             </button>
           </div>
-          <button className="btn btn-primary" onClick={openAdd}>
-            <Plus size={18} /> Add Vehicle
+          <button className="btn btn-primary" onClick={openAdd} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}>
+            <Plus size={18} /> <span className="hide-mobile">Add Vehicle</span>
           </button>
         </div>
       </div>

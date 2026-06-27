@@ -27,8 +27,8 @@ class AuthController extends Controller
             return response()->json(['message' => 'Account is inactive or suspended'], 403);
         }
 
-        // Revoke existing tokens for a clean state
-        $user->tokens()->delete();
+        // Allow multiple sessions (laptop + mobile) by NOT deleting existing tokens
+        // $user->tokens()->delete();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

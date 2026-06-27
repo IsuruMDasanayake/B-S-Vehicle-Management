@@ -47,12 +47,12 @@ const VehiclePaymentsList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1>Rental Income</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage payments received from parties who have rented our vehicles.</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <input 
             type="text" 
             className="form-control" 
@@ -61,7 +61,7 @@ const VehiclePaymentsList = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ width: '250px' }}
           />
-          <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem' }}>
+          <div className="view-mode-toggle" style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', padding: '0.25rem' }}>
             <button 
               className={`icon-btn ${viewMode === 'grid' ? 'active' : ''}`} 
               onClick={() => setViewMode('grid')}
@@ -85,8 +85,8 @@ const VehiclePaymentsList = () => {
       {isLoading ? (
         <div className="card table-container" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading vehicles…</div>
       ) : viewMode === 'table' ? (
-        <div className="card table-container" style={{ padding: 0 }}>
-          <table className="table">
+        <div className="card table-container" style={{ padding: 0, overflowX: 'auto' }}>
+          <table className="table" style={{ minWidth: '800px' }}>
             <thead>
               <tr>
                 <th>Vehicle No.</th>
@@ -124,7 +124,7 @@ const VehiclePaymentsList = () => {
           </table>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div className="grid-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
           {filteredVehicles.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles found.</div>
           ) : filteredVehicles.map(v => {

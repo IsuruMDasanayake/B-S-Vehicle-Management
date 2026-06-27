@@ -21,7 +21,8 @@ const AccidentsList = () => {
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><h1>Accidents</h1><p style={{ color: 'var(--text-muted)' }}>Record and manage vehicle accident reports</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> Report Accident</button>
+        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}>
+          <Plus size={18} /> <span className="hide-mobile">Report Accident</span></button>
       </div>
       <div className="card table-container" style={{ padding: 0 }}>
         {isLoading ? <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div> : (

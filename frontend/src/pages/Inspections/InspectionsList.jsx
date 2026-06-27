@@ -25,7 +25,8 @@ const InspectionsList = () => {
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><h1>Inspections</h1><p style={{ color: 'var(--text-muted)' }}>Pre-trip and post-trip vehicle inspection records</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> New Inspection</button>
+        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}>
+          <Plus size={18} /> <span className="hide-mobile">New Inspection</span></button>
       </div>
       <div className="card table-container" style={{ padding: 0 }}>
         {isLoading ? <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div> : (

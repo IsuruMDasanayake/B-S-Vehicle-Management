@@ -11,14 +11,14 @@ import FileUploadField from '../../components/ui/FileUploadField';
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   nic_number: z.string().min(10, 'Valid NIC is required'),
-  address: z.string().optional(),
+  address: z.string().nullable().optional(),
   contact_number: z.string().min(10, 'Valid contact number is required'),
   license_number: z.string().min(1, 'License number is required'),
   license_expiry_date: z.string().min(1, 'License expiry date is required'),
-  emergency_contact_name: z.string().optional(),
-  emergency_contact_phone: z.string().optional(),
+  emergency_contact_name: z.string().nullable().optional(),
+  emergency_contact_phone: z.string().nullable().optional(),
   status: z.enum(['active', 'on_leave', 'suspended', 'retired']),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 const DriverForm = ({ editId, onSuccess, onClose }) => {
@@ -28,7 +28,12 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
   const isModal = !!onSuccess;
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [files, setFiles] = useState([]);
+  const [licenseFront, setLicenseFront] = useState([]);
+  const [licenseBack, setLicenseBack] = useState([]);
+  const [photo, setPhoto] = useState([]);
+  const [existingLicenseFront, setExistingLicenseFront] = useState([]);
+  const [existingLicenseBack, setExistingLicenseBack] = useState([]);
+  const [existingPhoto, setExistingPhoto] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
@@ -41,8 +46,19 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
       api.get(`/drivers/${id}`)
         .then(({ data }) => {
           if (data.license_expiry_date) data.license_expiry_date = data.license_expiry_date.split('T')[0];
+          
+          if (data.license_front) setExistingLicenseFront([{ id: 'license_front', file_path: data.license_front, file_type: 'image/jpeg' }]);
+          if (data.license_back) setExistingLicenseBack([{ id: 'license_back', file_path: data.license_back, file_type: 'image/jpeg' }]);
+          if (data.photo) setExistingPhoto([{ id: 'photo', file_path: data.photo, file_type: 'image/jpeg' }]);
+          
           setExistingAttachments(data.attachments || []);
-          reset(data);
+          
+          // Convert nulls to empty strings for form reset so inputs don't complain
+          const resetData = { ...data };
+          Object.keys(resetData).forEach(key => {
+            if (resetData[key] === null) resetData[key] = '';
+          });
+          reset(resetData);
         })
         .catch(() => {
           toast.error('Failed to load driver details');
@@ -62,9 +78,9 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
         }
       });
       
-      files.forEach(file => {
-        payload.append('attachments[]', file);
-      });
+      if (licenseFront.length > 0) payload.append('license_front_file', licenseFront[0]);
+      if (licenseBack.length > 0) payload.append('license_back_file', licenseBack[0]);
+      if (photo.length > 0) payload.append('photo_file', photo[0]);
 
       if (isEditMode) {
         payload.append('_method', 'PUT');
@@ -102,8 +118,11 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+      <form onSubmit={handleSubmit(onSubmit, (errors) => {
+        console.error("Form validation failed:", errors);
+        toast.error("Please fix the validation errors above before submitting.");
+      })}>
+        <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
 
           <div className="form-group">
             <label className="form-label">Full Name *</label>
@@ -161,16 +180,40 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
 
           {/* File Upload Component */}
           <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-            <FileUploadField 
-              onFilesSelected={setFiles} 
-              existingFiles={existingAttachments} 
-              label="Driver Photos & Documents (License, Profile, etc.)" 
-            />
+            <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Driver Documents</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <FileUploadField 
+                onFilesSelected={setLicenseFront} 
+                existingFiles={existingLicenseFront}
+                onRemoveExistingFile={() => setExistingLicenseFront([])}
+                label="License Front" 
+                multiple={false}
+              />
+              <FileUploadField 
+                onFilesSelected={setLicenseBack} 
+                existingFiles={existingLicenseBack}
+                onRemoveExistingFile={() => setExistingLicenseBack([])}
+                label="License Back" 
+                multiple={false}
+              />
+              <FileUploadField 
+                onFilesSelected={setPhoto} 
+                existingFiles={existingPhoto}
+                onRemoveExistingFile={() => setExistingPhoto([])}
+                label="Driver Photo" 
+                multiple={false}
+              />
+            </div>
+            {existingAttachments.length > 0 && (
+              <div style={{ marginTop: '1rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Note: Existing documents are preserved unless overwritten.</p>
+              </div>
+            )}
           </div>
 
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dark-2)' }}>
+        <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dark-2)' }}>
           <button type="button" className="btn btn-ghost" onClick={handleCancel}
             style={{ border: '1px solid var(--surface-2)' }}>Cancel</button>
           <button type="submit" className="btn btn-primary" disabled={isLoading}>

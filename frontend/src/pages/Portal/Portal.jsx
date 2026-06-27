@@ -66,29 +66,33 @@ const Portal = () => {
           Choose a module below to access your workspace.
         </p>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isDriver ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-          gap: '2rem',
-          maxWidth: '1000px',
-          width: '100%'
-        }}>
+        <div 
+          className={isDriver ? 'grid-cols-2' : 'grid-cols-3'}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isDriver ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: '2rem',
+            maxWidth: '1000px',
+            width: '100%'
+          }}>
           {/* Dashboard Card */}
           <div 
             className="card portal-card" 
             onClick={() => navigate('/dashboard')}
             style={{ 
-              cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem',
+              cursor: 'pointer', transition: 'all 0.3s ease',
               border: '1px solid var(--surface-2)'
             }}
             onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-xl)'; }}
             onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--surface-2)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
           >
-            <div style={{ background: 'var(--primary-alpha)', color: 'var(--primary)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <div className="portal-card-icon" style={{ background: 'var(--primary-alpha)', color: 'var(--primary)' }}>
               <LayoutDashboard size={40} />
             </div>
-            <h2 style={{ marginBottom: '0.5rem' }}>Main Dashboard</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Access your daily operations, fleet status, and pending tasks.</p>
+            <div className="portal-card-content">
+              <h2>Main Dashboard</h2>
+              <p>Access your daily operations, fleet status, and pending tasks.</p>
+            </div>
           </div>
 
           {/* GPS Card */}
@@ -96,17 +100,19 @@ const Portal = () => {
             className="card portal-card" 
             onClick={() => navigate('/gps')}
             style={{ 
-              cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem',
+              cursor: 'pointer', transition: 'all 0.3s ease',
               border: '1px solid var(--surface-2)'
             }}
             onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.borderColor = 'var(--info)'; e.currentTarget.style.boxShadow = 'var(--shadow-xl)'; }}
             onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--surface-2)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
           >
-            <div style={{ background: 'var(--info-light)', color: 'var(--info)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <div className="portal-card-icon" style={{ background: 'var(--info-light)', color: 'var(--info)' }}>
               <Map size={40} />
             </div>
-            <h2 style={{ marginBottom: '0.5rem' }}>Live GPS Tracking</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Track vehicle locations, routes, and live telemetry data.</p>
+            <div className="portal-card-content">
+              <h2>Live GPS Tracking</h2>
+              <p>Track vehicle locations, routes, and live telemetry data.</p>
+            </div>
           </div>
 
           {/* Performance View Card (Hidden from Drivers) */}
@@ -115,17 +121,19 @@ const Portal = () => {
               className="card portal-card" 
               onClick={() => navigate('/performance')}
               style={{ 
-                cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem',
+                cursor: 'pointer', transition: 'all 0.3s ease',
                 border: '1px solid var(--surface-2)'
               }}
               onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.borderColor = 'var(--success)'; e.currentTarget.style.boxShadow = 'var(--shadow-xl)'; }}
               onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--surface-2)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
             >
-              <div style={{ background: 'var(--success-light)', color: 'var(--success)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+              <div className="portal-card-icon" style={{ background: 'var(--success-light)', color: 'var(--success)' }}>
                 <Activity size={40} />
               </div>
-              <h2 style={{ marginBottom: '0.5rem' }}>Performance View</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Analyze fleet efficiency, driver behavior, and key metrics.</p>
+              <div className="portal-card-content">
+                <h2>Performance View</h2>
+                <p>Analyze fleet efficiency, driver behavior, and key metrics.</p>
+              </div>
             </div>
           )}
         </div>
