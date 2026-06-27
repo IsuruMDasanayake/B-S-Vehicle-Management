@@ -104,7 +104,10 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit, (errors) => {
+        console.error("Form validation failed:", errors);
+        toast.error("Please fix the validation errors above before submitting.");
+      })}>
         <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
 
           <div className="form-group">
