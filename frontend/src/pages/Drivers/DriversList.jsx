@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
+import DriverDetailsModal from '../../components/ui/DriverDetailsModal';
 import DriverForm from './DriverForm';
 
 const DriversList = () => {
@@ -12,6 +13,7 @@ const DriversList = () => {
   const [modal, setModal] = useState(null);
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewDriver, setViewDriver] = useState(null);
 
   const fetchDrivers = async () => {
     setIsLoading(true);
@@ -63,7 +65,7 @@ const DriversList = () => {
               {drivers.length === 0 ? (
                 <tr><td colSpan="7" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No drivers found.</td></tr>
               ) : drivers.map(d => (
-                <tr key={d.id}>
+                <tr key={d.id} onClick={() => setViewDriver(d)} style={{ cursor: 'pointer' }}>
                   <td style={{ fontWeight: 700 }}>{d.name}</td>
                   <td>{d.nic_number}</td>
                   <td>{d.contact_number}</td>
@@ -77,8 +79,8 @@ const DriversList = () => {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
-                      <button className="icon-btn edit" onClick={() => openEdit(d.id)} title="Edit"><Edit size={16} /></button>
-                      <button className="icon-btn delete" onClick={() => setDeleteTarget({ id: d.id, name: d.name })} title="Delete"><Trash2 size={16} /></button>
+                      <button className="icon-btn edit" onClick={(e) => { e.stopPropagation(); openEdit(d.id); }} title="Edit"><Edit size={16} /></button>
+                      <button className="icon-btn delete" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: d.id, name: d.name }); }} title="Delete"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -98,6 +100,12 @@ const DriversList = () => {
         onDeleted={() => { setDeleteTarget(null); fetchDrivers(); }}
         endpoint={deleteTarget ? `/drivers/${deleteTarget.id}` : ''}
         itemName={deleteTarget?.name}
+      />
+
+      <DriverDetailsModal 
+        isOpen={!!viewDriver} 
+        onClose={() => setViewDriver(null)} 
+        driver={viewDriver} 
       />
     </div>
   );

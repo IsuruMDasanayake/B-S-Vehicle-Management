@@ -28,7 +28,9 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
   const isModal = !!onSuccess;
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [files, setFiles] = useState([]);
+  const [licenseFront, setLicenseFront] = useState([]);
+  const [licenseBack, setLicenseBack] = useState([]);
+  const [photo, setPhoto] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
@@ -62,9 +64,9 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
         }
       });
       
-      files.forEach(file => {
-        payload.append('attachments[]', file);
-      });
+      if (licenseFront.length > 0) payload.append('license_front_file', licenseFront[0]);
+      if (licenseBack.length > 0) payload.append('license_back_file', licenseBack[0]);
+      if (photo.length > 0) payload.append('photo_file', photo[0]);
 
       if (isEditMode) {
         payload.append('_method', 'PUT');
@@ -161,11 +163,29 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
 
           {/* File Upload Component */}
           <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-            <FileUploadField 
-              onFilesSelected={setFiles} 
-              existingFiles={existingAttachments} 
-              label="Driver Photos & Documents (License, Profile, etc.)" 
-            />
+            <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Driver Documents</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <FileUploadField 
+                onFilesSelected={setLicenseFront} 
+                label="License Front" 
+                multiple={false}
+              />
+              <FileUploadField 
+                onFilesSelected={setLicenseBack} 
+                label="License Back" 
+                multiple={false}
+              />
+              <FileUploadField 
+                onFilesSelected={setPhoto} 
+                label="Driver Photo" 
+                multiple={false}
+              />
+            </div>
+            {existingAttachments.length > 0 && (
+              <div style={{ marginTop: '1rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Note: Existing documents are preserved unless overwritten.</p>
+              </div>
+            )}
           </div>
 
         </div>

@@ -15,7 +15,7 @@ class Driver extends Model
 
     protected $fillable = [
         'name','nic_number','address','contact_number','license_number',
-        'license_expiry_date','photo','emergency_contact_name',
+        'license_expiry_date','photo','license_front','license_back','emergency_contact_name',
         'emergency_contact_phone','status','notes','user_id',
     ];
     protected $casts = ['license_expiry_date' => 'date'];

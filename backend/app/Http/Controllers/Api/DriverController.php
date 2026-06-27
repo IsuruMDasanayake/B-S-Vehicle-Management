@@ -33,10 +33,24 @@ class DriverController extends Controller
             'emergency_contact_phone' => 'nullable|string',
             'status' => 'required|in:active,on_leave,suspended,retired',
             'notes' => 'nullable|string',
-            'user_id' => 'nullable|exists:users,id'
+            'user_id' => 'nullable|exists:users,id',
+            'license_front_file' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10240',
+            'license_back_file' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10240',
+            'photo_file' => 'nullable|file|mimes:jpeg,png,jpg|max:10240',
         ]);
 
         $driver = Driver::create($validated);
+
+        if ($request->hasFile('license_front_file')) {
+            $driver->license_front = $request->file('license_front_file')->store('drivers/licenses', 'public');
+        }
+        if ($request->hasFile('license_back_file')) {
+            $driver->license_back = $request->file('license_back_file')->store('drivers/licenses', 'public');
+        }
+        if ($request->hasFile('photo_file')) {
+            $driver->photo = $request->file('photo_file')->store('drivers/photos', 'public');
+        }
+        $driver->save();
 
         if ($request->hasFile('attachments')) {
             $driver->saveAttachments($request->file('attachments'));
@@ -65,10 +79,24 @@ class DriverController extends Controller
             'emergency_contact_phone' => 'nullable|string',
             'status' => 'sometimes|required|in:active,on_leave,suspended,retired',
             'notes' => 'nullable|string',
-            'user_id' => 'nullable|exists:users,id'
+            'user_id' => 'nullable|exists:users,id',
+            'license_front_file' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10240',
+            'license_back_file' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10240',
+            'photo_file' => 'nullable|file|mimes:jpeg,png,jpg|max:10240',
         ]);
 
         $driver->update($validated);
+
+        if ($request->hasFile('license_front_file')) {
+            $driver->license_front = $request->file('license_front_file')->store('drivers/licenses', 'public');
+        }
+        if ($request->hasFile('license_back_file')) {
+            $driver->license_back = $request->file('license_back_file')->store('drivers/licenses', 'public');
+        }
+        if ($request->hasFile('photo_file')) {
+            $driver->photo = $request->file('photo_file')->store('drivers/photos', 'public');
+        }
+        $driver->save();
 
         if ($request->hasFile('attachments')) {
             $driver->saveAttachments($request->file('attachments'));
