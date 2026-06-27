@@ -147,8 +147,8 @@ const Navbar = ({ toggleMobileOpen }) => {
           {/* Notification Dropdown */}
           {showDropdown && (
             <div className="card" style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '1rem',
-              width: '350px', padding: 0, overflow: 'hidden',
+              position: 'absolute', top: '100%', right: isMobile ? '-3.5rem' : 0, marginTop: '1rem',
+              width: isMobile ? '320px' : '350px', padding: 0, overflow: 'hidden',
               boxShadow: 'var(--shadow-xl)', zIndex: 9999,
               animation: 'slideUp 0.2s ease forwards'
             }}>
