@@ -3,6 +3,7 @@ import { UploadCloud, X, File as FileIcon } from 'lucide-react';
 import api from '../../services/api';
 
 const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExistingFile, label = "Upload Images/Documents", multiple = true }) => {
+  const [inputId] = useState(() => 'file-upload-' + Math.random().toString(36).substr(2, 9));
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
 
@@ -66,24 +67,57 @@ const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExisting
         style={{
           border: `2px dashed ${dragActive ? 'var(--primary)' : 'var(--dark-2)'}`,
           borderRadius: 'var(--radius-md)',
-          padding: '2rem',
+          padding: (!multiple && selectedFiles.length > 0) ? '0' : '2rem',
           textAlign: 'center',
           backgroundColor: dragActive ? 'var(--primary-alpha)' : 'var(--dark-1)',
           cursor: 'pointer',
-          transition: 'all 0.2s'
+          transition: 'all 0.2s',
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: '120px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
-        onClick={() => document.getElementById('file-upload').click()}
+        onClick={() => document.getElementById(inputId).click()}
       >
-        <UploadCloud size={32} color="var(--primary)" style={{ margin: '0 auto 1rem', opacity: 0.8 }} />
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-          Drag & drop files here, or click to browse
-        </p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Supports JPG, PNG, PDF (Max 10MB)
-        </p>
+        {(!multiple && selectedFiles.length > 0) ? (
+          <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
+            {selectedFiles[0].type.startsWith('image/') ? (
+              <img src={URL.createObjectURL(selectedFiles[0])} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <FileIcon size={32} color="var(--text-muted)" style={{ marginTop: '2.5rem' }} />
+            )}
+            <button 
+              type="button"
+              onClick={(e) => { e.stopPropagation(); removeFile(0); }}
+              style={{
+                position: 'absolute', top: '8px', right: '8px',
+                background: 'rgba(0,0,0,0.6)', color: 'white',
+                border: 'none', borderRadius: '50%',
+                width: '24px', height: '24px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <UploadCloud size={32} color="var(--primary)" style={{ margin: '0 auto 1rem', opacity: 0.8 }} />
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+              Drag & drop files here, or click to browse
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Supports JPG, PNG, PDF (Max 10MB)
+            </p>
+          </>
+        )}
         <input 
           type="file" 
-          id="file-upload" 
+          id={inputId} 
           multiple={multiple} 
           style={{ display: 'none' }} 
           onChange={handleChange} 
@@ -132,8 +166,8 @@ const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExisting
         </div>
       )}
 
-      {/* New Files Preview */}
-      {selectedFiles.length > 0 && (
+      {/* New Files Preview (Only for multiple uploads) */}
+      {(multiple && selectedFiles.length > 0) && (
         <div style={{ marginTop: '1rem' }}>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>New Uploads:</p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
