@@ -7,7 +7,7 @@ import {
 
 import useAuthStore from '../../store/authStore';
 
-const Sidebar = () => {
+const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
   const location = useLocation();
   const user = useAuthStore(state => state.user);
 
@@ -83,7 +83,7 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="sidebar no-scrollbar" style={{ 
+    <aside className={`sidebar no-scrollbar ${isMobileOpen ? 'mobile-open' : ''}`} style={{ 
       display: 'flex', flexDirection: 'column', 
       borderRight: '1px solid var(--dark-2)',
       height: '100%',
@@ -127,6 +127,7 @@ const Sidebar = () => {
                     <li key={item.path} style={{ padding: '0.15rem 1rem' }}>
                       <Link 
                         to={item.path}
+                        onClick={() => isMobileOpen && closeMobileOpen()}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '0.75rem',
                           padding: '0.6rem 1rem', borderRadius: 'var(--radius-md)',

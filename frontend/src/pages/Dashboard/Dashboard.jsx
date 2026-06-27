@@ -62,7 +62,7 @@ const Dashboard = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1>Dashboard</h1>
           <p style={{ color: 'var(--text-muted)' }}>Welcome back to B&S Vehicle Management</p>
@@ -83,8 +83,8 @@ const Dashboard = () => {
       {/* KPI Cards */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: '1.5rem',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
+        gap: '1rem',
         marginBottom: '2rem'
       }}>
         {stats.map((stat, i) => {
@@ -94,17 +94,18 @@ const Dashboard = () => {
               <div style={{
                 background: `${stat.color}15`,
                 color: stat.color,
-                width: '56px', height: '56px',
-                borderRadius: 'var(--radius-lg)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                width: '48px', height: '48px',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
               }}>
-                <Icon size={28} />
+                <Icon size={24} />
               </div>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {stat.title}
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--dark)' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--dark)' }}>
                   {stat.value}
                 </div>
               </div>
@@ -113,7 +114,7 @@ const Dashboard = () => {
         })}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+      <div className="grid-layout-2-1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
         {/* Placeholder for Chart */}
         <div className="card" style={{ minHeight: '300px' }}>
           <h3>Fuel Consumption Overview</h3>

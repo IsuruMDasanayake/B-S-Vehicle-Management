@@ -308,7 +308,7 @@ const VehicleForm = ({ editId, onSuccess, onClose }) => {
                 <label className="form-label">Email</label>
                 <input type="email" {...register('hired_details.email')} className="form-control" />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <label className="form-label">Address *</label>
                 <input {...register('hired_details.address')} className="form-control" />
                 {errors.hired_details?.address && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.hired_details.address.message}</span>}
@@ -342,7 +342,7 @@ const VehicleForm = ({ editId, onSuccess, onClose }) => {
             />
           </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dark-2)' }}>
+        <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dark-2)' }}>
           {Object.keys(errors).length > 0 && (
             <div style={{ flex: 1, color: 'var(--danger)', fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
               Please fix the errors above to continue. (Debug: {Object.keys(errors).join(', ')})

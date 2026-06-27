@@ -71,7 +71,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onDeleted, endpoint, itemName }) 
           This action <strong>cannot</strong> be undone.
         </p>
 
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+        <div className="modal-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
           <button className="btn btn-ghost" onClick={onClose} disabled={isDeleting}
             style={{ border: '1px solid var(--surface-2)', minWidth: '120px' }}>
             Cancel

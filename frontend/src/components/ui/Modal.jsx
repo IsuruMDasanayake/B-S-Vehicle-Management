@@ -66,6 +66,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'lg' }) => {
       >
         {/* Header */}
         <div
+          className="modal-header"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -76,7 +77,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'lg' }) => {
             background: 'var(--white)',
           }}
         >
-          <h3 style={{ fontSize: '1.1rem', marginBottom: 0, fontWeight: 700 }}>{title}</h3>
+          <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, paddingRight: '1rem' }}>{title}</h3>
           <button
             onClick={onClose}
             className="icon-btn"
@@ -87,7 +88,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'lg' }) => {
         </div>
 
         {/* Scrollable Body */}
-        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+        <div className="modal-body" style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {children}
           </div>
