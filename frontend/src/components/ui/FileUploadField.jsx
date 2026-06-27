@@ -67,7 +67,7 @@ const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExisting
         style={{
           border: `2px dashed ${dragActive ? 'var(--primary)' : 'var(--dark-2)'}`,
           borderRadius: 'var(--radius-md)',
-          padding: (!multiple && selectedFiles.length > 0) ? '0' : '2rem',
+          padding: (!multiple && (selectedFiles.length > 0 || existingFiles.length > 0)) ? '0' : '2rem',
           textAlign: 'center',
           backgroundColor: dragActive ? 'var(--primary-alpha)' : 'var(--dark-1)',
           cursor: 'pointer',
@@ -82,16 +82,28 @@ const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExisting
         }}
         onClick={() => document.getElementById(inputId).click()}
       >
-        {(!multiple && selectedFiles.length > 0) ? (
+        {(!multiple && (selectedFiles.length > 0 || existingFiles.length > 0)) ? (
           <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
-            {selectedFiles[0].type.startsWith('image/') ? (
-              <img src={URL.createObjectURL(selectedFiles[0])} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {selectedFiles.length > 0 ? (
+              selectedFiles[0].type.startsWith('image/') ? (
+                <img src={URL.createObjectURL(selectedFiles[0])} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <FileIcon size={32} color="var(--text-muted)" style={{ marginTop: '2.5rem' }} />
+              )
             ) : (
-              <FileIcon size={32} color="var(--text-muted)" style={{ marginTop: '2.5rem' }} />
+              existingFiles[0].file_type?.startsWith('image/') ? (
+                <img src={getFileUrl(existingFiles[0].file_path)} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <FileIcon size={32} color="var(--text-muted)" style={{ marginTop: '2.5rem' }} />
+              )
             )}
             <button 
               type="button"
-              onClick={(e) => { e.stopPropagation(); removeFile(0); }}
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                if (selectedFiles.length > 0) removeFile(0); 
+                else if (onRemoveExistingFile) onRemoveExistingFile(existingFiles[0].id); 
+              }}
               style={{
                 position: 'absolute', top: '8px', right: '8px',
                 background: 'rgba(0,0,0,0.6)', color: 'white',
@@ -124,8 +136,8 @@ const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExisting
         />
       </div>
 
-      {/* Existing Files Preview */}
-      {existingFiles.length > 0 && (
+      {/* Existing Files Preview (Only for multiple uploads) */}
+      {(multiple && existingFiles.length > 0) && (
         <div style={{ marginTop: '1rem' }}>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Attached Files:</p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

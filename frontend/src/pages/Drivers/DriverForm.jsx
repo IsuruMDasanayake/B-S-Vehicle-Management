@@ -11,14 +11,14 @@ import FileUploadField from '../../components/ui/FileUploadField';
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   nic_number: z.string().min(10, 'Valid NIC is required'),
-  address: z.string().optional(),
+  address: z.string().nullable().optional(),
   contact_number: z.string().min(10, 'Valid contact number is required'),
   license_number: z.string().min(1, 'License number is required'),
   license_expiry_date: z.string().min(1, 'License expiry date is required'),
-  emergency_contact_name: z.string().optional(),
-  emergency_contact_phone: z.string().optional(),
+  emergency_contact_name: z.string().nullable().optional(),
+  emergency_contact_phone: z.string().nullable().optional(),
   status: z.enum(['active', 'on_leave', 'suspended', 'retired']),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 const DriverForm = ({ editId, onSuccess, onClose }) => {
@@ -31,6 +31,9 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
   const [licenseFront, setLicenseFront] = useState([]);
   const [licenseBack, setLicenseBack] = useState([]);
   const [photo, setPhoto] = useState([]);
+  const [existingLicenseFront, setExistingLicenseFront] = useState([]);
+  const [existingLicenseBack, setExistingLicenseBack] = useState([]);
+  const [existingPhoto, setExistingPhoto] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
@@ -43,8 +46,19 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
       api.get(`/drivers/${id}`)
         .then(({ data }) => {
           if (data.license_expiry_date) data.license_expiry_date = data.license_expiry_date.split('T')[0];
+          
+          if (data.license_front) setExistingLicenseFront([{ id: 'license_front', file_path: data.license_front, file_type: 'image/jpeg' }]);
+          if (data.license_back) setExistingLicenseBack([{ id: 'license_back', file_path: data.license_back, file_type: 'image/jpeg' }]);
+          if (data.photo) setExistingPhoto([{ id: 'photo', file_path: data.photo, file_type: 'image/jpeg' }]);
+          
           setExistingAttachments(data.attachments || []);
-          reset(data);
+          
+          // Convert nulls to empty strings for form reset so inputs don't complain
+          const resetData = { ...data };
+          Object.keys(resetData).forEach(key => {
+            if (resetData[key] === null) resetData[key] = '';
+          });
+          reset(resetData);
         })
         .catch(() => {
           toast.error('Failed to load driver details');
@@ -170,16 +184,22 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               <FileUploadField 
                 onFilesSelected={setLicenseFront} 
+                existingFiles={existingLicenseFront}
+                onRemoveExistingFile={() => setExistingLicenseFront([])}
                 label="License Front" 
                 multiple={false}
               />
               <FileUploadField 
                 onFilesSelected={setLicenseBack} 
+                existingFiles={existingLicenseBack}
+                onRemoveExistingFile={() => setExistingLicenseBack([])}
                 label="License Back" 
                 multiple={false}
               />
               <FileUploadField 
                 onFilesSelected={setPhoto} 
+                existingFiles={existingPhoto}
+                onRemoveExistingFile={() => setExistingPhoto([])}
                 label="Driver Photo" 
                 multiple={false}
               />
