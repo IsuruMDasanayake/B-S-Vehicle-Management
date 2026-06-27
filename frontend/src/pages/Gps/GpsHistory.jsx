@@ -262,10 +262,10 @@ const GpsHistory = () => {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 130px)', display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem' }}>
-      
-      {/* Filters Sidebar (Left 30%) */}
-      <div className="card" style={{ padding: '1rem', overflowY: 'auto' }}>
+    <div className="gps-history-root" style={{ height: 'calc(100vh - 130px)' }}>
+      <div className="gps-history-layout" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem', height: '100%' }}>
+        {/* Filters Sidebar (Left 30%) */}
+        <div className="card gps-history-sidebar" style={{ padding: '1rem', overflowY: 'auto' }}>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Map color="var(--info)" /> Route History
         </h2>
@@ -378,7 +378,7 @@ const GpsHistory = () => {
       </div>
 
       {/* Map Area */}
-      <div className="card" style={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative', border: '1px solid var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
+      <div className="card gps-history-map-area" style={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative', border: '1px solid var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <MapContainer 
             center={positions.length > 0 ? positions[0] : defaultCenter} 
@@ -490,8 +490,10 @@ const GpsHistory = () => {
                   </div>
                </div>
             </div>
+          {/* End Player UI */}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

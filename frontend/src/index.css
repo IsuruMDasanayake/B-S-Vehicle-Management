@@ -506,6 +506,24 @@ a:hover { color: var(--primary-dark); }
   .hide-mobile {
     display: none !important;
   }
+
+  .gps-history-root {
+    height: 100vh !important;
+    overflow-y: auto !important;
+  }
+  .gps-history-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  .gps-history-sidebar {
+    width: 100% !important;
+  }
+  .gps-history-map-area {
+    height: 60vh !important;
+    min-height: 400px;
+    margin-bottom: 2rem;
+  }
 }
 
 /* Badges */
