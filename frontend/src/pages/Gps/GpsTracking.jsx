@@ -287,12 +287,14 @@ const GpsTracking = () => {
       `}</style>
       
       {/* Top Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <StatCard title="Today Distance" value={`${dailyDistance.toFixed(2)} km`} icon={<Activity size={24} color="var(--primary)" />} />
-        <StatCard title="Moving" value={liveStats.moving} icon={<Navigation size={24} color="var(--success)" />} isActive={activeFilter === 'moving'} isFaded={activeFilter !== null && activeFilter !== 'moving'} onClick={() => setActiveFilter(prev => prev === 'moving' ? null : 'moving')} />
-        <StatCard title="Idling (Engine ON)" value={liveStats.idling} icon={<Clock size={24} color="var(--warning)" />} isActive={activeFilter === 'idling'} isFaded={activeFilter !== null && activeFilter !== 'idling'} onClick={() => setActiveFilter(prev => prev === 'idling' ? null : 'idling')} />
-        <StatCard title="Parked" value={liveStats.parked} icon={<MapPin size={24} color="var(--text-muted)" />} isActive={activeFilter === 'parked'} isFaded={activeFilter !== null && activeFilter !== 'parked'} onClick={() => setActiveFilter(prev => prev === 'parked' ? null : 'parked')} />
-        <StatCard title="Offline" value={liveStats.offline} icon={<AlertTriangle size={24} color="var(--danger)" />} isActive={activeFilter === 'offline'} isFaded={activeFilter !== null && activeFilter !== 'offline'} onClick={() => setActiveFilter(prev => prev === 'offline' ? null : 'offline')} />
+      <div className="gps-stats-container">
+        <StatCard className="gps-stat-main" title="Today Distance" value={`${dailyDistance.toFixed(2)} km`} icon={<Activity size={24} color="var(--primary)" />} />
+        <div className="gps-stat-filters">
+          <StatCard className="stat-card-filter" title="Moving" value={liveStats.moving} icon={<Navigation size={24} color="var(--success)" />} isActive={activeFilter === 'moving'} isFaded={activeFilter !== null && activeFilter !== 'moving'} onClick={() => setActiveFilter(prev => prev === 'moving' ? null : 'moving')} />
+          <StatCard className="stat-card-filter" title="Idling (Engine ON)" value={liveStats.idling} icon={<Clock size={24} color="var(--warning)" />} isActive={activeFilter === 'idling'} isFaded={activeFilter !== null && activeFilter !== 'idling'} onClick={() => setActiveFilter(prev => prev === 'idling' ? null : 'idling')} />
+          <StatCard className="stat-card-filter" title="Parked" value={liveStats.parked} icon={<MapPin size={24} color="var(--text-muted)" />} isActive={activeFilter === 'parked'} isFaded={activeFilter !== null && activeFilter !== 'parked'} onClick={() => setActiveFilter(prev => prev === 'parked' ? null : 'parked')} />
+          <StatCard className="stat-card-filter" title="Offline" value={liveStats.offline} icon={<AlertTriangle size={24} color="var(--danger)" />} isActive={activeFilter === 'offline'} isFaded={activeFilter !== null && activeFilter !== 'offline'} onClick={() => setActiveFilter(prev => prev === 'offline' ? null : 'offline')} />
+        </div>
       </div>
 
       {/* Main Layout */}
@@ -523,9 +525,9 @@ const GpsTracking = () => {
 };
 
 // Helper Components & Functions
-const StatCard = ({ title, value, icon, onClick, isActive, isFaded }) => (
+const StatCard = ({ title, value, icon, onClick, isActive, isFaded, className = '' }) => (
   <div 
-    className="card" 
+    className={`card ${className}`} 
     onClick={onClick}
     style={{ 
       padding: '1.25rem', 
@@ -540,12 +542,12 @@ const StatCard = ({ title, value, icon, onClick, isActive, isFaded }) => (
       opacity: isFaded ? 0.5 : 1
     }}
   >
-    <div style={{ padding: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)' }}>
+    <div className="stat-card-icon" style={{ padding: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)' }}>
       {icon}
     </div>
-    <div>
-      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{title}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{value}</div>
+    <div className="stat-card-content">
+      <div className="stat-card-title" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{title}</div>
+      <div className="stat-card-value" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{value}</div>
     </div>
   </div>
 );

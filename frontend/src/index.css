@@ -304,8 +304,64 @@ a:hover { color: var(--primary-dark); }
     margin: 0;
   }
 
+  /* GPS Dashboard Desktop */
+  .gps-stats-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+  }
+  .gps-stat-filters {
+    display: contents;
+  }
+
   @media (max-width: 1024px) {
     /* GPS Dashboard Responsive */
+    .gps-stats-container {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .gps-stat-filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .gps-stat-main {
+      padding: 0.75rem !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      text-align: center;
+      gap: 0.5rem !important;
+    }
+    .gps-stat-main .stat-card-title {
+      font-size: 0.75rem !important;
+    }
+    .gps-stat-main .stat-card-value {
+      font-size: 1.25rem !important;
+    }
+    
+    .stat-card-filter {
+      padding: 0.5rem !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      gap: 0.25rem !important;
+    }
+    .stat-card-filter .stat-card-title {
+      display: none !important;
+    }
+    .stat-card-filter .stat-card-value {
+      font-size: 1rem !important;
+    }
+    .stat-card-filter .stat-card-icon {
+      padding: 0.25rem !important;
+    }
+    .stat-card-filter .stat-card-icon svg {
+      width: 18px !important;
+      height: 18px !important;
+    }
+
+
     .gps-tracking-root {
       height: auto !important;
     }
