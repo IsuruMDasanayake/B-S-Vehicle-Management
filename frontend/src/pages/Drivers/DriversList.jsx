@@ -31,14 +31,16 @@ const DriversList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1>Drivers</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage your fleet drivers</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={18} /> Add Driver
-        </button>
+        <div className="header-actions-mobile" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={openAdd} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}>
+            <Plus size={18} /> <span className="hide-mobile">Add Driver</span>
+          </button>
+        </div>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>
