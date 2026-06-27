@@ -296,6 +296,8 @@ const GpsTracking = () => {
           <StatCard className="stat-card-filter" title="Parked" value={liveStats.parked} icon={<MapPin size={24} color="var(--text-muted)" />} isActive={activeFilter === 'parked'} isFaded={activeFilter !== null && activeFilter !== 'parked'} onClick={() => setActiveFilter(prev => prev === 'parked' ? null : 'parked')} />
           <StatCard className="stat-card-filter" title="Offline" value={liveStats.offline} icon={<AlertTriangle size={24} color="var(--danger)" />} isActive={activeFilter === 'offline'} isFaded={activeFilter !== null && activeFilter !== 'offline'} onClick={() => setActiveFilter(prev => prev === 'offline' ? null : 'offline')} />
         </div>
+      </div>
+      
       {/* Mobile Fleet Toggle */}
       <div className="gps-mobile-fleet-toggle" style={{ margin: '0.5rem 0' }}>
         <button 
