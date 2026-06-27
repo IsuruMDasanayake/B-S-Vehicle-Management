@@ -2,8 +2,10 @@ import React from 'react';
 import Modal from './Modal';
 import { User, CreditCard, Activity, Phone, MapPin, AlertCircle, FileText } from 'lucide-react';
 import api from '../../services/api';
+import ImageViewerModal from './ImageViewerModal';
 
 const DriverDetailsModal = ({ isOpen, onClose, driver }) => {
+  const [viewImage, setViewImage] = React.useState(null);
   if (!driver) return null;
 
   let baseUrl = api.defaults.baseURL?.replace('/api', ''); 
@@ -19,18 +21,22 @@ const DriverDetailsModal = ({ isOpen, onClose, driver }) => {
         
         {/* Left Side: Photo & Status */}
         <div className="sticky-desktop">
-          <div style={{
-            width: '100%',
-            height: '250px',
-            background: 'var(--surface-2)',
-            borderRadius: 'var(--radius-lg)',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '1rem',
-            border: '1px solid var(--surface-2)'
-          }}>
+          <div 
+            onClick={() => { if (photoUrl) setViewImage({ url: photoUrl, title: 'Driver Photo' }); }}
+            style={{
+              width: '100%',
+              height: '250px',
+              background: 'var(--surface-2)',
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              border: '1px solid var(--surface-2)',
+              cursor: photoUrl ? 'pointer' : 'default'
+            }}
+          >
             {photoUrl ? (
               <img src={photoUrl} alt={driver.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
@@ -101,17 +107,23 @@ const DriverDetailsModal = ({ isOpen, onClose, driver }) => {
                   {driver.license_front && (
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>License Front</div>
-                      <a href={`${baseUrl}/storage/${driver.license_front}`} target="_blank" rel="noreferrer">
+                      <div 
+                        onClick={() => setViewImage({ url: `${baseUrl}/storage/${driver.license_front}`, title: 'License Front' })}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <img src={`${baseUrl}/storage/${driver.license_front}`} alt="License Front" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--dark-2)' }} />
-                      </a>
+                      </div>
                     </div>
                   )}
                   {driver.license_back && (
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>License Back</div>
-                      <a href={`${baseUrl}/storage/${driver.license_back}`} target="_blank" rel="noreferrer">
+                      <div 
+                        onClick={() => setViewImage({ url: `${baseUrl}/storage/${driver.license_back}`, title: 'License Back' })}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <img src={`${baseUrl}/storage/${driver.license_back}`} alt="License Back" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--dark-2)' }} />
-                      </a>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -160,6 +172,13 @@ const DriverDetailsModal = ({ isOpen, onClose, driver }) => {
           </div>
         </div>
       </div>
+      
+      <ImageViewerModal 
+        isOpen={!!viewImage} 
+        onClose={() => setViewImage(null)} 
+        imageUrl={viewImage?.url} 
+        title={viewImage?.title} 
+      />
     </Modal>
   );
 };
