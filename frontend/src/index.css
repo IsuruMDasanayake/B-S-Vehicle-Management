@@ -138,14 +138,25 @@ a:hover { color: var(--primary-dark); }
 }
 
 .sidebar {
-  width: var(--sidebar-width);
-  background-color: var(--dark);
+  width: 260px;
+  background: var(--dark);
   color: var(--white);
+  display: flex;
+  flex-direction: column;
   position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  transition: transform 0.3s ease;
+  left: 0;
+  top: 0;
+  bottom: 0;
   z-index: 1040;
+  transition: transform 0.3s ease;
+}
+
+@media (min-width: 1025px) {
+  .sticky-desktop {
+    position: sticky;
+    top: 0;
+    align-self: start;
+  }
 }
 
 .no-scrollbar {
@@ -222,6 +233,12 @@ a:hover { color: var(--primary-dark); }
   .grid-cols-2, .grid-cols-3, .grid-cols-4,
   .grid-layout-1-2, .grid-layout-2-1 {
     grid-template-columns: 1fr !important;
+  }
+  .grid-cols-2-mobile {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .grid-cols-3-mobile {
+    grid-template-columns: 1fr 1fr 1fr !important;
   }
   
   /* Data Tables */

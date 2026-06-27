@@ -29,7 +29,7 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
     <Modal isOpen={isOpen} onClose={onClose} title={`Vehicle Details: ${vehicle.vehicle_number}`} size="lg">
       <div className="grid-layout-1-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
         {/* Left Side: Image & Quick Stats */}
-        <div>
+        <div className="sticky-desktop">
           <div style={{
             width: '100%',
             height: '200px',
@@ -123,7 +123,7 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
             </h3>
             
             {/* Primary Identifiers */}
-            <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
+            <div className="grid-cols-2-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vehicle Number</div>
                 <div style={{ fontWeight: 600 }}>{vehicle.vehicle_number || 'N/A'}</div>
@@ -146,7 +146,7 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
             <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', marginTop: '2rem' }}>
               <Fuel size={16} /> Specifications
             </h4>
-            <div className="grid-cols-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="grid-cols-2-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vehicle Type</div>
                 <div style={{ fontWeight: 600 }}>{vehicle.vehicle_type || 'N/A'}</div>
@@ -177,7 +177,7 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
             <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', marginTop: '2rem' }}>
               <Activity size={16} /> Ownership & Purchase
             </h4>
-            <div className="grid-cols-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="grid-cols-3-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Ownership</div>
                 <div style={{ fontWeight: 600 }}>{vehicle.ownership || 'N/A'}</div>
@@ -197,7 +197,7 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', marginTop: '2rem' }}>
                   <Activity size={16} /> Hired Details
                 </h4>
-                <div className="grid-cols-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div className="grid-cols-2-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Owner Name</div>
                     <div style={{ fontWeight: 600 }}>{vehicle.hired_details.owner_name || 'N/A'}</div>
