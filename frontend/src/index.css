@@ -555,7 +555,7 @@ a:hover { color: var(--primary-dark); }
   .gps-geofence-mobile-toggle {
     display: flex !important;
     position: absolute;
-    top: 1rem;
+    bottom: 2rem;
     right: 1rem;
     z-index: 400; /* Leaflet map is usually z-index 400 */
     background: var(--primary);
