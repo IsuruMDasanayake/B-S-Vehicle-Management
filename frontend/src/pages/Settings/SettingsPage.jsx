@@ -22,10 +22,10 @@ const SettingsPage = () => {
         <p style={{ color: 'var(--text-muted)' }}>Manage your application preferences and configurations</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="settings-layout" style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '2rem', alignItems: 'start' }}>
         {/* Settings Navigation */}
         <div className="card" style={{ padding: '0.5rem' }}>
-          <ul style={{ listStyle: 'none' }}>
+          <ul className="settings-nav-list" style={{ listStyle: 'none' }}>
             {[
               { id: 'general', label: 'General', icon: Globe },
               { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -50,7 +50,7 @@ const SettingsPage = () => {
                   }}
                 >
                   <tab.icon size={18} />
-                  {tab.label}
+                  <span className="hide-mobile">{tab.label}</span>
                 </button>
               </li>
             ))}
