@@ -473,22 +473,22 @@ const GpsHistory = () => {
 
         {/* Player UI */}
         {routeData.length > 0 && (
-          <div style={{ background: '#fff', borderTop: '1px solid #e0e0e0', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ background: '#fff', borderTop: '1px solid #e0e0e0', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {/* Top row: Location & Battery */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.875rem' }}>
-                 <MapPin size={16} color="#2ecc71" />
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                 <MapPin size={14} color="#2ecc71" />
                  <span>{currentLog?.time} | {currentLog?.ignition ? 'Engine ON' : 'Engine OFF'}</span>
                </div>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e74c3c', fontSize: '0.875rem' }}>
-                 <Settings size={16} /> 12V
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#e74c3c', fontSize: '0.75rem' }}>
+                 <Settings size={14} /> 12V
                </div>
             </div>
             
             {/* Middle row: Slider & Play controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-               <button onClick={() => setIsPlaying(!isPlaying)} style={{ background: 'none', border: '2px solid #e74c3c', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e74c3c', cursor: 'pointer' }}>
-                 {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '4px' }} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+               <button onClick={() => setIsPlaying(!isPlaying)} style={{ background: 'none', border: '1.5px solid #e74c3c', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e74c3c', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                 {isPlaying ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: '2px' }} />}
                </button>
                
                <input 
@@ -500,13 +500,13 @@ const GpsHistory = () => {
                    setCurrentIndex(parseInt(e.target.value));
                    setIsPlaying(false);
                  }}
-                 style={{ flex: 1, accentColor: '#e74c3c' }}
+                 style={{ flex: 1, accentColor: '#e74c3c', height: '4px' }}
                />
                
                <select 
                  value={playbackSpeed} 
                  onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                 style={{ border: 'none', background: 'transparent', color: '#666', fontWeight: 'bold' }}
+                 style={{ border: 'none', background: 'transparent', color: '#666', fontWeight: 'bold', fontSize: '0.75rem', padding: 0 }}
                >
                  <option value="1">1x</option>
                  <option value="2">2x</option>
@@ -517,22 +517,22 @@ const GpsHistory = () => {
             </div>
             
             {/* Bottom row: Stats */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-                     <Clock size={20} color="#2ecc71" /> <span style={{ fontWeight: '500' }}>{currentLog?.time.split(' ')[1]}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                     <Clock size={14} color="#2ecc71" /> <span style={{ fontWeight: '600' }}>{currentLog?.time.split(' ')[1]}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-                     <Navigation size={20} color="#e74c3c" /> <span style={{ fontWeight: '500' }}>{Math.round(currentLog?.speed || 0)} Km/hr</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                     <Navigation size={14} color="#e74c3c" /> <span style={{ fontWeight: '600' }}>{Math.round(currentLog?.speed || 0)} Km/h</span>
                   </div>
                </div>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                  <div style={{ fontSize: '1rem', color: '#666', fontWeight: '500' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: '600' }}>
                     {vehiclesList.find(v => v.id == vehicleId)?.vehicle_number}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-                    <Map size={20} color="#e74c3c" />
-                    <span style={{ fontSize: '1rem', fontWeight: '500' }}>{distanceKm} Kms</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                    <Map size={14} color="#e74c3c" />
+                    <span style={{ fontWeight: '600' }}>{distanceKm} Kms</span>
                   </div>
                </div>
             </div>
