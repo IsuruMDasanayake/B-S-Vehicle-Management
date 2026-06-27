@@ -300,17 +300,17 @@ const GpsHistory = () => {
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
                 <Calendar size={12} /> From <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
-              <div className="form-control" style={{ padding: '0.25rem 0.5rem', height: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #d1d5db', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
                 <input 
                   type="date" 
-                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0 }}
+                  style={{ border: 'none', borderBottom: '1px solid #f3f4f6', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', WebkitAppearance: 'none', minHeight: '30px' }}
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
                   required
                 />
                 <input 
                   type="time" 
-                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0, color: 'var(--text-muted)' }}
+                  style={{ border: 'none', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', color: '#666', WebkitAppearance: 'none', minHeight: '30px' }}
                   value={fromTime}
                   onChange={(e) => setFromTime(e.target.value)}
                 />
@@ -321,17 +321,17 @@ const GpsHistory = () => {
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
                 <Calendar size={12} /> To <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
-              <div className="form-control" style={{ padding: '0.25rem 0.5rem', height: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #d1d5db', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
                 <input 
                   type="date" 
-                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0 }}
+                  style={{ border: 'none', borderBottom: '1px solid #f3f4f6', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', WebkitAppearance: 'none', minHeight: '30px' }}
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                   required
                 />
                 <input 
                   type="time" 
-                  style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.75rem', width: '100%', padding: 0, color: 'var(--text-muted)' }}
+                  style={{ border: 'none', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', color: '#666', WebkitAppearance: 'none', minHeight: '30px' }}
                   value={toTime}
                   onChange={(e) => setToTime(e.target.value)}
                 />
