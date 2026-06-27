@@ -29,7 +29,7 @@ const VendorsList = () => {
           <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>Vendors</h1>
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>Fuel stations, workshops, suppliers and partners</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem' }}>
           
           <div style={{ position: 'relative', display: 'inline-block' }}>
             <div className="btn" style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', height: '100%', borderRadius: 'var(--radius-md)' }}>

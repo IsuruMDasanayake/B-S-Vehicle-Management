@@ -23,7 +23,8 @@ const TiresList = () => {
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><h1>Tires</h1><p style={{ color: 'var(--text-muted)' }}>Track tire installation and replacements</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}><Plus size={18} /> Add Tire</button>
+        <button className="btn btn-primary" onClick={() => { setEditId(null); setModal('add'); }}>
+          <Plus size={18} /> <span className="hide-mobile">Add Tire</span></button>
       </div>
       <div className="card table-container" style={{ padding: 0 }}>
         {isLoading ? <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div> : (

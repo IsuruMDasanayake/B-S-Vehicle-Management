@@ -37,7 +37,8 @@ const FuelList = () => {
           <h1>Fuel Management</h1>
           <p style={{ color: 'var(--text-muted)' }}>Track fuel consumption and costs</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> New Fuel Entry</button>
+        <button className="btn btn-primary" onClick={openAdd}>
+          <Plus size={18} /> <span className="hide-mobile">New Fuel Entry</span></button>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>

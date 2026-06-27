@@ -37,7 +37,8 @@ const BreakdownsList = () => {
           <h1>Breakdowns</h1>
           <p style={{ color: 'var(--text-muted)' }}>Emergency breakdown incidents</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Report Breakdown</button>
+        <button className="btn btn-primary" onClick={openAdd}>
+          <Plus size={18} /> <span className="hide-mobile">Report Breakdown</span></button>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>

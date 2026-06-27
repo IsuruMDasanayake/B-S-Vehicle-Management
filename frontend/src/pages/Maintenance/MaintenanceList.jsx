@@ -37,7 +37,8 @@ const MaintenanceList = () => {
           <h1>Maintenance</h1>
           <p style={{ color: 'var(--text-muted)' }}>Service and repair history</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> New Record</button>
+        <button className="btn btn-primary" onClick={openAdd}>
+          <Plus size={18} /> <span className="hide-mobile">New Record</span></button>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>
