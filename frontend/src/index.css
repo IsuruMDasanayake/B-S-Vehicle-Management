@@ -305,6 +305,23 @@ a:hover { color: var(--primary-dark); }
   }
 
   @media (max-width: 1024px) {
+    /* GPS Dashboard Responsive */
+    .gps-tracking-root {
+      height: auto !important;
+    }
+    .gps-main-layout {
+      display: flex !important;
+      flex-direction: column-reverse !important;
+    }
+    .gps-list-panel {
+      height: 400px !important;
+      overflow-y: auto !important;
+    }
+    .gps-map-panel {
+      height: 50vh !important;
+      min-height: 400px !important;
+    }
+
     .portal-card {
       flex-direction: row;
       align-items: center;

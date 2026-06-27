@@ -279,7 +279,7 @@ const GpsTracking = () => {
   if (isLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading GPS Dashboard...</div>;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: 'calc(96vh - 100px)' }}>
+    <div className="gps-tracking-root" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: 'calc(96vh - 100px)' }}>
       <style>{`
         .custom-vehicle-marker {
           transition: transform 2s linear !important;
@@ -296,10 +296,10 @@ const GpsTracking = () => {
       </div>
 
       {/* Main Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '1rem', flex: 1, minHeight: 0 }}>
+      <div className="gps-main-layout" style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '1rem', flex: 1, minHeight: 0 }}>
         
         {/* Sidebar List */}
-        <div className="card" style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="card gps-list-panel" style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
               <Car color="var(--info)" /> Live Fleet Status
