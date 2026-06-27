@@ -43,19 +43,17 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Rental Income: ${vehicle.vehicle_number}`} size="xl">
-      <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
         <div>
-          <h3 style={{ margin: 0 }}>Payment History</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            Vehicle: <strong>{vehicle.brand} {vehicle.model}</strong> • 
-            Ownership: <strong style={{ textTransform: 'capitalize' }}>{vehicle.ownership}</strong>
-          </p>
+          <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Payment History</h3>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            <div style={{ marginBottom: '0.25rem' }}>Vehicle: <strong>{vehicle.brand} {vehicle.model}</strong></div>
+            <div>Ownership: <strong style={{ textTransform: 'capitalize' }}>{vehicle.ownership}</strong></div>
+          </div>
         </div>
-        <div className="header-controls">
-          <button className="btn btn-primary" onClick={() => setActiveAction('add')}>
-            <Plus size={18} /> <span className="hide-mobile">Record Payment</span>
-          </button>
-        </div>
+        <button className="btn btn-primary" onClick={() => setActiveAction('add')} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}>
+          <Plus size={18} /> <span className="hide-mobile">Record Payment</span>
+        </button>
       </div>
 
       <div className="card table-container" style={{ padding: 0, overflowX: 'auto' }}>
