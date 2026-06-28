@@ -102,7 +102,7 @@ const Dashboard = () => {
                 <Icon size={24} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
                   {stat.title}
                 </div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--dark)' }}>

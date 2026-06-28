@@ -110,6 +110,7 @@ const GpsTracking = () => {
   const [activeFilter, setActiveFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   
   const mapRef = useRef(null);
 
@@ -279,7 +280,7 @@ const GpsTracking = () => {
   if (isLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading GPS Dashboard...</div>;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: 'calc(96vh - 100px)' }}>
+    <div className="gps-tracking-root" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: 'calc(96vh - 100px)' }}>
       <style>{`
         .custom-vehicle-marker {
           transition: transform 2s linear !important;
@@ -287,34 +288,63 @@ const GpsTracking = () => {
       `}</style>
       
       {/* Top Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <StatCard title="Today Distance" value={`${dailyDistance.toFixed(2)} km`} icon={<Activity size={24} color="var(--primary)" />} />
-        <StatCard title="Moving" value={liveStats.moving} icon={<Navigation size={24} color="var(--success)" />} isActive={activeFilter === 'moving'} isFaded={activeFilter !== null && activeFilter !== 'moving'} onClick={() => setActiveFilter(prev => prev === 'moving' ? null : 'moving')} />
-        <StatCard title="Idling (Engine ON)" value={liveStats.idling} icon={<Clock size={24} color="var(--warning)" />} isActive={activeFilter === 'idling'} isFaded={activeFilter !== null && activeFilter !== 'idling'} onClick={() => setActiveFilter(prev => prev === 'idling' ? null : 'idling')} />
-        <StatCard title="Parked" value={liveStats.parked} icon={<MapPin size={24} color="var(--text-muted)" />} isActive={activeFilter === 'parked'} isFaded={activeFilter !== null && activeFilter !== 'parked'} onClick={() => setActiveFilter(prev => prev === 'parked' ? null : 'parked')} />
-        <StatCard title="Offline" value={liveStats.offline} icon={<AlertTriangle size={24} color="var(--danger)" />} isActive={activeFilter === 'offline'} isFaded={activeFilter !== null && activeFilter !== 'offline'} onClick={() => setActiveFilter(prev => prev === 'offline' ? null : 'offline')} />
+      <div className="gps-stats-container">
+        <StatCard className="gps-stat-main" title="Today Distance" value={`${dailyDistance.toFixed(2)} km`} icon={<Activity size={24} color="var(--primary)" />} />
+        <div className="gps-stat-filters">
+          <StatCard className="stat-card-filter" title="Moving" value={liveStats.moving} icon={<Navigation size={24} color="var(--success)" />} isActive={activeFilter === 'moving'} isFaded={activeFilter !== null && activeFilter !== 'moving'} onClick={() => setActiveFilter(prev => prev === 'moving' ? null : 'moving')} />
+          <StatCard className="stat-card-filter" title="Idling (Engine ON)" value={liveStats.idling} icon={<Clock size={24} color="var(--warning)" />} isActive={activeFilter === 'idling'} isFaded={activeFilter !== null && activeFilter !== 'idling'} onClick={() => setActiveFilter(prev => prev === 'idling' ? null : 'idling')} />
+          <StatCard className="stat-card-filter" title="Parked" value={liveStats.parked} icon={<MapPin size={24} color="var(--text-muted)" />} isActive={activeFilter === 'parked'} isFaded={activeFilter !== null && activeFilter !== 'parked'} onClick={() => setActiveFilter(prev => prev === 'parked' ? null : 'parked')} />
+          <StatCard className="stat-card-filter" title="Offline" value={liveStats.offline} icon={<AlertTriangle size={24} color="var(--danger)" />} isActive={activeFilter === 'offline'} isFaded={activeFilter !== null && activeFilter !== 'offline'} onClick={() => setActiveFilter(prev => prev === 'offline' ? null : 'offline')} />
+        </div>
+      </div>
+      
+      {/* Mobile Fleet Toggle */}
+      <div className="gps-mobile-fleet-toggle" style={{ margin: '0.5rem 0' }}>
+        <button 
+          className="btn btn-primary" 
+          style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '0.75rem' }}
+          onClick={() => setIsRightSidebarOpen(true)}
+        >
+          <Car size={18} /> View Live Fleet Status
+        </button>
       </div>
 
+      {/* Right Sidebar Overlay for Mobile */}
+      <div 
+        className={`sidebar-overlay ${isRightSidebarOpen ? 'active' : ''}`} 
+        onClick={() => setIsRightSidebarOpen(false)} 
+        style={{ zIndex: 1040 }} 
+      />
+
       {/* Main Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '1rem', flex: 1, minHeight: 0 }}>
-        
+      <div className="gps-main-layout" style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '1rem', flex: 1, minHeight: 0 }}>
+
         {/* Sidebar List */}
-        <div className="card" style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className={`card gps-list-panel ${isRightSidebarOpen ? 'mobile-open' : ''}`} style={{ padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
               <Car color="var(--info)" /> Live Fleet Status
             </h2>
-            <button 
-              className="btn btn-primary"
-              style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: '4px' }}
-              onClick={() => {
-                setActiveFilter(null);
-                setSearchQuery('');
-                setSelectedVehicleId(null);
-              }}
-            >
-              Reset
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button 
+                className="btn btn-primary"
+                style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: '4px' }}
+                onClick={() => {
+                  setActiveFilter(null);
+                  setSearchQuery('');
+                  setSelectedVehicleId(null);
+                }}
+              >
+                Reset
+              </button>
+              <button 
+                className="gps-mobile-close-btn"
+                onClick={() => setIsRightSidebarOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', lineHeight: 1, cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                &times;
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -332,6 +362,7 @@ const GpsTracking = () => {
                 setSelectedVehicleId(id);
                 if (id && vehicles[id] && mapRef.current) {
                   mapRef.current.flyTo([vehicles[id].latitude, vehicles[id].longitude], 16, { animate: true, duration: 1 });
+                  setIsRightSidebarOpen(false);
                 }
               }}
               style={{ padding: '0.5rem', fontSize: '0.875rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%' }}
@@ -357,6 +388,7 @@ const GpsTracking = () => {
                         setSelectedVehicleId(v.vehicle_id);
                         if (mapRef.current) {
                           mapRef.current.flyTo([v.latitude, v.longitude], 16, { animate: true, duration: 1 });
+                          setIsRightSidebarOpen(false);
                         }
                       }
                     }}
@@ -485,7 +517,7 @@ const GpsTracking = () => {
         </div>
 
         {/* Map Area */}
-        <div className="card" style={{ overflow: 'hidden', border: '1px solid var(--surface-2)', padding: 0, position: 'relative' }}>
+        <div className="card gps-map-panel" style={{ overflow: 'hidden', border: '1px solid var(--surface-2)', padding: 0, position: 'relative' }}>
           <MapContainer ref={mapRef} center={defaultCenter} zoom={10} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -523,9 +555,9 @@ const GpsTracking = () => {
 };
 
 // Helper Components & Functions
-const StatCard = ({ title, value, icon, onClick, isActive, isFaded }) => (
+const StatCard = ({ title, value, icon, onClick, isActive, isFaded, className = '' }) => (
   <div 
-    className="card" 
+    className={`card ${className}`} 
     onClick={onClick}
     style={{ 
       padding: '1.25rem', 
@@ -540,12 +572,12 @@ const StatCard = ({ title, value, icon, onClick, isActive, isFaded }) => (
       opacity: isFaded ? 0.5 : 1
     }}
   >
-    <div style={{ padding: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)' }}>
+    <div className="stat-card-icon" style={{ padding: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)' }}>
       {icon}
     </div>
-    <div>
-      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{title}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{value}</div>
+    <div className="stat-card-content">
+      <div className="stat-card-title" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{title}</div>
+      <div className="stat-card-value" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{value}</div>
     </div>
   </div>
 );

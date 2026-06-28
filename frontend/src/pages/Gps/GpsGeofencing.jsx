@@ -58,6 +58,8 @@ const GpsGeofencing = () => {
   // Track the drawn shape internally before saving
   const [drawnShape, setDrawnShape] = useState(null); 
   const featureGroupRef = useRef();
+  
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -169,13 +171,23 @@ const GpsGeofencing = () => {
   };
 
   return (
-    <div style={{ height: 'calc(100vh - 130px)', display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem' }}>
+    <div className="gps-geofence-layout" style={{ height: 'calc(100vh - 130px)', display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem' }}>
       
+      <div 
+        className={`gps-geofence-overlay ${isMobileSidebarOpen ? 'active' : ''} hide-desktop`}
+        onClick={() => setIsMobileSidebarOpen(false)}
+      ></div>
+
       {/* Sidebar Panel */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <ShieldAlert size={20} />
-          Geofences
+      <div className={`card gps-geofence-sidebar ${isMobileSidebarOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShieldAlert size={20} />
+            Geofences
+          </div>
+          <button className="icon-btn hide-desktop" onClick={() => setIsMobileSidebarOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}>
+            <X size={20} />
+          </button>
         </h2>
 
         {isCreating ? (
@@ -293,6 +305,13 @@ const GpsGeofencing = () => {
 
       {/* Map Area */}
       <div className="card" style={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative', border: '1px solid var(--surface-2)' }}>
+        <button 
+          className="gps-geofence-mobile-toggle hide-desktop"
+          onClick={() => setIsMobileSidebarOpen(true)}
+          style={{ display: 'none' }}
+        >
+          <ShieldAlert size={24} />
+        </button>
         <MapContainer 
           center={[6.9271, 79.8612]} // Default center
           zoom={12} 

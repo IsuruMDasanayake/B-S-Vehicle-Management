@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Calendar, Search, Clock, Filter, Map, Play, Pause, FastForward, Navigation, Settings, MapPin } from 'lucide-react';
+import { Calendar, Search, Clock, Filter, Map, Play, Pause, FastForward, Navigation, Settings, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import L from 'leaflet';
 import api from '../../services/api';
@@ -94,6 +94,7 @@ const GpsHistory = () => {
   const [eventsData, setEventsData] = useState([]);
   const [distanceKm, setDistanceKm] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [isMobileFormExpanded, setIsMobileFormExpanded] = useState(true);
 
   const [vehiclesList, setVehiclesList] = useState([]);
 
@@ -164,6 +165,7 @@ const GpsHistory = () => {
         setDistanceKm(response.data.distance_km || 0);
         setCurrentIndex(0);
         setIsPlaying(false);
+        setIsMobileFormExpanded(false);
         toast.success(`Loaded ${response.data.path.length} coordinates.`);
       } else {
         setRouteData([]);
@@ -262,15 +264,23 @@ const GpsHistory = () => {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 130px)', display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem' }}>
-      
-      {/* Filters Sidebar (Left 30%) */}
-      <div className="card" style={{ padding: '1rem', overflowY: 'auto' }}>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Map color="var(--info)" /> Route History
+    <div className="gps-history-root no-scrollbar" style={{ height: 'calc(100vh - 130px)' }}>
+      <div className="gps-history-layout" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1rem', height: '100%' }}>
+        {/* Filters Sidebar (Left 30%) */}
+        <div className="card gps-history-sidebar no-scrollbar" style={{ padding: '1rem', overflowY: 'auto' }}>
+        <h2 
+          style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          onClick={() => setIsMobileFormExpanded(!isMobileFormExpanded)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Map color="var(--info)" /> Route History
+          </div>
+          <div className="hide-desktop">
+            {isMobileFormExpanded ? <ChevronUp size={20} color="var(--text-muted)" /> : <ChevronDown size={20} color="var(--text-muted)" />}
+          </div>
         </h2>
         
-        <form onSubmit={fetchHistory} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <form onSubmit={fetchHistory} className={!isMobileFormExpanded ? 'hide-mobile' : ''} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">Select Vehicle <span style={{ color: 'var(--danger)' }}>*</span></label>
@@ -294,7 +304,53 @@ const GpsHistory = () => {
             <button type="button" onClick={() => setQuickFilter('week')} style={{ flex: 1, padding: '0.25rem', background: '#f39c12', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Week</button>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* Mobile Combined Date/Time */}
+          <div className="gps-history-datetime-row hide-desktop" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                <Calendar size={12} /> From <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #d1d5db', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
+                <input 
+                  type="date" 
+                  style={{ border: 'none', borderBottom: '1px solid #f3f4f6', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', WebkitAppearance: 'none', minHeight: '30px' }}
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  required
+                />
+                <input 
+                  type="time" 
+                  style={{ border: 'none', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', color: '#666', WebkitAppearance: 'none', minHeight: '30px' }}
+                  value={fromTime}
+                  onChange={(e) => setFromTime(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                <Calendar size={12} /> To <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #d1d5db', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
+                <input 
+                  type="date" 
+                  style={{ border: 'none', borderBottom: '1px solid #f3f4f6', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', WebkitAppearance: 'none', minHeight: '30px' }}
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  required
+                />
+                <input 
+                  type="time" 
+                  style={{ border: 'none', outline: 'none', background: '#fff', fontSize: '0.75rem', width: '100%', padding: '0.5rem', color: '#666', WebkitAppearance: 'none', minHeight: '30px' }}
+                  value={toTime}
+                  onChange={(e) => setToTime(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Separated Date/Time */}
+          <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Calendar size={14} /> From Date <span style={{ color: 'var(--danger)' }}>*</span>
@@ -302,12 +358,12 @@ const GpsHistory = () => {
               <input 
                 type="date" 
                 className="form-control"
-                value={fromDate} 
-                onChange={(e) => setFromDate(e.target.value)} 
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
                 required
               />
             </div>
-
+            
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Calendar size={14} /> To Date <span style={{ color: 'var(--danger)' }}>*</span>
@@ -315,14 +371,14 @@ const GpsHistory = () => {
               <input 
                 type="date" 
                 className="form-control"
-                value={toDate} 
-                onChange={(e) => setToDate(e.target.value)} 
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
                 required
               />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Clock size={14} /> From Time
@@ -330,11 +386,11 @@ const GpsHistory = () => {
               <input 
                 type="time" 
                 className="form-control"
-                value={fromTime} 
-                onChange={(e) => setFromTime(e.target.value)} 
+                value={fromTime}
+                onChange={(e) => setFromTime(e.target.value)}
               />
             </div>
-
+            
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Clock size={14} /> To Time
@@ -342,13 +398,13 @@ const GpsHistory = () => {
               <input 
                 type="time" 
                 className="form-control"
-                value={toTime} 
-                onChange={(e) => setToTime(e.target.value)} 
+                value={toTime}
+                onChange={(e) => setToTime(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
+          <div className="form-group hide-mobile" style={{ marginBottom: 0 }}>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <Filter size={14} /> Exclude Parked?
             </label>
@@ -378,12 +434,12 @@ const GpsHistory = () => {
       </div>
 
       {/* Map Area */}
-      <div className="card" style={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative', border: '1px solid var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
+      <div className="card gps-history-map-area" style={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative', border: '1px solid var(--surface-2)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
           <MapContainer 
             center={positions.length > 0 ? positions[0] : defaultCenter} 
             zoom={12} 
-            style={{ height: '100%', width: '100%', zIndex: 10 }}
+            style={{ flex: 1, width: '100%', height: '100%', zIndex: 10 }}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -427,22 +483,22 @@ const GpsHistory = () => {
 
         {/* Player UI */}
         {routeData.length > 0 && (
-          <div style={{ background: '#fff', borderTop: '1px solid #e0e0e0', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ background: '#fff', borderTop: '1px solid #e0e0e0', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {/* Top row: Location & Battery */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.875rem' }}>
-                 <MapPin size={16} color="#2ecc71" />
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                 <MapPin size={14} color="#2ecc71" />
                  <span>{currentLog?.time} | {currentLog?.ignition ? 'Engine ON' : 'Engine OFF'}</span>
                </div>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e74c3c', fontSize: '0.875rem' }}>
-                 <Settings size={16} /> 12V
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#e74c3c', fontSize: '0.75rem' }}>
+                 <Settings size={14} /> 12V
                </div>
             </div>
             
             {/* Middle row: Slider & Play controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-               <button onClick={() => setIsPlaying(!isPlaying)} style={{ background: 'none', border: '2px solid #e74c3c', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e74c3c', cursor: 'pointer' }}>
-                 {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '4px' }} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+               <button onClick={() => setIsPlaying(!isPlaying)} style={{ background: 'none', border: '1.5px solid #e74c3c', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e74c3c', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                 {isPlaying ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: '2px' }} />}
                </button>
                
                <input 
@@ -454,13 +510,13 @@ const GpsHistory = () => {
                    setCurrentIndex(parseInt(e.target.value));
                    setIsPlaying(false);
                  }}
-                 style={{ flex: 1, accentColor: '#e74c3c' }}
+                 style={{ flex: 1, accentColor: '#e74c3c', height: '4px' }}
                />
                
                <select 
                  value={playbackSpeed} 
                  onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                 style={{ border: 'none', background: 'transparent', color: '#666', fontWeight: 'bold' }}
+                 style={{ border: 'none', background: 'transparent', color: '#666', fontWeight: 'bold', fontSize: '0.75rem', padding: 0 }}
                >
                  <option value="1">1x</option>
                  <option value="2">2x</option>
@@ -471,27 +527,29 @@ const GpsHistory = () => {
             </div>
             
             {/* Bottom row: Stats */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-                     <Clock size={20} color="#2ecc71" /> <span style={{ fontWeight: '500' }}>{currentLog?.time.split(' ')[1]}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                     <Clock size={14} color="#2ecc71" /> <span style={{ fontWeight: '600' }}>{currentLog?.time.split(' ')[1]}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-                     <Navigation size={20} color="#e74c3c" /> <span style={{ fontWeight: '500' }}>{Math.round(currentLog?.speed || 0)} Km/hr</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                     <Navigation size={14} color="#e74c3c" /> <span style={{ fontWeight: '600' }}>{Math.round(currentLog?.speed || 0)} Km/h</span>
                   </div>
                </div>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                  <div style={{ fontSize: '1rem', color: '#666', fontWeight: '500' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: '600' }}>
                     {vehiclesList.find(v => v.id == vehicleId)?.vehicle_number}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-                    <Map size={20} color="#e74c3c" />
-                    <span style={{ fontSize: '1rem', fontWeight: '500' }}>{distanceKm} Kms</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#666', fontSize: '0.75rem' }}>
+                    <Map size={14} color="#e74c3c" />
+                    <span style={{ fontWeight: '600' }}>{distanceKm} Kms</span>
                   </div>
                </div>
             </div>
+          {/* End Player UI */}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

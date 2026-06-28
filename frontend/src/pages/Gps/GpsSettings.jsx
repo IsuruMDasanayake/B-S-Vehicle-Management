@@ -56,7 +56,8 @@ const GpsSettings = () => {
 
   if (isLoading) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-      <Loader className="spin" size={32} color="var(--primary)" />
+      {/* <Loader className="spin" size={32} color="var(--primary)" /> */}
+      <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>
     </div>;
   }
 
