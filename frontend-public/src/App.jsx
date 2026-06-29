@@ -4,7 +4,7 @@ import { Car, CalendarDays, User, Mail, Phone, CheckCircle2 } from 'lucide-react
 import { Toaster, toast } from 'react-hot-toast';
 
 const api = axios.create({
-  baseURL: 'http://localhost/api', // Pointing to Nginx reverse proxy
+  baseURL: import.meta.env.VITE_API_URL || `http://${window.location.hostname}/api`, // Dynamically point to Nginx on port 80
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
