@@ -131,6 +131,7 @@ const FileUploadField = ({ onFilesSelected, existingFiles = [], onRemoveExisting
           type="file" 
           id={inputId} 
           multiple={multiple} 
+          accept=".pdf,image/*"
           style={{ display: 'none' }} 
           onChange={handleChange} 
         />
