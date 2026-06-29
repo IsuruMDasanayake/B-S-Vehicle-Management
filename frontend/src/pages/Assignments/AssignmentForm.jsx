@@ -129,7 +129,8 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
             type="button"
             onClick={() => { setAssigneeType('external'); setValue('driver_id', null); }}
             style={{ flex: 1, padding: '1rem', border: `2px solid ${assigneeType === 'external' ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--radius-lg)', background: assigneeType === 'external' ? 'var(--primary-alpha)' : 'var(--surface)', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
-          >
+
+>
             <Users size={20} style={{ color: assigneeType === 'external' ? 'var(--primary)' : 'var(--text-muted)' }} />
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 600, color: assigneeType === 'external' ? 'var(--primary)' : 'var(--text)' }}>External Requester</div>
@@ -146,7 +147,10 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
             <label className="form-label">Vehicle *</label>
             <select {...register('vehicle_id')} className="form-control">
               <option value="">Select Vehicle</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicle_number} ({v.brand} {v.model})</option>)}
+              {vehicles
+                .filter(v => v.current_status === 'available' || v.id == watch('vehicle_id'))
+                .map(v => <option key={v.id} value={v.id}>{v.vehicle_number} ({v.brand} {v.model})</option>)
+              }
             </select>
             {errors.vehicle_id && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.vehicle_id.message}</span>}
           </div>
