@@ -18,6 +18,8 @@ Route::post('/gps/webhook', [\App\Http\Controllers\Api\GpsWebhookController::cla
 use App\Http\Controllers\Api\OwnerPaymentController;
 use App\Http\Controllers\Api\VehiclePaymentController;
 
+Route::post('/public/vehicle-requests', [\App\Http\Controllers\Api\VehicleRequestController::class, 'publicStore']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
     Route::get('/auth/me', [\App\Http\Controllers\Api\AuthController::class, 'me']);

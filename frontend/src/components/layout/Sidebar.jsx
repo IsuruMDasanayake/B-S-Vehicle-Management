@@ -47,7 +47,7 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
         // { name: 'Expenses', path: '/expenses', icon: DollarSign, roles: ['super_admin', 'fleet_manager'] },
         { name: 'Rental Income', path: '/vehicle-payments', icon: DollarSign, roles: ['super_admin', 'fleet_manager'] },
         { name: 'Hiring Payments', path: '/hiring-details', icon: Briefcase, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Vendors', path: '/vendors', icon: Store, roles: ['super_admin', 'fleet_manager'] },
+        // { name: 'Vendors', path: '/vendors', icon: Store, roles: ['super_admin', 'fleet_manager'] },
       ]
     },
 
@@ -55,12 +55,12 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
       title: 'Maintenance & Safety',
       items: [
         { name: 'Maintenance', path: '/maintenance', icon: Wrench, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        { name: 'Inspections', path: '/inspections', icon: FileCheck, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        { name: 'Breakdowns', path: '/breakdowns', icon: AlertTriangle, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic'] },
+        // { name: 'Inspections', path: '/inspections', icon: FileCheck, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
+        // { name: 'Breakdowns', path: '/breakdowns', icon: AlertTriangle, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic'] },
         { name: 'Accidents', path: '/accidents', icon: HardHat, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Tires', path: '/tires', icon: Activity, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        { name: 'Spare Parts', path: '/spare-parts', icon: Package, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        { name: 'Fuel', path: '/fuel', icon: Fuel, roles: ['super_admin', 'fleet_manager', 'driver'] },
+        // { name: 'Tires', path: '/tires', icon: Activity, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
+        // { name: 'Spare Parts', path: '/spare-parts', icon: Package, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
+        // { name: 'Fuel', path: '/fuel', icon: Fuel, roles: ['super_admin', 'fleet_manager', 'driver'] },
       ]
     },
 

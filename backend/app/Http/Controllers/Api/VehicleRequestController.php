@@ -15,6 +15,24 @@ class VehicleRequestController extends Controller
         return response()->json($query->latest()->paginate(15));
     }
 
+    public function publicStore(Request $request)
+    {
+        $validated = $request->validate([
+            'requester_name' => 'required|string|max:255',
+            'requester_email' => 'required|email|max:255',
+            'requester_contact' => 'required|string|max:50',
+            'requested_vehicle_type' => 'required|string|max:100',
+            'request_date' => 'required|date',
+            'return_date' => 'required|date|after_or_equal:request_date',
+        ]);
+
+        $validated['approval_status'] = 'pending';
+
+        $vehicle_request = VehicleRequest::create($validated);
+
+        return response()->json(['message' => 'Vehicle request submitted successfully', 'data' => $vehicle_request], 201);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
