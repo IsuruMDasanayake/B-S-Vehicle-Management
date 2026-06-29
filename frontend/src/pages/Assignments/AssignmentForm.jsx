@@ -16,6 +16,7 @@ const schema = z.object({
   return_date: z.string().optional().nullable(),
   department_id: z.string().optional().nullable().or(z.number()),
   purpose: z.string().optional().nullable(),
+  amount: z.any().transform(v => v ? Number(v) : null),
   status: z.enum(['active', 'completed', 'cancelled']),
   notes: z.string().optional().nullable(),
 }).refine(data => data.driver_id || data.vehicle_request_id, {
@@ -41,7 +42,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { status: 'active' },
+    defaultValues: { status: 'active', assignment_date: new Date().toISOString().split('T')[0] },
   });
 
   useEffect(() => {
@@ -97,6 +98,17 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
       if (isModal) onSuccess(); else navigate('/assignments');
     } catch (e) { toast.error(e.response?.data?.message || 'Something went wrong'); }
     finally { setIsLoading(false); }
+  };
+
+  const handleRemoveAttachment = async (attachmentId) => {
+    if (!window.confirm('Are you sure you want to remove this attachment?')) return;
+    try {
+      await api.delete(`/attachments/${attachmentId}`);
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
+      toast.success('Attachment removed');
+    } catch (e) {
+      toast.error('Failed to remove attachment');
+    }
   };
 
   const handleCancel = () => { if (isModal) onClose?.(); else navigate('/assignments'); };
@@ -189,9 +201,19 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
             </div>
           )}
 
-          <div className="form-group" style={{ gridColumn: assigneeType === 'external' ? '1 / -1' : 'auto' }}>
+          <div className="form-group">
             <label className="form-label">Purpose</label>
-            <input {...register('purpose')} className="form-control" placeholder="Purpose of assignment" />
+            <input type="text" {...register('purpose')} className="form-control" placeholder="e.g. Employee Transport, Goods Delivery" />
+            {errors.purpose && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.purpose.message}</span>}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Amount (Assigned/Rented Amount)</label>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ padding: '0.6rem 0.75rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRight: 'none', borderRadius: 'var(--radius-md) 0 0 var(--radius-md)', color: 'var(--text-muted)' }}>Rs</span>
+              <input type="number" step="0.01" {...register('amount')} className="form-control" style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }} placeholder="0.00" />
+            </div>
+            {errors.amount && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.amount.message}</span>}
           </div>
 
           <div className="form-group">
@@ -224,6 +246,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
             <FileUploadField 
               onFilesSelected={setFiles} 
               existingFiles={existingAttachments} 
+              onRemoveExistingFile={handleRemoveAttachment}
               label="Assignment Documents & Approvals" 
             />
           </div>

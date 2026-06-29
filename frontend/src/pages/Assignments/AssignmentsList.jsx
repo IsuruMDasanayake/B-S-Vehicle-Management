@@ -51,6 +51,7 @@ const AssignmentsList = () => {
                 <th>Assignee</th>
                 <th>Start Date</th>
                 <th>End Date</th>
+                <th>Amount</th>
                 <th>Document</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -58,7 +59,7 @@ const AssignmentsList = () => {
             </thead>
             <tbody>
               {assignments.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No assignments found.</td></tr>
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No assignments found.</td></tr>
               ) : assignments.map(a => (
                 <tr key={a.id}>
                   <td style={{ fontWeight: 700 }}>{a.vehicle?.vehicle_number || '-'}</td>
@@ -71,6 +72,7 @@ const AssignmentsList = () => {
                   </td>
                   <td>{a.assignment_date ? format(new Date(a.assignment_date), 'MMM dd, yyyy') : '-'}</td>
                   <td>{a.return_date ? format(new Date(a.return_date), 'MMM dd, yyyy') : 'Present'}</td>
+                  <td>{a.amount ? `Rs ${Number(a.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
                   <td>
                     {a.attachments && a.attachments.length > 0 ? (
                       <a 

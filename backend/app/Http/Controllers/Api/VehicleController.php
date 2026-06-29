@@ -10,7 +10,7 @@ class VehicleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Vehicle::with('hiredDetails');
+        $query = Vehicle::with(['hiredDetails', 'currentAssignment.driver:id,name', 'currentAssignment.vehicleRequest:id,requester_name']);
 
         if ($request->has('ownership')) {
             $query->where('ownership', $request->ownership);

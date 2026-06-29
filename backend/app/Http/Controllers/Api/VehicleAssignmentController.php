@@ -29,6 +29,7 @@ class VehicleAssignmentController extends Controller
             'assignment_date' => 'required|date',
             'return_date' => 'nullable|date|after_or_equal:assignment_date',
             'purpose' => 'nullable|string',
+            'amount' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,completed,cancelled',
             'notes' => 'nullable|string'
         ]);
@@ -59,6 +60,7 @@ class VehicleAssignmentController extends Controller
             'assignment_date' => 'sometimes|required|date',
             'return_date' => 'nullable|date|after_or_equal:assignment_date',
             'purpose' => 'nullable|string',
+            'amount' => 'nullable|numeric|min:0',
             'status' => 'sometimes|required|in:active,completed,cancelled',
             'notes' => 'nullable|string'
         ]);
