@@ -15,6 +15,12 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    proxy: {
+      '/api': {
+        target: 'http://nginx:80', // In docker, 'nginx' is the service name for backend proxy
+        changeOrigin: true,
+      }
+    }
   },
   build: {
     target: 'es2015'

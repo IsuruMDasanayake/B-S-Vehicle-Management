@@ -4,7 +4,7 @@ import { Car, CalendarDays, User, Mail, Phone, CheckCircle2 } from 'lucide-react
 import { Toaster, toast } from 'react-hot-toast';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || `http://${window.location.hostname}/api`, // Dynamically point to Nginx on port 80
+  baseURL: import.meta.env.VITE_API_URL || '/api', // Vite proxy handles this in dev
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ function App() {
                     value={formData.requester_contact}
                     onChange={handleChange}
                     className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="07X XXX XXXX"
                   />
                 </div>
               </div>
