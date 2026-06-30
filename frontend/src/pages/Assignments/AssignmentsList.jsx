@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import Modal from '../../components/ui/Modal';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
@@ -48,22 +48,45 @@ const AssignmentsList = () => {
             <thead>
               <tr>
                 <th>Vehicle</th>
-                <th>Driver</th>
+                <th>Assignee</th>
                 <th>Start Date</th>
                 <th>End Date</th>
+                <th>Amount</th>
+                <th>Document</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {assignments.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No assignments found.</td></tr>
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No assignments found.</td></tr>
               ) : assignments.map(a => (
                 <tr key={a.id}>
                   <td style={{ fontWeight: 700 }}>{a.vehicle?.vehicle_number || '-'}</td>
-                  <td>{a.driver?.name || '-'}</td>
+                  <td>
+                    {a.driver ? (
+                      <span><span style={{color: 'var(--text-muted)', fontSize: '0.85em'}}>Driver:</span> {a.driver.name}</span>
+                    ) : a.vehicle_request ? (
+                      <span><span style={{color: 'var(--text-muted)', fontSize: '0.85em'}}>Requester:</span> {a.vehicle_request.requester_name}</span>
+                    ) : '-'}
+                  </td>
                   <td>{a.assignment_date ? format(new Date(a.assignment_date), 'MMM dd, yyyy') : '-'}</td>
                   <td>{a.return_date ? format(new Date(a.return_date), 'MMM dd, yyyy') : 'Present'}</td>
+                  <td>{a.amount ? `Rs ${Number(a.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                  <td>
+                    {a.attachments && a.attachments.length > 0 ? (
+                      <a 
+                        href={`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost'}/storage/${a.attachments[0].file_path}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.85em', color: 'var(--primary)', fontWeight: 500 }}
+                      >
+                        <FileText size={14} /> View
+                      </a>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85em' }}>-</span>
+                    )}
+                  </td>
                   <td>
                     <span className={`badge ${a.status === 'active' ? 'badge-success' : a.status === 'completed' ? 'badge-info' : 'badge-danger'}`}>
                       {a.status}

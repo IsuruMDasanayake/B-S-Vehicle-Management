@@ -18,6 +18,8 @@ Route::post('/gps/webhook', [\App\Http\Controllers\Api\GpsWebhookController::cla
 use App\Http\Controllers\Api\OwnerPaymentController;
 use App\Http\Controllers\Api\VehiclePaymentController;
 
+Route::post('/public/vehicle-requests', [\App\Http\Controllers\Api\VehicleRequestController::class, 'publicStore']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
     Route::get('/auth/me', [\App\Http\Controllers\Api\AuthController::class, 'me']);
@@ -46,6 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('tires', \App\Http\Controllers\Api\TireController::class);
     Route::apiResource('spare-parts', \App\Http\Controllers\Api\SparePartController::class);
     Route::apiResource('expenses', \App\Http\Controllers\Api\ExpenseController::class);
+    Route::delete('accidents/{accident}/photos/{index}', [\App\Http\Controllers\Api\AccidentController::class, 'removePhoto']);
+    Route::delete('accidents/{accident}/police-report', [\App\Http\Controllers\Api\AccidentController::class, 'removePoliceReport']);
     Route::apiResource('vendors', \App\Http\Controllers\Api\VendorController::class);
     Route::apiResource('departments', \App\Http\Controllers\Api\DepartmentController::class);
     Route::apiResource('vehicle-requests', \App\Http\Controllers\Api\VehicleRequestController::class);

@@ -166,6 +166,21 @@ services:
     networks:
       - bs_network
 
+  # ─── Public Portal (Nginx / Vite Dev) ────────────────────────────────────────
+  frontend-public:
+    build:
+      context: ./frontend-public
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./frontend-public:/app
+      - /app/node_modules
+    networks:
+      - bs_network
+
   # ─── Nginx Reverse Proxy ─────────────────────────────────────────────────────
   nginx:
     image: nginx:alpine

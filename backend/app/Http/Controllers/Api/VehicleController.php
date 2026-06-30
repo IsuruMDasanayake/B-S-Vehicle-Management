@@ -10,7 +10,7 @@ class VehicleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Vehicle::with('hiredDetails');
+        $query = Vehicle::with(['hiredDetails', 'currentAssignment.driver:id,name', 'currentAssignment.vehicleRequest:id,requester_name']);
 
         if ($request->has('ownership')) {
             $query->where('ownership', $request->ownership);
@@ -45,7 +45,7 @@ class VehicleController extends Controller
             'color' => 'nullable|string',
             'purchase_date' => 'nullable|date',
             'purchase_cost' => 'nullable|numeric',
-            'current_status' => 'required|in:available,in_use,under_maintenance,out_of_service,sold',
+            'current_status' => 'required|in:available,assigned,under_maintenance,out_of_service,sold',
             'ownership' => 'required|in:B&S Transports,Hired',
             'notes' => 'nullable|string',
             'current_odometer' => 'nullable|numeric',
@@ -95,7 +95,7 @@ class VehicleController extends Controller
             'color' => 'nullable|string',
             'purchase_date' => 'nullable|date',
             'purchase_cost' => 'nullable|numeric',
-            'current_status' => 'sometimes|required|in:available,in_use,under_maintenance,out_of_service,sold',
+            'current_status' => 'sometimes|required|in:available,assigned,under_maintenance,out_of_service,sold',
             'ownership' => 'sometimes|required|in:B&S Transports,Hired',
             'notes' => 'nullable|string',
             'current_odometer' => 'nullable|numeric',

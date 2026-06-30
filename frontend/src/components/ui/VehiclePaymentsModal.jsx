@@ -48,7 +48,15 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
           <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>Payment History</h3>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             <div style={{ marginBottom: '0.25rem' }}>Vehicle: <strong>{vehicle.brand} {vehicle.model}</strong></div>
-            <div>Ownership: <strong style={{ textTransform: 'capitalize' }}>{vehicle.ownership}</strong></div>
+            <div style={{ marginBottom: '0.25rem' }}>Ownership: <strong style={{ textTransform: 'capitalize' }}>{vehicle.ownership}</strong></div>
+            {vehicle.current_assignment && (
+              <div>
+                Renter/Assignee: <strong>
+                  {vehicle.current_assignment.driver?.name || vehicle.current_assignment.vehicle_request?.requester_name || 'N/A'}
+                </strong>
+                {vehicle.current_assignment.amount > 0 && <span style={{ marginLeft: '10px' }}>(Rs {Number(vehicle.current_assignment.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })})</span>}
+              </div>
+            )}
           </div>
         </div>
         <button className="btn btn-primary" onClick={() => setActiveAction('add')} style={{ flexShrink: 0, padding: '0.5rem 0.75rem' }}>

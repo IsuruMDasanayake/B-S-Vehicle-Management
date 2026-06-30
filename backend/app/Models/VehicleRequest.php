@@ -9,7 +9,7 @@ class VehicleRequest extends Model
     use HasFactory, HasAttachments;
 
     protected $with = ['attachments'];
-    protected $fillable = ['requester_id','vehicle_id','department_id','request_date','return_date','purpose','destination','approval_status','approved_by','rejection_reason','approved_at'];
+    protected $fillable = ['requester_id','vehicle_id','department_id','request_date','return_date','purpose','destination','approval_status','approved_by','rejection_reason','approved_at', 'requester_name', 'requester_email', 'requester_contact', 'requested_vehicle_type'];
     protected $casts = ['request_date'=>'date','return_date'=>'date','approved_at'=>'datetime'];
     public function requester() { return $this->belongsTo(User::class,'requester_id'); }
     public function approver() { return $this->belongsTo(User::class,'approved_by'); }

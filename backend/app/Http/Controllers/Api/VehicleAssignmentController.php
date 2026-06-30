@@ -10,7 +10,7 @@ class VehicleAssignmentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = VehicleAssignment::with(['vehicle:id,vehicle_number', 'driver:id,name', 'department:id,name']);
+        $query = VehicleAssignment::with(['vehicle:id,vehicle_number', 'driver:id,name', 'department:id,name', 'vehicleRequest:id,requester_name,approval_status']);
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -23,11 +23,13 @@ class VehicleAssignmentController extends Controller
     {
         $validated = $request->validate([
             'vehicle_id' => 'required|exists:vehicles,id',
-            'driver_id' => 'required|exists:drivers,id',
+            'driver_id' => 'required_without:vehicle_request_id|nullable|exists:drivers,id',
+            'vehicle_request_id' => 'required_without:driver_id|nullable|exists:vehicle_requests,id',
             'department_id' => 'nullable|exists:departments,id',
             'assignment_date' => 'required|date',
             'return_date' => 'nullable|date|after_or_equal:assignment_date',
             'purpose' => 'nullable|string',
+            'amount' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,completed,cancelled',
             'notes' => 'nullable|string'
         ]);
@@ -44,7 +46,7 @@ class VehicleAssignmentController extends Controller
 
     public function show(VehicleAssignment $assignment)
     {
-        $assignment->load(['vehicle', 'driver', 'department']);
+        $assignment->load(['vehicle', 'driver', 'department', 'vehicleRequest']);
         return response()->json($assignment);
     }
 
@@ -52,11 +54,13 @@ class VehicleAssignmentController extends Controller
     {
         $validated = $request->validate([
             'vehicle_id' => 'sometimes|required|exists:vehicles,id',
-            'driver_id' => 'sometimes|required|exists:drivers,id',
+            'driver_id' => 'sometimes|required_without:vehicle_request_id|nullable|exists:drivers,id',
+            'vehicle_request_id' => 'sometimes|required_without:driver_id|nullable|exists:vehicle_requests,id',
             'department_id' => 'nullable|exists:departments,id',
             'assignment_date' => 'sometimes|required|date',
             'return_date' => 'nullable|date|after_or_equal:assignment_date',
             'purpose' => 'nullable|string',
+            'amount' => 'nullable|numeric|min:0',
             'status' => 'sometimes|required|in:active,completed,cancelled',
             'notes' => 'nullable|string'
         ]);
