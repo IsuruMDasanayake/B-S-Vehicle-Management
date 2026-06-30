@@ -36,8 +36,8 @@ jobs:
             # Restart docker containers with dev profile
             docker compose -p bsv_dev up -d --build
             
-            # Force recreate the frontend container so 'npm run build' executes on new source code
-            docker compose -p bsv_dev up -d --force-recreate frontend
+            # Force recreate the frontend container and nginx (to restore proxy ports)
+            docker compose -p bsv_dev up -d --force-recreate frontend nginx
             
             # Install PHP Dependencies (since host mount overwrites vendor folder)
             docker compose -p bsv_dev exec -T backend composer install --no-dev --optimize-autoloader --no-interaction
