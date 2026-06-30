@@ -65,21 +65,21 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
     },
 
     
-    {
-      title: 'Organization',
-      items: [
-        // { name: 'Departments', path: '/departments', icon: Database, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Users & Roles', path: '/users', icon: Users2, roles: ['super_admin'] },
-        { name: 'Audit Logs', path: '/audit-logs', icon: FileText, roles: ['super_admin'] },
-      ]
-    },
-    {
-      title: 'System',
-      items: [
-        { name: 'Reports', path: '/reports', icon: FileText, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
-        { name: 'Settings', path: '/settings', icon: Settings, roles: ['super_admin'] },
-      ]
-    }
+    // {
+    //   title: 'Organization',
+    //   items: [
+    //     // { name: 'Departments', path: '/departments', icon: Database, roles: ['super_admin', 'fleet_manager'] },
+    //     { name: 'Users & Roles', path: '/users', icon: Users2, roles: ['super_admin'] },
+    //     { name: 'Audit Logs', path: '/audit-logs', icon: FileText, roles: ['super_admin'] },
+    //   ]
+    // },
+    // {
+    //   title: 'System',
+    //   items: [
+    //     { name: 'Reports', path: '/reports', icon: FileText, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
+    //     { name: 'Settings', path: '/settings', icon: Settings, roles: ['super_admin'] },
+    //   ]
+    // }
   ];
 
   return (
