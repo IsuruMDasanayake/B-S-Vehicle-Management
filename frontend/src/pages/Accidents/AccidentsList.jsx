@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import Modal from '../../components/ui/Modal';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 import AccidentForm from './AccidentForm';
+import ViewAccidentModal from '../../components/ui/ViewAccidentModal';
 
 const AccidentsList = () => {
   const [items, setItems] = useState([]);
@@ -13,6 +14,14 @@ const AccidentsList = () => {
   const [modal, setModal] = useState(null);
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewTarget, setViewTarget] = useState(null);
+
+  const getDriverName = (item) => {
+    if (item.assignee_type === 'internal') return item.driver?.name || 'Unknown';
+    if (item.assignee_type === 'external') return item.vehicleRequest?.requester_name || 'Unknown';
+    if (item.assignee_type === 'manual') return item.driver_name || 'Unknown';
+    return item.driver?.name || item.driver_name || '-';
+  };
 
   const fetchItems = async () => { setIsLoading(true); try { const r = await api.get('/accidents'); setItems((r.data.data || r.data || [])); } catch { toast.error('Failed to load'); } finally { setIsLoading(false); } };
   useEffect(() => { fetchItems(); }, []);
@@ -34,11 +43,12 @@ const AccidentsList = () => {
                   <tr key={item.id}>
                     <td>{format(new Date(item.accident_date), 'MMM dd, yyyy HH:mm')}</td>
                     <td style={{ fontWeight: 700 }}>{item.vehicle?.vehicle_number || '-'}</td>
-                    <td>{item.driver?.name || '-'}</td>
+                    <td>{getDriverName(item)}</td>
                     <td>{item.location}</td>
                     <td>{item.repair_cost ? `LKR ${parseFloat(item.repair_cost).toLocaleString()}` : '-'}</td>
                     <td><span className={`badge ${item.status === 'resolved' ? 'badge-success' : item.status === 'reported' ? 'badge-danger' : 'badge-warning'}`}>{item.status?.replace('_', ' ')}</span></td>
                     <td style={{ textAlign: 'right' }}><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
+                      <button className="icon-btn view" onClick={() => setViewTarget(item)} style={{ color: 'var(--primary)' }}><Eye size={16} /></button>
                       <button className="icon-btn edit" onClick={() => { setEditId(item.id); setModal('edit'); }}><Edit size={16} /></button>
                       <button className="icon-btn delete" onClick={() => setDeleteTarget({ id: item.id, name: `Accident at ${item.location}` })}><Trash2 size={16} /></button>
                     </div></td>
@@ -52,6 +62,12 @@ const AccidentsList = () => {
         <AccidentForm editId={editId} onSuccess={() => { setModal(null); setEditId(null); fetchItems(); }} onClose={() => { setModal(null); setEditId(null); }} />
       </Modal>
       <ConfirmDeleteModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={() => { setDeleteTarget(null); fetchItems(); }} endpoint={deleteTarget ? `/accidents/${deleteTarget.id}` : ''} itemName={deleteTarget?.name} />
+      
+      <ViewAccidentModal 
+        isOpen={!!viewTarget} 
+        onClose={() => setViewTarget(null)} 
+        accident={viewTarget} 
+      />
     </div>
   );
 };

@@ -48,6 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('tires', \App\Http\Controllers\Api\TireController::class);
     Route::apiResource('spare-parts', \App\Http\Controllers\Api\SparePartController::class);
     Route::apiResource('expenses', \App\Http\Controllers\Api\ExpenseController::class);
+    Route::delete('accidents/{accident}/photos/{index}', [\App\Http\Controllers\Api\AccidentController::class, 'removePhoto']);
+    Route::delete('accidents/{accident}/police-report', [\App\Http\Controllers\Api\AccidentController::class, 'removePoliceReport']);
     Route::apiResource('vendors', \App\Http\Controllers\Api\VendorController::class);
     Route::apiResource('departments', \App\Http\Controllers\Api\DepartmentController::class);
     Route::apiResource('vehicle-requests', \App\Http\Controllers\Api\VehicleRequestController::class);
