@@ -37,6 +37,10 @@ class VehicleAssignmentController extends Controller
         $validated['assigned_by'] = $request->user()->id;
         $assignment = VehicleAssignment::create($validated);
 
+        if ($validated['status'] === 'active') {
+            $assignment->vehicle()->update(['current_status' => 'assigned']);
+        }
+
         if ($request->hasFile('attachments')) {
             $assignment->saveAttachments($request->file('attachments'));
         }
@@ -67,6 +71,12 @@ class VehicleAssignmentController extends Controller
 
         $assignment->update($validated);
 
+        if ($validated['status'] === 'active') {
+            $assignment->vehicle()->update(['current_status' => 'assigned']);
+        } elseif (in_array($validated['status'], ['completed', 'cancelled'])) {
+            $assignment->vehicle()->update(['current_status' => 'available']);
+        }
+
         if ($request->hasFile('attachments')) {
             $assignment->saveAttachments($request->file('attachments'));
         }
@@ -76,6 +86,9 @@ class VehicleAssignmentController extends Controller
 
     public function destroy(VehicleAssignment $assignment)
     {
+        if ($assignment->status === 'active') {
+            $assignment->vehicle()->update(['current_status' => 'available']);
+        }
         $assignment->delete();
         return response()->json(['message' => 'Assignment deleted successfully']);
     }
