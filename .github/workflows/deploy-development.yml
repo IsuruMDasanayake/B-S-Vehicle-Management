@@ -33,6 +33,9 @@ jobs:
             # Set frontend command to build and preview for development server
             export FRONTEND_CMD="sh -c 'npm run build && npm run preview -- --host 0.0.0.0 --port 5173'"
             
+            # Use development nginx configuration (no SSL)
+            cp nginx/nginx.dev.conf nginx/nginx.conf
+            
             # Restart docker containers with dev profile
             docker compose -p bsv_dev up -d --build
             
