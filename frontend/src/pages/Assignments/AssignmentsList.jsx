@@ -80,7 +80,9 @@ const AssignmentsList = () => {
                     {a.attachments && a.attachments.length > 0 ? (
                       <button 
                         onClick={() => {
-                          setViewPdfUrl(`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost'}/storage/${a.attachments[0].file_path}`);
+                          let baseUrl = api.defaults.baseURL?.replace('/api', '');
+                          if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
+                          setViewPdfUrl(`${baseUrl}/storage/${a.attachments[0].file_path}`);
                           setPdfTitle(`Document - ${a.vehicle?.vehicle_number || 'Assignment'}`);
                         }}
                         className="btn btn-outline"
