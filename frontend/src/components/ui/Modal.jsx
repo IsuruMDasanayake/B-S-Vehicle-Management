@@ -9,7 +9,7 @@ const sizeMap = {
   xl: '1000px',
 };
 
-const Modal = ({ isOpen, onClose, title, children, size = 'lg' }) => {
+const Modal = ({ isOpen, onClose, title, children, size = 'lg', headerActions }) => {
   // Lock body scroll while modal is open
   useEffect(() => {
     if (isOpen) {
@@ -78,13 +78,16 @@ const Modal = ({ isOpen, onClose, title, children, size = 'lg' }) => {
           }}
         >
           <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, paddingRight: '1rem' }}>{title}</h3>
-          <button
-            onClick={onClose}
-            className="icon-btn"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {headerActions}
+            <button
+              onClick={onClose}
+              className="icon-btn"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Body */}

@@ -5,22 +5,26 @@ const PDFViewerModal = ({ isOpen, onClose, fileUrl, title }) => {
   if (!isOpen || !fileUrl) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title || "Document Viewer"} size="xl">
-      <div style={{ display: 'flex', flexDirection: 'column', height: '75vh', width: '100%', gap: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <a 
-            href={fileUrl} 
-            download
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-outline" 
-            style={{ padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <Download size={16} />
-            <span>Download Original</span>
-          </a>
-        </div>
-        
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={title || "Document Viewer"} 
+      size="xl"
+      headerActions={
+        <a 
+          href={fileUrl} 
+          download
+          target="_blank"
+          rel="noreferrer"
+          className="icon-btn" 
+          style={{ color: 'var(--text-muted)' }}
+          title="Download Original"
+        >
+          <Download size={20} />
+        </a>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', height: '75vh', width: '100%' }}>
         <div style={{ 
           flex: 1, 
           background: 'var(--surface-2)', 
