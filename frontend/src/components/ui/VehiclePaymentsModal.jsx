@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import Modal from './Modal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import VehiclePaymentForm from '../../pages/Vehicles/VehiclePaymentForm';
+import PDFViewerModal from './PDFViewerModal';
 
 const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
   const [payments, setPayments] = useState([]);
@@ -13,6 +14,8 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
   const [activeAction, setActiveAction] = useState(null); // 'add' | 'edit'
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewPdfUrl, setViewPdfUrl] = useState(null);
+  const [pdfTitle, setPdfTitle] = useState('');
 
   const fetchPayments = async () => {
     if (!vehicle) return;
@@ -104,9 +107,16 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
                       <td>{p.payment_date ? format(new Date(p.payment_date), 'MMM dd, yyyy') : '-'}</td>
                       <td>
                         {receiptUrl ? (
-                          <a href={receiptUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <button 
+                            onClick={() => {
+                              setViewPdfUrl(receiptUrl);
+                              setPdfTitle(`Receipt - ${p.payment_month} (${vehicle.vehicle_number})`);
+                            }}
+                            className="btn btn-outline"
+                            style={{ color: 'var(--primary)', border: 'none', background: 'transparent', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
                             <DollarSign size={14} /> View Receipt
-                          </a>
+                          </button>
                         ) : (
                           <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>None</span>
                         )}
@@ -141,6 +151,13 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
         onDeleted={() => { setDeleteTarget(null); fetchPayments(); }}
         endpoint={deleteTarget ? `/vehicle-payments/${deleteTarget}` : ''}
         itemName="Payment Record"
+      />
+
+      <PDFViewerModal 
+        isOpen={!!viewPdfUrl} 
+        onClose={() => setViewPdfUrl(null)} 
+        fileUrl={viewPdfUrl} 
+        title={pdfTitle} 
       />
     </Modal>
   );

@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import Modal from '../../components/ui/Modal';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 import AssignmentForm from './AssignmentForm';
+import PDFViewerModal from '../../components/ui/PDFViewerModal';
 
 const AssignmentsList = () => {
   const [assignments, setAssignments] = useState([]);
@@ -13,6 +14,8 @@ const AssignmentsList = () => {
   const [modal, setModal] = useState(null);
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewPdfUrl, setViewPdfUrl] = useState(null);
+  const [pdfTitle, setPdfTitle] = useState('');
 
   const fetchAssignments = async () => {
     setIsLoading(true);
@@ -75,14 +78,16 @@ const AssignmentsList = () => {
                   <td>{a.amount ? `Rs ${Number(a.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
                   <td>
                     {a.attachments && a.attachments.length > 0 ? (
-                      <a 
-                        href={`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost'}/storage/${a.attachments[0].file_path}`} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.85em', color: 'var(--primary)', fontWeight: 500 }}
+                      <button 
+                        onClick={() => {
+                          setViewPdfUrl(`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost'}/storage/${a.attachments[0].file_path}`);
+                          setPdfTitle(`Document - ${a.vehicle?.vehicle_number || 'Assignment'}`);
+                        }}
+                        className="btn btn-outline"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.85em', color: 'var(--primary)', fontWeight: 500, padding: '0.25rem 0.5rem', border: 'none', background: 'transparent', cursor: 'pointer' }}
                       >
                         <FileText size={14} /> View
-                      </a>
+                      </button>
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85em' }}>-</span>
                     )}
@@ -104,6 +109,13 @@ const AssignmentsList = () => {
           </table>
         )}
       </div>
+
+      <PDFViewerModal 
+        isOpen={!!viewPdfUrl} 
+        onClose={() => setViewPdfUrl(null)} 
+        fileUrl={viewPdfUrl} 
+        title={pdfTitle} 
+      />
 
       <Modal isOpen={modal === 'add' || modal === 'edit'} onClose={closeModal}
         title={modal === 'edit' ? 'Edit Assignment' : 'New Assignment'} size="md">
