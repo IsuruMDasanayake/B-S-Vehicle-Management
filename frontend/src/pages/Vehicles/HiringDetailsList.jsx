@@ -162,8 +162,9 @@ const HiringDetailsList = () => {
         <div className="grid-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
           {filteredVehicles.map(v => {
             let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
-            const vehicleImage = v.photos && v.photos.length > 0
-              ? `${baseUrl}/storage/${v.photos[0].photo_path}`
+            const imageAttachments = v.attachments?.filter(a => a.file_path && !a.file_path.toLowerCase().endsWith('.pdf')) || [];
+            const vehicleImage = imageAttachments.length > 0
+              ? `${baseUrl}/storage/${imageAttachments[0].file_path}`
               : null;
             
             return (

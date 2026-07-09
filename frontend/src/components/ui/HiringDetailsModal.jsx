@@ -13,8 +13,9 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
   
   let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
   
-  const vehicleImage = vehicle.photos && vehicle.photos.length > 0 
-    ? `${baseUrl}/storage/${vehicle.photos[0].photo_path}`
+  const imageAttachments = vehicle.attachments?.filter(a => a.file_path && !a.file_path.toLowerCase().endsWith('.pdf')) || [];
+  const vehicleImage = imageAttachments.length > 0 
+    ? `${baseUrl}/storage/${imageAttachments[0].file_path}`
     : null;
 
   const firstAttachment = vehicle.attachments && vehicle.attachments.length > 0 ? vehicle.attachments[0] : null;
