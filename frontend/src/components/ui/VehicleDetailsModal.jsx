@@ -7,10 +7,12 @@ import InsuranceForm from '../../pages/Insurance/InsuranceForm';
 import RevenueLicenseForm from '../../pages/RevenueLicense/RevenueLicenseForm';
 import EmissionTestForm from '../../pages/EmissionTest/EmissionTestForm';
 import ComplianceHistoryModal from './ComplianceHistoryModal';
+import PDFViewerModal from './PDFViewerModal';
 
 const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
   const [activeAction, setActiveAction] = useState(null); // 'add-insurance', 'view-insurance', etc.
   const [editId, setEditId] = useState(null);
+  const [viewPdfUrl, setViewPdfUrl] = useState(null);
 
   if (!vehicle) return null;
 
@@ -24,6 +26,9 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
   const vehicleImage = vehicle.attachments && vehicle.attachments.length > 0 
     ? `${baseUrl}/storage/${vehicle.attachments[0].file_path}`
     : null;
+
+  const pdfAttachments = vehicle.attachments?.filter(a => a.file_path && a.file_path.toLowerCase().endsWith('.pdf')) || [];
+  const contractPdf = pdfAttachments.length > 0 ? pdfAttachments[0] : null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Vehicle Details: ${vehicle.vehicle_number}`} size="lg">
@@ -222,6 +227,20 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact</div>
                     <div style={{ fontWeight: 600 }}>{vehicle.hired_details.emergency_contact || 'N/A'}</div>
                   </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Contract Document</div>
+                    <div style={{ marginTop: '0.25rem' }}>
+                      <button 
+                        className="btn btn-outline"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem', borderColor: contractPdf ? 'var(--primary)' : 'var(--border)', color: contractPdf ? 'var(--primary)' : 'var(--text-muted)' }}
+                        onClick={() => contractPdf && setViewPdfUrl(`${baseUrl}/storage/${contractPdf.file_path}`)}
+                        disabled={!contractPdf}
+                      >
+                        <FileText size={14} />
+                        {contractPdf ? 'View Document' : 'No Contract'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
@@ -269,6 +288,13 @@ const VehicleDetailsModal = ({ isOpen, onClose, vehicle }) => {
         vehicle={vehicle} 
         type="emission" 
         onEdit={(id) => { setEditId(id); setActiveAction('add-emission'); }}
+      />
+
+      <PDFViewerModal 
+        isOpen={!!viewPdfUrl} 
+        onClose={() => setViewPdfUrl(null)} 
+        fileUrl={viewPdfUrl} 
+        title={`Contract - ${vehicle.vehicle_number}`} 
       />
 
     </Modal>
