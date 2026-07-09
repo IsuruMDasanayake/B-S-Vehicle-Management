@@ -18,7 +18,8 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
     ? `${baseUrl}/storage/${imageAttachments[0].file_path}`
     : null;
 
-  const firstAttachment = vehicle.attachments && vehicle.attachments.length > 0 ? vehicle.attachments[0] : null;
+  const pdfAttachments = vehicle.attachments?.filter(a => a.file_path && a.file_path.toLowerCase().endsWith('.pdf')) || [];
+  const contractPdf = pdfAttachments.length > 0 ? pdfAttachments[0] : null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Hiring Details: ${vehicle.vehicle_number}`} size="lg">
@@ -59,26 +60,31 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: 'var(--radius-md)', marginTop: '1rem' }}>
-            <div>
+            {/* <div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vehicle Number</div>
               <div style={{ fontWeight: 600 }}>{vehicle.vehicle_number || 'N/A'}</div>
             </div>
             <div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Registration Number</div>
               <div style={{ fontWeight: 600 }}>{vehicle.registration_number || 'N/A'}</div>
-            </div>
-            {firstAttachment && (
-              <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Contract Document</div>
+            </div> */}
+            
+            <div style={{  borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Contract Document</div>
+              {contractPdf ? (
                 <button 
                   className="btn btn-outline" 
                   style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
-                  onClick={() => setViewPdfUrl(`${baseUrl}/storage/${firstAttachment.file_path}`)}
+                  onClick={() => setViewPdfUrl(`${baseUrl}/storage/${contractPdf.file_path}`)}
                 >
                   <FileText size={16} /> View Document
                 </button>
-              </div>
-            )}
+              ) : (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem', background: 'var(--surface-1)', borderRadius: 'var(--radius-sm)' }}>
+                  No contract uploaded
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -86,12 +92,12 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
           
           <div>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '2rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <CarFront size={20} /> {vehicle.brand} {vehicle.model} ({vehicle.manufacturing_year})
             </h3>
             
             <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <User size={16} /> Owner Information
+               Owner Information
             </h4>
             <div style={{ display: 'grid', gap: '1rem' }}>
               
