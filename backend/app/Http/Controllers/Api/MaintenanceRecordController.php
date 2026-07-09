@@ -30,14 +30,17 @@ class MaintenanceRecordController extends Controller
             'vendor_id' => 'nullable|exists:vendors,id',
             'service_type' => 'required|in:routine,repair,inspection,emergency',
             'service_date' => 'required|date',
-            'odometer_reading' => 'required|numeric',
-            'description' => 'required|string',
+            'odometer_reading' => 'nullable|numeric',
             'cost' => 'required|numeric',
             'next_service_date' => 'nullable|date',
             'next_service_km' => 'nullable|numeric',
             'status' => 'required|in:scheduled,in_progress,completed,cancelled',
-            'notes' => 'nullable|string'
+            'notes' => 'required|string',
+            'mechanic_name' => 'nullable|string',
+            'parts_replaced' => 'nullable|string',
         ]);
+
+        $validated['maintenance_type'] = 'regular_service';
 
         $record = MaintenanceRecord::create($validated);
 
@@ -56,7 +59,7 @@ class MaintenanceRecordController extends Controller
 
     public function show(MaintenanceRecord $maintenance_record)
     {
-        $maintenance_record->load(['vehicle', 'vendor']);
+        $maintenance_record->load(['vehicle', 'vendor', 'attachments']);
         return response()->json($maintenance_record);
     }
 
@@ -67,13 +70,14 @@ class MaintenanceRecordController extends Controller
             'vendor_id' => 'nullable|exists:vendors,id',
             'service_type' => 'sometimes|required|in:routine,repair,inspection,emergency',
             'service_date' => 'sometimes|required|date',
-            'odometer_reading' => 'sometimes|required|numeric',
-            'description' => 'sometimes|required|string',
+            'odometer_reading' => 'nullable|numeric',
             'cost' => 'sometimes|required|numeric',
             'next_service_date' => 'nullable|date',
             'next_service_km' => 'nullable|numeric',
             'status' => 'sometimes|required|in:scheduled,in_progress,completed,cancelled',
-            'notes' => 'nullable|string',
+            'notes' => 'sometimes|required|string',
+            'mechanic_name' => 'nullable|string',
+            'parts_replaced' => 'nullable|string',
             'attachments.*' => 'nullable|file|max:5120'
         ]);
 

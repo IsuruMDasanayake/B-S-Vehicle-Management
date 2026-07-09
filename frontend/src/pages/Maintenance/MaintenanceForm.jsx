@@ -7,21 +7,21 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Save } from 'lucide-react';
 import FileUploadField from '../../components/ui/FileUploadField';
+import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 
 const schema = z.object({
   vehicle_id: z.string().min(1, 'Vehicle is required').or(z.number()),
-  vendor_id: z.string().optional().or(z.number().optional()),
+  vendor_id: z.string().optional().nullable().or(z.number().optional().nullable()),
   service_type: z.enum(['routine', 'repair', 'inspection', 'emergency']),
   service_date: z.string().min(1, 'Service date is required'),
-  odometer_reading: z.coerce.number().min(0),
-  description: z.string().min(1, 'Description is required'),
+  odometer_reading: z.coerce.number().min(0).optional().nullable(),
+  notes: z.string().min(1, 'Description is required'),
   cost: z.coerce.number().min(0),
   next_service_date: z.string().optional().nullable(),
   next_service_km: z.coerce.number().optional().nullable(),
-  mechanic_name: z.string().optional(),
-  parts_replaced: z.string().optional(),
+  mechanic_name: z.string().optional().nullable(),
+  parts_replaced: z.string().optional().nullable(),
   status: z.enum(['scheduled', 'in_progress', 'completed', 'cancelled']),
-  notes: z.string().optional(),
 });
 
 const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
@@ -34,6 +34,7 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
   const [vehicles, setVehicles] = useState([]);
   const [files, setFiles] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
+  const [deleteAttachmentId, setDeleteAttachmentId] = useState(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -51,6 +52,9 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
         .then(({ data }) => {
           if (data.service_date) data.service_date = data.service_date.split('T')[0];
           if (data.next_service_date) data.next_service_date = data.next_service_date.split('T')[0];
+          if (data.notes === null) data.notes = '';
+          if (Array.isArray(data.parts_replaced)) data.parts_replaced = data.parts_replaced.join(', ');
+          
           setExistingAttachments(data.attachments || []);
           reset(data);
         })
@@ -64,6 +68,7 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
       const payload = new FormData();
       Object.keys(data).forEach(key => {
         if (data[key] !== null && data[key] !== undefined) {
+          if (['attachments', 'vehicle', 'vendor'].includes(key)) return;
           payload.append(key, data[key]);
         }
       });
@@ -130,8 +135,8 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
 
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <label className="form-label">Description of Work *</label>
-            <textarea {...register('description')} className="form-control" rows="3" placeholder="What was done?" />
-            {errors.description && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.description.message}</span>}
+            <textarea {...register('notes')} className="form-control" rows="3" placeholder="What was done?" />
+            {errors.notes && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.notes.message}</span>}
           </div>
 
           <div className="form-group">
@@ -174,6 +179,7 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
             <FileUploadField 
               onFilesSelected={setFiles} 
               existingFiles={existingAttachments} 
+              onRemoveExistingFile={(id) => setDeleteAttachmentId(id)}
               label="Service Invoices & Documents" 
             />
           </div>
@@ -186,6 +192,17 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
             <Save size={16} /> {isLoading ? 'Saving…' : isEditMode ? 'Update Record' : 'Add Record'}
           </button>
         </div>
+
+        <ConfirmDeleteModal
+          isOpen={!!deleteAttachmentId}
+          onClose={() => setDeleteAttachmentId(null)}
+          onDeleted={() => {
+            setExistingAttachments(prev => prev.filter(a => a.id !== deleteAttachmentId));
+            setDeleteAttachmentId(null);
+          }}
+          endpoint={deleteAttachmentId ? `/attachments/${deleteAttachmentId}` : ''}
+          itemName="Attachment"
+        />
       </form>
     </div>
   );

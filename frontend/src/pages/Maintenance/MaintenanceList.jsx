@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import Modal from '../../components/ui/Modal';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 import MaintenanceForm from './MaintenanceForm';
+import MaintenanceDetailsModal from './MaintenanceDetailsModal';
 
 const MaintenanceList = () => {
   const [records, setRecords] = useState([]);
@@ -13,6 +14,7 @@ const MaintenanceList = () => {
   const [modal, setModal] = useState(null);
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [detailsRecord, setDetailsRecord] = useState(null);
 
   const fetchRecords = async () => {
     setIsLoading(true);
@@ -49,7 +51,7 @@ const MaintenanceList = () => {
                 <th>Date</th>
                 <th>Vehicle</th>
                 <th>Type</th>
-                <th>Description</th>
+                {/* <th>Description</th> */}
                 <th>Cost</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -63,7 +65,7 @@ const MaintenanceList = () => {
                   <td>{format(new Date(r.service_date), 'MMM dd, yyyy')}</td>
                   <td style={{ fontWeight: 700 }}>{r.vehicle?.vehicle_number || '-'}</td>
                   <td style={{ textTransform: 'capitalize' }}>{r.service_type}</td>
-                  <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.description}</td>
+                  {/* <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.notes || '-'}</td> */}
                   <td>LKR {parseFloat(r.cost).toLocaleString()}</td>
                   <td>
                     <span className={`badge ${r.status === 'completed' ? 'badge-success' : r.status === 'scheduled' ? 'badge-info' : 'badge-warning'}`}>
@@ -72,8 +74,9 @@ const MaintenanceList = () => {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
-                      <button className="icon-btn edit" onClick={() => openEdit(r.id)}><Edit size={16} /></button>
-                      <button className="icon-btn delete" onClick={() => setDeleteTarget({ id: r.id, name: `${r.service_type} – ${r.vehicle?.vehicle_number}` })}><Trash2 size={16} /></button>
+                      <button className="icon-btn view" style={{ color: 'var(--primary)' }} onClick={() => setDetailsRecord(r)} title="View Details"><FileText size={16} /></button>
+                      <button className="icon-btn edit" onClick={() => openEdit(r.id)} title="Edit"><Edit size={16} /></button>
+                      <button className="icon-btn delete" onClick={() => setDeleteTarget({ id: r.id, name: `${r.service_type} – ${r.vehicle?.vehicle_number}` })} title="Delete"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -82,6 +85,12 @@ const MaintenanceList = () => {
           </table>
         )}
       </div>
+
+      <MaintenanceDetailsModal 
+        isOpen={!!detailsRecord} 
+        onClose={() => setDetailsRecord(null)} 
+        record={detailsRecord} 
+      />
 
       <Modal isOpen={modal === 'add' || modal === 'edit'} onClose={closeModal}
         title={modal === 'edit' ? 'Edit Maintenance Record' : 'New Maintenance Record'} size="lg">
