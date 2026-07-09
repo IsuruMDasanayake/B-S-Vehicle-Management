@@ -1,16 +1,23 @@
 import Modal from './Modal';
-import { User, Phone, MapPin, AlertCircle, DollarSign, CarFront } from 'lucide-react';
+import { User, Phone, MapPin, AlertCircle, DollarSign, CarFront, FileText } from 'lucide-react';
 import api from '../../services/api';
+import { useState } from 'react';
+import PDFViewerModal from './PDFViewerModal';
 
 const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
+  const [viewPdfUrl, setViewPdfUrl] = useState(null);
+
   if (!vehicle || !vehicle.hired_details) return null;
 
   const { hired_details } = vehicle;
   
   let baseUrl = api.defaults.baseURL?.replace('/api', ''); if (baseUrl === undefined || baseUrl === null) baseUrl = 'http://localhost';
-  const vehicleImage = vehicle.attachments && vehicle.attachments.length > 0 
-    ? `${baseUrl}/storage/${vehicle.attachments[0].file_path}`
+  
+  const vehicleImage = vehicle.photos && vehicle.photos.length > 0 
+    ? `${baseUrl}/storage/${vehicle.photos[0].photo_path}`
     : null;
+
+  const firstAttachment = vehicle.attachments && vehicle.attachments.length > 0 ? vehicle.attachments[0] : null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Hiring Details: ${vehicle.vehicle_number}`} size="lg">
@@ -59,6 +66,18 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Registration Number</div>
               <div style={{ fontWeight: 600 }}>{vehicle.registration_number || 'N/A'}</div>
             </div>
+            {firstAttachment && (
+              <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Contract Document</div>
+                <button 
+                  className="btn btn-outline" 
+                  style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                  onClick={() => setViewPdfUrl(`${baseUrl}/storage/${firstAttachment.file_path}`)}
+                >
+                  <FileText size={16} /> View Document
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -125,6 +144,13 @@ const HiringDetailsModal = ({ isOpen, onClose, vehicle }) => {
           </div>
         </div>
       </div>
+      
+      <PDFViewerModal 
+        isOpen={!!viewPdfUrl} 
+        onClose={() => setViewPdfUrl(null)} 
+        fileUrl={viewPdfUrl} 
+        title={`Contract - ${vehicle.vehicle_number}`} 
+      />
     </Modal>
   );
 };
