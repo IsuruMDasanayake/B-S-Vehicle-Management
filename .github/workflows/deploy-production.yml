@@ -31,10 +31,15 @@ jobs:
             git reset --hard origin/production
             
             # Set frontend command to build and preview for production
-            export FRONTEND_CMD="sh -c 'npm run build && npm run preview -- --host 0.0.0.0 --port 5173'"
+            export FRONTEND_CMD="sh -c 'npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 5173'"
             
-            # Restart docker containers with prod profile
-            docker compose -p bsv_prod up -d --build
+            # Build containers sequentially to prevent VPS out-of-memory (OOM) freezing
+            docker compose -p bsv_prod build backend
+            docker compose -p bsv_prod build frontend
+            docker compose -p bsv_prod build frontend-public
+            
+            # Start the containers
+            docker compose -p bsv_prod up -d
             
             # Force recreate the frontend container and nginx (to pick up conf changes)
             docker compose -p bsv_prod up -d --force-recreate frontend nginx

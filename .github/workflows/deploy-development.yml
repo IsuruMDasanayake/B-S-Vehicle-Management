@@ -30,16 +30,21 @@ jobs:
             git fetch origin development
             git reset --hard origin/development
             
-            # Set frontend command to build and preview for development server
-            export FRONTEND_CMD="sh -c 'npm run build && npm run preview -- --host 0.0.0.0 --port 5173'"
+            # Set frontend command to use dev server for development to save memory
+            export FRONTEND_CMD="sh -c 'npm install && npm run dev -- --host 0.0.0.0'"
             
             # Use development nginx configuration (no SSL)
             cp nginx/nginx.dev.conf nginx/nginx.conf
             
-            # Restart docker containers with dev profile
-            docker compose -p bsv_dev up -d --build
+            # Build containers sequentially to prevent VPS out-of-memory (OOM) freezing
+            docker compose -p bsv_dev build backend
+            docker compose -p bsv_dev build frontend
+            docker compose -p bsv_dev build frontend-public
             
-            # Force recreate the frontend container and nginx (to restore proxy ports)
+            # Start the containers
+            docker compose -p bsv_dev up -d
+            
+            # Force recreate the frontend container and nginx (to pick up conf changes)
             docker compose -p bsv_dev up -d --force-recreate frontend nginx
             
             # Install PHP Dependencies (since host mount overwrites vendor folder)
