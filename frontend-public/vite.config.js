@@ -8,6 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  base: '/request/',
   server: {
     port: 5174,
     strictPort: true,
@@ -15,12 +16,6 @@ export default defineConfig({
     allowedHosts: true,
     watch: {
       usePolling: true,
-    },
-    proxy: {
-      '/api': {
-        target: 'http://nginx:80', // In docker, 'nginx' is the service name for backend proxy
-        changeOrigin: true,
-      }
     }
   },
   build: {
