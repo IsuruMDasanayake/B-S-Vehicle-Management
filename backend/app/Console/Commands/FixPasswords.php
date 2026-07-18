@@ -11,7 +11,7 @@ class FixPasswords extends Command
      *
      * @var string
      */
-    protected $signature = 'app:fix-passwords';
+    protected $signature = 'app:fix-passwords {email?} {password?}';
 
     /**
      * The console command description.
@@ -25,6 +25,21 @@ class FixPasswords extends Command
      */
     public function handle()
     {
+        $email = $this->argument('email');
+        $newPassword = $this->argument('password');
+
+        if ($email && $newPassword) {
+            $user = \App\Models\User::where('email', $email)->first();
+            if ($user) {
+                $user->password = \Illuminate\Support\Facades\Hash::make($newPassword);
+                $user->save();
+                $this->info("Password for {$email} has been reset successfully to the provided password!");
+            } else {
+                $this->error("User with email {$email} not found!");
+            }
+            return;
+        }
+
         $users = \App\Models\User::all();
         $fixedCount = 0;
         foreach ($users as $user) {
