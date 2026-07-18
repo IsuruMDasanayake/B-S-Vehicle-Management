@@ -56,3 +56,7 @@ jobs:
             # Clear caches
             docker compose -p bsv_prod exec -T backend php artisan cache:clear
             docker compose -p bsv_prod exec -T backend php artisan config:clear
+            
+            # Fix storage and cache permissions for www-data (Nginx/PHP-FPM)
+            docker compose -p bsv_prod exec -T backend chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+            docker compose -p bsv_prod exec -T backend chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
