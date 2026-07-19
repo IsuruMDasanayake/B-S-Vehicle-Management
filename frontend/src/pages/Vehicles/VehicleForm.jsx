@@ -81,7 +81,7 @@ const VehicleForm = ({ editId, onSuccess, onClose }) => {
         })
         .catch(() => {
           toast.error('Failed to load vehicle details');
-          if (!isModal) navigate('/vehicles');
+          if (!isModal) navigate('/admin/vehicles');
           else onClose?.();
         });
     }
@@ -122,7 +122,7 @@ const VehicleForm = ({ editId, onSuccess, onClose }) => {
         toast.success('Vehicle added successfully');
       }
       if (isModal) onSuccess();
-      else navigate('/vehicles');
+      else navigate('/admin/vehicles');
     } catch (e) {
       toast.error(e.response?.data?.message || 'Something went wrong');
     } finally {
@@ -132,7 +132,7 @@ const VehicleForm = ({ editId, onSuccess, onClose }) => {
 
   const handleCancel = () => {
     if (isModal) onClose?.();
-    else navigate('/vehicles');
+    else navigate('/admin/vehicles');
   };
 
   const handleRemoveExistingFile = async (attachmentId) => {

@@ -52,7 +52,7 @@ const BreakdownForm = ({ editId, onSuccess, onClose }) => {
           setExistingAttachments(data.attachments || []);
           reset(data);
         })
-        .catch(() => { toast.error('Failed to load record'); if (!isModal) navigate('/breakdowns'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load record'); if (!isModal) navigate('/admin/breakdowns'); else onClose?.(); });
     }
   }, [id]);
 
@@ -78,12 +78,12 @@ const BreakdownForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/breakdowns', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Breakdown reported');
       }
-      if (isModal) onSuccess(); else navigate('/breakdowns');
+      if (isModal) onSuccess(); else navigate('/admin/breakdowns');
     } catch (e) { toast.error(e.response?.data?.message || 'Something went wrong'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/breakdowns'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/breakdowns'); };
 
   return (
     <div>

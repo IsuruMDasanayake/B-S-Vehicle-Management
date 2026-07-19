@@ -58,7 +58,7 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
           setExistingAttachments(data.attachments || []);
           reset(data);
         })
-        .catch(() => { toast.error('Failed to load record'); if (!isModal) navigate('/maintenance'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load record'); if (!isModal) navigate('/admin/maintenance'); else onClose?.(); });
     }
   }, [id]);
 
@@ -85,12 +85,12 @@ const MaintenanceForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/maintenance-records', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Maintenance record added');
       }
-      if (isModal) onSuccess(); else navigate('/maintenance');
+      if (isModal) onSuccess(); else navigate('/admin/maintenance');
     } catch (e) { toast.error(e.response?.data?.message || 'Something went wrong'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/maintenance'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/maintenance'); };
 
   return (
     <div>

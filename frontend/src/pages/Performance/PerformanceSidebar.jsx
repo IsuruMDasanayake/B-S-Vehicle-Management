@@ -13,15 +13,15 @@ const PerformanceSidebar = () => {
     {
       title: 'Analytics',
       items: [
-        { name: 'Overview', path: '/performance', icon: BarChart2, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
-        { name: 'Driver Analytics', path: '/performance/drivers', icon: Users, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Vehicle Analytics', path: '/performance/vehicles', icon: CarFront, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Overview', path: '/admin/performance', icon: BarChart2, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
+        { name: 'Driver Analytics', path: '/admin/performance/drivers', icon: Users, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Vehicle Analytics', path: '/admin/performance/vehicles', icon: CarFront, roles: ['super_admin', 'fleet_manager'] },
       ]
     },
     {
       title: 'Configuration',
       items: [
-        { name: 'Settings', path: '/performance/settings', icon: Settings, roles: ['super_admin'] },
+        { name: 'Settings', path: '/admin/performance/settings', icon: Settings, roles: ['super_admin'] },
       ]
     }
   ];
@@ -65,7 +65,7 @@ const PerformanceSidebar = () => {
               </h3>
               <ul style={{ listStyle: 'none' }}>
                 {visibleItems.map((item) => {
-                  const isActive = location.pathname === item.path || (item.path !== '/performance' && location.pathname.startsWith(item.path));
+                  const isActive = location.pathname === item.path || (item.path !== '/admin/performance' && location.pathname.startsWith(item.path));
                   const Icon = item.icon;
                   return (
                     <li key={item.path} style={{ padding: '0.15rem 1rem' }}>
@@ -95,7 +95,7 @@ const PerformanceSidebar = () => {
 
       <div style={{ padding: '1.5rem', borderTop: '1px solid var(--dark-2)', marginTop: 'auto' }}>
         <Link 
-          to="/"
+          to="/portal"
           style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
             padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',

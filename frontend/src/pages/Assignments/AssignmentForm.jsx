@@ -69,7 +69,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
           setExistingAttachments(data.attachments || []);
           reset(data);
         })
-        .catch(() => { toast.error('Failed to load assignment'); if (!isModal) navigate('/assignments'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load assignment'); if (!isModal) navigate('/admin/assignments'); else onClose?.(); });
     }
   }, [id]);
 
@@ -95,7 +95,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/assignments', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Assignment created');
       }
-      if (isModal) onSuccess(); else navigate('/assignments');
+      if (isModal) onSuccess(); else navigate('/admin/assignments');
     } catch (e) { toast.error(e.response?.data?.message || 'Something went wrong'); }
     finally { setIsLoading(false); }
   };
@@ -111,7 +111,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
     }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/assignments'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/assignments'); };
 
   return (
     <div>

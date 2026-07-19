@@ -37,7 +37,7 @@ const InspectionForm = ({ editId, onSuccess, onClose }) => {
         if (data.inspected_at) data.inspected_at = new Date(data.inspected_at).toISOString().slice(0, 16);
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/inspections'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/inspections'); else onClose?.(); });
     }
   }, [id]);
 
@@ -63,12 +63,12 @@ const InspectionForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/inspections', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Inspection submitted');
       }
-      if (isModal) onSuccess(); else navigate('/inspections');
+      if (isModal) onSuccess(); else navigate('/admin/inspections');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/inspections'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/inspections'); };
 
   const CheckItem = ({ name, label }) => (
     <div style={{

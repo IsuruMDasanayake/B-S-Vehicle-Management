@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import { CarFront } from 'lucide-react';
@@ -8,13 +8,20 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const login = useAuthStore(state => state.login);
   const isLoading = useAuthStore(state => state.isLoading);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/portal');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const success = await login({ email, password });
     if (success) {
-      navigate('/');
+      navigate('/portal');
     }
   };
 

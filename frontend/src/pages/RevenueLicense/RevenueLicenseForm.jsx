@@ -29,7 +29,7 @@ const RevenueLicenseForm = ({ editId, onSuccess, onClose, defaultVehicleId }) =>
         if (data.expiry_date) data.expiry_date = data.expiry_date.split('T')[0];
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/revenue-licenses'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/revenue-licenses'); else onClose?.(); });
     }
   }, [id]);
 
@@ -55,12 +55,12 @@ const RevenueLicenseForm = ({ editId, onSuccess, onClose, defaultVehicleId }) =>
         await api.post('/revenue-licenses', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Revenue license added');
       }
-      if (isModal) onSuccess(); else navigate('/revenue-licenses');
+      if (isModal) onSuccess(); else navigate('/admin/revenue-licenses');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/revenue-licenses'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/revenue-licenses'); };
 
   const handleRemoveExistingFile = async (attachmentId) => {
     try {

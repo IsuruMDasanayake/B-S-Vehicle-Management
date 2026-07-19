@@ -28,7 +28,7 @@ const ExpenseForm = ({ editId, onSuccess, onClose }) => {
         if (data.date) data.date = data.date.split('T')[0];
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/expenses'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/expenses'); else onClose?.(); });
     }
   }, [id]);
 
@@ -54,12 +54,12 @@ const ExpenseForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/expenses', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Expense recorded');
       }
-      if (isModal) onSuccess(); else navigate('/expenses');
+      if (isModal) onSuccess(); else navigate('/admin/expenses');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/expenses'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/expenses'); };
 
   return (
     <div>

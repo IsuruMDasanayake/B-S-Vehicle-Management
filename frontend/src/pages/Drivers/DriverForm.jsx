@@ -62,7 +62,7 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
         })
         .catch(() => {
           toast.error('Failed to load driver details');
-          if (!isModal) navigate('/drivers');
+          if (!isModal) navigate('/admin/drivers');
           else onClose?.();
         });
     }
@@ -91,7 +91,7 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
         toast.success('Driver added successfully');
       }
       if (isModal) onSuccess();
-      else navigate('/drivers');
+      else navigate('/admin/drivers');
     } catch (e) {
       toast.error(e.response?.data?.message || 'Something went wrong');
     } finally {
@@ -101,7 +101,7 @@ const DriverForm = ({ editId, onSuccess, onClose }) => {
 
   const handleCancel = () => {
     if (isModal) onClose?.();
-    else navigate('/drivers');
+    else navigate('/admin/drivers');
   };
 
   return (

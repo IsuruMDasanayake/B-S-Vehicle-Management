@@ -20,7 +20,7 @@ const RouteForm = ({ editId, onSuccess, onClose }) => {
   useEffect(() => {
     if (isEditMode) {
       api.get(`/routes/${id}`).then(({ data }) => reset(data))
-        .catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/routes'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/routes'); else onClose?.(); });
     }
   }, [id]);
 
@@ -29,12 +29,12 @@ const RouteForm = ({ editId, onSuccess, onClose }) => {
     try {
       if (isEditMode) { await api.put(`/routes/${id}`, data); toast.success('Route updated'); }
       else { await api.post('/routes', data); toast.success('Route created'); }
-      if (isModal) onSuccess(); else navigate('/routes');
+      if (isModal) onSuccess(); else navigate('/admin/routes');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/routes'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/routes'); };
 
   return (
     <div>

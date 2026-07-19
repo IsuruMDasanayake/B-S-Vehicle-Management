@@ -22,7 +22,7 @@ const UserForm = ({ editId, onSuccess, onClose }) => {
       api.get(`/users/${id}`).then(({ data }) => {
         data.role = data.roles?.[0]?.name || 'fleet_manager';
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/users'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/users'); else onClose?.(); });
     }
   }, [id]);
 
@@ -33,12 +33,12 @@ const UserForm = ({ editId, onSuccess, onClose }) => {
     try {
       if (isEditMode) { await api.put(`/users/${id}`, data); toast.success('User updated'); }
       else { await api.post('/users', data); toast.success('User created'); }
-      if (isModal) onSuccess(); else navigate('/users');
+      if (isModal) onSuccess(); else navigate('/admin/users');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/users'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/users'); };
 
   return (
     <div>

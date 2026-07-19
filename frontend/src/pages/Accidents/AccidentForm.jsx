@@ -54,7 +54,7 @@ const AccidentForm = ({ editId, onSuccess, onClose }) => {
 
         if (data.assignee_type) setAssigneeType(data.assignee_type);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/accidents'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/accidents'); else onClose?.(); });
     }
   }, [id]);
 
@@ -80,7 +80,7 @@ const AccidentForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/accidents', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Accident reported');
       }
-      if (isModal) onSuccess(); else navigate('/accidents');
+      if (isModal) onSuccess(); else navigate('/admin/accidents');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
@@ -107,7 +107,7 @@ const AccidentForm = ({ editId, onSuccess, onClose }) => {
     }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/accidents'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/accidents'); };
 
   return (
     <div>

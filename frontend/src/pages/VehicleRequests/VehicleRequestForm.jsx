@@ -32,7 +32,7 @@ const VehicleRequestForm = ({ editId, onSuccess, onClose }) => {
         if (data.return_date) data.return_date = data.return_date.split('T')[0];
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/vehicle-requests'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/vehicle-requests'); else onClose?.(); });
     }
   }, [id]);
 
@@ -58,12 +58,12 @@ const VehicleRequestForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/vehicle-requests', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Vehicle requested');
       }
-      if (isModal) onSuccess(); else navigate('/vehicle-requests');
+      if (isModal) onSuccess(); else navigate('/admin/vehicle-requests');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/vehicle-requests'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/vehicle-requests'); };
 
   return (
     <div>

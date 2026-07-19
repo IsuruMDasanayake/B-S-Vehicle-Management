@@ -27,7 +27,7 @@ const SparePartForm = ({ editId, onSuccess, onClose }) => {
       api.get(`/spare-parts/${id}`).then(({ data }) => {
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/spare-parts'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/spare-parts'); else onClose?.(); });
     }
   }, [id]);
 
@@ -53,12 +53,12 @@ const SparePartForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/spare-parts', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Spare part added');
       }
-      if (isModal) onSuccess(); else navigate('/spare-parts');
+      if (isModal) onSuccess(); else navigate('/admin/spare-parts');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/spare-parts'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/spare-parts'); };
 
   return (
     <div>

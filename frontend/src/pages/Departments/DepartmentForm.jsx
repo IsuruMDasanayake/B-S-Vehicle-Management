@@ -20,7 +20,7 @@ const DepartmentForm = ({ editId, onSuccess, onClose }) => {
     api.get('/users').then(r => setUsers((r.data.data || r.data || []) || [])).catch(() => {});
     if (isEditMode) {
       api.get(`/departments/${id}`).then(({ data }) => reset(data))
-        .catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/departments'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/departments'); else onClose?.(); });
     }
   }, [id]);
 
@@ -29,12 +29,12 @@ const DepartmentForm = ({ editId, onSuccess, onClose }) => {
     try {
       if (isEditMode) { await api.put(`/departments/${id}`, data); toast.success('Department updated'); }
       else { await api.post('/departments', data); toast.success('Department created'); }
-      if (isModal) onSuccess(); else navigate('/departments');
+      if (isModal) onSuccess(); else navigate('/admin/departments');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/departments'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/departments'); };
 
   return (
     <div>

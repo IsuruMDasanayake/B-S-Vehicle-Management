@@ -33,7 +33,7 @@ const TripForm = ({ editId, onSuccess, onClose }) => {
         if (data.end_time) data.end_time = new Date(data.end_time).toISOString().slice(0, 16);
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/trips'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/trips'); else onClose?.(); });
     }
   }, [id]);
 
@@ -59,12 +59,12 @@ const TripForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/trips', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Trip created');
       }
-      if (isModal) onSuccess(); else navigate('/trips');
+      if (isModal) onSuccess(); else navigate('/admin/trips');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/trips'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/trips'); };
 
   return (
     <div>

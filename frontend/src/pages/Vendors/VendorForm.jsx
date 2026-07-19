@@ -20,7 +20,7 @@ const VendorForm = ({ editId, onSuccess, onClose }) => {
   useEffect(() => {
     if (isEditMode) {
       api.get(`/vendors/${id}`).then(({ data }) => reset(data))
-        .catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/vendors'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/vendors'); else onClose?.(); });
     }
   }, [id]);
 
@@ -29,12 +29,12 @@ const VendorForm = ({ editId, onSuccess, onClose }) => {
     try {
       if (isEditMode) { await api.put(`/vendors/${id}`, data); toast.success('Vendor updated'); }
       else { await api.post('/vendors', data); toast.success('Vendor added'); }
-      if (isModal) onSuccess(); else navigate('/vendors');
+      if (isModal) onSuccess(); else navigate('/admin/vendors');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/vendors'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/vendors'); };
 
   return (
     <div>

@@ -18,6 +18,7 @@ import ReportsDashboard from './pages/Reports/ReportsDashboard';
 import SettingsPage from './pages/Settings/SettingsPage';
 import Login from './pages/Auth/Login';
 import Portal from './pages/Portal/Portal';
+import ComingSoon from './pages/Portal/ComingSoon';
 import PerformanceDashboard from './pages/Performance/PerformanceDashboard';
 import PerformanceLayout from './pages/Performance/PerformanceLayout';
 
@@ -48,8 +49,8 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
   const user = useAuthStore(state => state.user);
   if (!user) return <Navigate to="/login" replace />;
   
-  const hasRole = allowedRoles.some(role => user?.roles?.includes(role));
-  return hasRole ? children : <Navigate to="/dashboard" replace />;
+  const hasRole = allowedRoles.some(role => user?.roles?.includes(role) || user?.role === role);
+  return hasRole ? children : <Navigate to="/portal" replace />;
 };
 
 function App() {
@@ -70,9 +71,11 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
+      <Route path="/" element={<ComingSoon />} />
+      <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
       
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <Route path="/admin" element={<RoleProtectedRoute allowedRoles={['super_admin']}><Layout /></RoleProtectedRoute>}>
+        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         
         {/* Fleet */}
@@ -112,7 +115,7 @@ function App() {
       </Route>
 
       {/* Dedicated GPS Dashboard */}
-      <Route path="/gps" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver']}><GpsLayout /></RoleProtectedRoute>}>
+      <Route path="/admin/gps" element={<RoleProtectedRoute allowedRoles={['super_admin']}><GpsLayout /></RoleProtectedRoute>}>
         <Route index element={<GpsTracking />} />
         <Route path="history" element={<GpsHistory />} />
         <Route path="geofences" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><GpsGeofencing /></RoleProtectedRoute>} />
@@ -120,7 +123,7 @@ function App() {
       </Route>
 
       {/* Dedicated Performance Dashboard */}
-      <Route path="/performance" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'dept_manager']}><PerformanceLayout /></RoleProtectedRoute>}>
+      <Route path="/admin/performance" element={<RoleProtectedRoute allowedRoles={['super_admin']}><PerformanceLayout /></RoleProtectedRoute>}>
         <Route index element={<PerformanceDashboard />} />
       </Route>
     </Routes>

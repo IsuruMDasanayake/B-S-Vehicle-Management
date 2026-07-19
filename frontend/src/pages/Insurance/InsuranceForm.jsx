@@ -46,7 +46,7 @@ const InsuranceForm = ({ editId, onSuccess, onClose, defaultVehicleId }) => {
           setExistingAttachments(data.attachments || []);
           reset(data);
         })
-        .catch(() => { toast.error('Failed to load policy'); if (!isModal) navigate('/insurance'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load policy'); if (!isModal) navigate('/admin/insurance'); else onClose?.(); });
     }
   }, [id]);
 
@@ -72,12 +72,12 @@ const InsuranceForm = ({ editId, onSuccess, onClose, defaultVehicleId }) => {
         await api.post('/insurance-policies', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Policy added');
       }
-      if (isModal) onSuccess(); else navigate('/insurance');
+      if (isModal) onSuccess(); else navigate('/admin/insurance');
     } catch (e) { toast.error(e.response?.data?.message || 'Something went wrong'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/insurance'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/insurance'); };
 
   const handleRemoveExistingFile = async (attachmentId) => {
     try {

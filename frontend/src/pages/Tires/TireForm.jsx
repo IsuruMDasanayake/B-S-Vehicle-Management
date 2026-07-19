@@ -29,7 +29,7 @@ const TireForm = ({ editId, onSuccess, onClose }) => {
         if (data.replacement_date) data.replacement_date = data.replacement_date.split('T')[0];
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/tires'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/tires'); else onClose?.(); });
     }
   }, [id]);
 
@@ -55,12 +55,12 @@ const TireForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/tires', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Tire record added');
       }
-      if (isModal) onSuccess(); else navigate('/tires');
+      if (isModal) onSuccess(); else navigate('/admin/tires');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/tires'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/tires'); };
 
   return (
     <div>

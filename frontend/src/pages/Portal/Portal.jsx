@@ -78,7 +78,7 @@ const Portal = () => {
           {/* Dashboard Card */}
           <div 
             className="card portal-card" 
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/admin/dashboard')}
             style={{ 
               cursor: 'pointer', transition: 'all 0.3s ease',
               border: '1px solid var(--surface-2)'
@@ -98,7 +98,7 @@ const Portal = () => {
           {/* GPS Card */}
           <div 
             className="card portal-card" 
-            onClick={() => navigate('/gps')}
+            onClick={() => navigate('/admin/gps')}
             style={{ 
               cursor: 'pointer', transition: 'all 0.3s ease',
               border: '1px solid var(--surface-2)'
@@ -119,7 +119,7 @@ const Portal = () => {
           {!isDriver && (
             <div 
               className="card portal-card" 
-              onClick={() => navigate('/performance')}
+              onClick={() => navigate('/admin/performance')}
               style={{ 
                 cursor: 'pointer', transition: 'all 0.3s ease',
                 border: '1px solid var(--surface-2)'

@@ -57,7 +57,7 @@ const FuelForm = ({ editId, onSuccess, onClose }) => {
           setExistingAttachments(data.attachments || []);
           reset(data);
         })
-        .catch(() => { toast.error('Failed to load entry'); if (!isModal) navigate('/fuel'); else onClose?.(); });
+        .catch(() => { toast.error('Failed to load entry'); if (!isModal) navigate('/admin/fuel'); else onClose?.(); });
     }
   }, [id]);
 
@@ -83,12 +83,12 @@ const FuelForm = ({ editId, onSuccess, onClose }) => {
         await api.post('/fuel-entries', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Fuel entry added');
       }
-      if (isModal) onSuccess(); else navigate('/fuel');
+      if (isModal) onSuccess(); else navigate('/admin/fuel');
     } catch (e) { toast.error(e.response?.data?.message || 'Something went wrong'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/fuel'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/fuel'); };
 
   return (
     <div>

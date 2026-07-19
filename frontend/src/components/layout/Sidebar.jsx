@@ -20,47 +20,47 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
     {
       title: 'Main',
       items: [
-        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic', 'dept_manager'] },
+        { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic', 'dept_manager'] },
       ]
     },
     {
       title: 'Fleet Management',
       items: [
-        { name: 'Vehicles', path: '/vehicles', icon: CarFront, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Drivers', path: '/drivers', icon: Users, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Assignments', path: '/assignments', icon: UserSquare2, roles: ['super_admin', 'fleet_manager', 'driver', 'dept_manager'] },
-        { name: 'Vehicle Requests', path: '/vehicle-requests', icon: Car, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
+        { name: 'Vehicles', path: '/admin/vehicles', icon: CarFront, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Drivers', path: '/admin/drivers', icon: Users, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Assignments', path: '/admin/assignments', icon: UserSquare2, roles: ['super_admin', 'fleet_manager', 'driver', 'dept_manager'] },
+        { name: 'Vehicle Requests', path: '/admin/vehicle-requests', icon: Car, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
       ]
     },
     // {
     //   title: 'Operations',
     //   items: [
-    //     { name: 'Trips', path: '/trips', icon: Navigation, roles: ['super_admin', 'fleet_manager'] },
-    //     { name: 'Routes', path: '/routes', icon: Route, roles: ['super_admin', 'fleet_manager'] },
-    //     { name: 'Fuel', path: '/fuel', icon: Fuel, roles: ['super_admin', 'fleet_manager', 'driver'] },
+    //     { name: 'Trips', path: '/admin/trips', icon: Navigation, roles: ['super_admin', 'fleet_manager'] },
+    //     { name: 'Routes', path: '/admin/routes', icon: Route, roles: ['super_admin', 'fleet_manager'] },
+    //     { name: 'Fuel', path: '/admin/fuel', icon: Fuel, roles: ['super_admin', 'fleet_manager', 'driver'] },
     //   ]
     // },
 
     {
       title: 'Finance & Vendors',
       items: [
-        // { name: 'Expenses', path: '/expenses', icon: DollarSign, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Rental Income', path: '/vehicle-payments', icon: DollarSign, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Hiring Payments', path: '/hiring-details', icon: Briefcase, roles: ['super_admin', 'fleet_manager'] },
-        // { name: 'Vendors', path: '/vendors', icon: Store, roles: ['super_admin', 'fleet_manager'] },
+        // { name: 'Expenses', path: '/admin/expenses', icon: DollarSign, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Rental Income', path: '/admin/vehicle-payments', icon: DollarSign, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Hiring Payments', path: '/admin/hiring-details', icon: Briefcase, roles: ['super_admin', 'fleet_manager'] },
+        // { name: 'Vendors', path: '/admin/vendors', icon: Store, roles: ['super_admin', 'fleet_manager'] },
       ]
     },
 
     {
       title: 'Maintenance & Safety',
       items: [
-        { name: 'Maintenance', path: '/maintenance', icon: Wrench, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        // { name: 'Inspections', path: '/inspections', icon: FileCheck, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        // { name: 'Breakdowns', path: '/breakdowns', icon: AlertTriangle, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic'] },
-        { name: 'Accidents', path: '/accidents', icon: HardHat, roles: ['super_admin', 'fleet_manager'] },
-        // { name: 'Tires', path: '/tires', icon: Activity, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        // { name: 'Spare Parts', path: '/spare-parts', icon: Package, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
-        // { name: 'Fuel', path: '/fuel', icon: Fuel, roles: ['super_admin', 'fleet_manager', 'driver'] },
+        { name: 'Maintenance', path: '/admin/maintenance', icon: Wrench, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
+        // { name: 'Inspections', path: '/admin/inspections', icon: FileCheck, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
+        // { name: 'Breakdowns', path: '/admin/breakdowns', icon: AlertTriangle, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic'] },
+        { name: 'Accidents', path: '/admin/accidents', icon: HardHat, roles: ['super_admin', 'fleet_manager'] },
+        // { name: 'Tires', path: '/admin/tires', icon: Activity, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
+        // { name: 'Spare Parts', path: '/admin/spare-parts', icon: Package, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
+        // { name: 'Fuel', path: '/admin/fuel', icon: Fuel, roles: ['super_admin', 'fleet_manager', 'driver'] },
       ]
     },
 
@@ -68,16 +68,16 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
     // {
     //   title: 'Organization',
     //   items: [
-    //     // { name: 'Departments', path: '/departments', icon: Database, roles: ['super_admin', 'fleet_manager'] },
-    //     { name: 'Users & Roles', path: '/users', icon: Users2, roles: ['super_admin'] },
-    //     { name: 'Audit Logs', path: '/audit-logs', icon: FileText, roles: ['super_admin'] },
+    //     // { name: 'Departments', path: '/admin/departments', icon: Database, roles: ['super_admin', 'fleet_manager'] },
+    //     { name: 'Users & Roles', path: '/admin/users', icon: Users2, roles: ['super_admin'] },
+    //     { name: 'Audit Logs', path: '/admin/audit-logs', icon: FileText, roles: ['super_admin'] },
     //   ]
     // },
     // {
     //   title: 'System',
     //   items: [
-    //     { name: 'Reports', path: '/reports', icon: FileText, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
-    //     { name: 'Settings', path: '/settings', icon: Settings, roles: ['super_admin'] },
+    //     { name: 'Reports', path: '/admin/reports', icon: FileText, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
+    //     { name: 'Settings', path: '/admin/settings', icon: Settings, roles: ['super_admin'] },
     //   ]
     // }
   ];

@@ -29,7 +29,7 @@ const EmissionTestForm = ({ editId, onSuccess, onClose, defaultVehicleId }) => {
         if (data.expiry_date) data.expiry_date = data.expiry_date.split('T')[0];
         setExistingAttachments(data.attachments || []);
         reset(data);
-      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/emission-tests'); else onClose?.(); });
+      }).catch(() => { toast.error('Failed to load'); if (!isModal) navigate('/admin/emission-tests'); else onClose?.(); });
     }
   }, [id]);
 
@@ -55,12 +55,12 @@ const EmissionTestForm = ({ editId, onSuccess, onClose, defaultVehicleId }) => {
         await api.post('/emission-tests', payload, { headers: { 'Content-Type': 'multipart/form-data' }});
         toast.success('Emission test added');
       }
-      if (isModal) onSuccess(); else navigate('/emission-tests');
+      if (isModal) onSuccess(); else navigate('/admin/emission-tests');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setIsLoading(false); }
   };
 
-  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/emission-tests'); };
+  const handleCancel = () => { if (isModal) onClose?.(); else navigate('/admin/emission-tests'); };
 
   const handleRemoveExistingFile = async (attachmentId) => {
     try {
