@@ -30,8 +30,9 @@ class VehicleAssignmentController extends Controller
             'return_date' => 'nullable|date|after_or_equal:assignment_date',
             'purpose' => 'nullable|string',
             'amount' => 'nullable|numeric|min:0',
-            'status' => 'required|in:active,completed,cancelled',
-            'notes' => 'nullable|string'
+            'status' => 'required|in:active,completed,cancelled,pending',
+            'notes' => 'nullable|string',
+            'payment_frequency' => 'required|in:monthly,custom,weekends'
         ]);
 
         $validated['assigned_by'] = $request->user()->id;
@@ -65,8 +66,9 @@ class VehicleAssignmentController extends Controller
             'return_date' => 'nullable|date|after_or_equal:assignment_date',
             'purpose' => 'nullable|string',
             'amount' => 'nullable|numeric|min:0',
-            'status' => 'sometimes|required|in:active,completed,cancelled',
-            'notes' => 'nullable|string'
+            'status' => 'sometimes|required|in:active,completed,cancelled,pending',
+            'notes' => 'nullable|string',
+            'payment_frequency' => 'sometimes|required|in:monthly,custom,weekends'
         ]);
 
         $assignment->update($validated);

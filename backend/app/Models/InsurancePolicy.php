@@ -1,10 +1,14 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use App\Traits\HasAttachments;
 
 class InsurancePolicy extends Model
 {
+    use LogsActivity;
+
     use HasAttachments;
 
     protected $with = ['attachments'];
@@ -12,4 +16,9 @@ class InsurancePolicy extends Model
     protected $casts = ['start_date'=>'date','expiry_date'=>'date','premium_amount'=>'decimal:2'];
     public function vehicle() { return $this->belongsTo(Vehicle::class); }
     public function vendor() { return $this->belongsTo(Vendor::class); }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logAll()->useLogName('insurance_policy');
+    }
 }

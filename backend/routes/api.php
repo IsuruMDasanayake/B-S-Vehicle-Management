@@ -17,6 +17,7 @@ Route::post('/gps/webhook', [\App\Http\Controllers\Api\GpsWebhookController::cla
 
 use App\Http\Controllers\Api\OwnerPaymentController;
 use App\Http\Controllers\Api\VehiclePaymentController;
+use App\Http\Controllers\Api\AlertsController;
 
 Route::post('/public/vehicle-requests', [\App\Http\Controllers\Api\VehicleRequestController::class, 'publicStore']);
 
@@ -65,6 +66,10 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Owner Payments
     Route::apiResource('owner-payments', OwnerPaymentController::class);
+
+    // Alerts and Activity Feed
+    Route::get('alerts', [AlertsController::class, 'index']);
+    Route::patch('alerts/{id}/read', [AlertsController::class, 'markAsRead']);
     
     // Vehicle (Rental Income) Payments
     Route::apiResource('vehicle-payments', VehiclePaymentController::class);

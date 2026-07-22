@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('alerts:generate')->everyMinute();
+        $schedule->command('payments:generate-weekends')->dailyAt('00:05');
     }
 
     /**

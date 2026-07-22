@@ -112,7 +112,62 @@ class GenerateSystemAlerts extends Command
             }
         }
 
-        // 6 & 7. Simulated Low Fuel and Over-Speed Alerts
+        // 6. Expired Documents
+        $today = $now->toDateString();
+        
+        // Expired Insurance
+        $expiredPolicies = InsurancePolicy::whereDate('expiry_date', '<', $today)->with('vehicle')->get();
+        foreach ($expiredPolicies as $policy) {
+            $vehicleNumber = $policy->vehicle ? $policy->vehicle->vehicle_number : 'Unknown';
+            $this->dispatchAlert($notifiableUsers, [
+                'title' => 'Insurance Expired',
+                'message' => "Insurance for vehicle {$vehicleNumber} has EXPIRED.",
+                'type' => 'danger',
+                'source_type' => 'insurance',
+                'source_id' => $policy->id,
+            ]);
+        }
+
+        // Expired Revenue License
+        $expiredLicenses = RevenueLicense::whereDate('expiry_date', '<', $today)->with('vehicle')->get();
+        foreach ($expiredLicenses as $license) {
+            $vehicleNumber = $license->vehicle ? $license->vehicle->vehicle_number : 'Unknown';
+            $this->dispatchAlert($notifiableUsers, [
+                'title' => 'Revenue License Expired',
+                'message' => "Revenue license for vehicle {$vehicleNumber} has EXPIRED.",
+                'type' => 'danger',
+                'source_type' => 'revenue_license',
+                'source_id' => $license->id,
+            ]);
+        }
+
+        // Expired Emission Test
+        $expiredTests = EmissionTest::whereDate('expiry_date', '<', $today)->with('vehicle')->get();
+        foreach ($expiredTests as $test) {
+            $vehicleNumber = $test->vehicle ? $test->vehicle->vehicle_number : 'Unknown';
+            $this->dispatchAlert($notifiableUsers, [
+                'title' => 'Emission Test Expired',
+                'message' => "Emission test for vehicle {$vehicleNumber} has EXPIRED.",
+                'type' => 'danger',
+                'source_type' => 'emission_test',
+                'source_id' => $test->id,
+            ]);
+        }
+
+        // 7. Pending Payments
+        $pendingPayments = \App\Models\VehiclePayment::where('status', 'pending')->with('vehicle')->get();
+        foreach ($pendingPayments as $payment) {
+            $vehicleNumber = $payment->vehicle ? $payment->vehicle->vehicle_number : 'Unknown';
+            $this->dispatchAlert($notifiableUsers, [
+                'title' => 'Pending Payment',
+                'message' => "Payment of LKR {$payment->amount} for vehicle {$vehicleNumber} ({$payment->rental_period}) is still pending.",
+                'type' => 'danger',
+                'source_type' => 'vehicle_payment',
+                'source_id' => $payment->id,
+            ]);
+        }
+
+        // 8 & 9. Simulated Low Fuel and Over-Speed Alerts
         $activeVehicles = Vehicle::where('current_status', 'active')->get();
         if ($activeVehicles->count() > 0) {
             foreach ($activeVehicles as $vehicle) {
@@ -148,13 +203,22 @@ class GenerateSystemAlerts extends Command
         $signature = md5(json_encode($data));
         $cacheKey = "system_alert_{$signature}";
         
-        // For simulated alerts (low fuel, overspeed), cooldown is 1 hour
-        // For expiry alerts, cooldown is 24 hours
         $isSimulated = in_array($data['source_type'] ?? '', ['vehicle']);
         $cooldownMinutes = $isSimulated ? 60 : 1440;
 
         if (!\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-            Notification::send($users, new SystemAlertNotification($data));
+            foreach ($users as $user) {
+                // Check if user already has an unread notification for this source
+                $existingUnread = $user->unreadNotifications()
+                    ->where('type', SystemAlertNotification::class)
+                    ->where('data->source_type', $data['source_type'])
+                    ->where('data->source_id', $data['source_id'])
+                    ->exists();
+
+                if (!$existingUnread) {
+                    $user->notify(new SystemAlertNotification($data));
+                }
+            }
             \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addMinutes($cooldownMinutes));
         }
     }

@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import api from '../../services/api';
-import toast from 'react-hot-toast';
 import { ArrowLeft, Save, User, Users } from 'lucide-react';
 import FileUploadField from '../../components/ui/FileUploadField';
+import { differenceInDays, isWeekend, addDays } from 'date-fns';
 
 const schema = z.object({
   vehicle_id: z.string().min(1, 'Vehicle is required').or(z.number()),
@@ -16,8 +16,9 @@ const schema = z.object({
   return_date: z.string().optional().nullable(),
   department_id: z.string().optional().nullable().or(z.number()),
   purpose: z.string().optional().nullable(),
+  payment_frequency: z.enum(['monthly', 'custom', 'weekends']),
   amount: z.any().transform(v => v ? Number(v) : null),
-  status: z.enum(['active', 'completed', 'cancelled']),
+  status: z.enum(['active', 'completed', 'cancelled', 'pending']),
   notes: z.string().optional().nullable(),
 }).refine(data => data.driver_id || data.vehicle_request_id, {
   message: "Either Driver or Vehicle Request must be selected",
@@ -42,8 +43,42 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { status: 'active', assignment_date: new Date().toISOString().split('T')[0] },
+    defaultValues: { status: 'active', assignment_date: new Date().toISOString().split('T')[0], payment_frequency: 'monthly' },
   });
+
+  const [inputRate, setInputRate] = useState('');
+  const [totalCalculated, setTotalCalculated] = useState(0);
+
+  const watchPaymentFrequency = watch('payment_frequency');
+  const watchAssignmentDate = watch('assignment_date');
+  const watchReturnDate = watch('return_date');
+
+  useEffect(() => {
+    if (!inputRate || !watchAssignmentDate) {
+      setTotalCalculated(0);
+      setValue('amount', '');
+      return;
+    }
+    const rate = Number(inputRate) || 0;
+    if (watchPaymentFrequency === 'monthly') {
+      setTotalCalculated(rate);
+    } else {
+      const start = new Date(watchAssignmentDate);
+      const end = watchReturnDate ? new Date(watchReturnDate) : start;
+      if (watchPaymentFrequency === 'custom') {
+        const days = differenceInDays(end, start) + 1;
+        setTotalCalculated(days * rate);
+      } else if (watchPaymentFrequency === 'weekends') {
+        let weekendDays = 0;
+        let curr = start;
+        while (curr <= end) {
+          if (isWeekend(curr)) weekendDays++;
+          curr = addDays(curr, 1);
+        }
+        setTotalCalculated(weekendDays * rate);
+      }
+    }
+  }, [inputRate, watchPaymentFrequency, watchAssignmentDate, watchReturnDate, setValue]);
 
   useEffect(() => {
     Promise.all([
@@ -68,6 +103,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
           if (data.vehicle_request_id) setAssigneeType('external');
           setExistingAttachments(data.attachments || []);
           reset(data);
+          if (data.amount) setInputRate(data.amount.toString());
         })
         .catch(() => { toast.error('Failed to load assignment'); if (!isModal) navigate('/admin/assignments'); else onClose?.(); });
     }
@@ -77,9 +113,10 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
     setIsLoading(true);
     try {
       const payload = new FormData();
-      Object.keys(data).forEach(key => {
-        if (data[key] !== null && data[key] !== undefined) {
-          payload.append(key, data[key]);
+      const finalData = { ...data, amount: Number(inputRate) || 0 };
+      Object.keys(finalData).forEach(key => {
+        if (finalData[key] !== null && finalData[key] !== undefined) {
+          payload.append(key, finalData[key]);
         }
       });
       
@@ -208,11 +245,27 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Amount (Assigned/Rented Amount)</label>
+            <label className="form-label">Payment Type *</label>
+            <select {...register('payment_frequency')} className="form-control">
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom Date Range</option>
+              <option value="weekends">Weekends Only</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">
+              {watchPaymentFrequency === 'monthly' ? 'Monthly Rental Amount' : 'Daily Rental Amount'} (LKR)
+            </label>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <span style={{ padding: '0.6rem 0.75rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRight: 'none', borderRadius: 'var(--radius-md) 0 0 var(--radius-md)', color: 'var(--text-muted)' }}>Rs</span>
-              <input type="number" step="0.01" {...register('amount')} className="form-control" style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }} placeholder="0.00" />
+              <input type="number" step="0.01" className="form-control" style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }} placeholder="0.00" value={inputRate} onChange={(e) => setInputRate(e.target.value)} />
             </div>
+            {watchPaymentFrequency !== 'monthly' && Number(inputRate) > 0 && (
+              <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-md)', fontSize: '0.9rem' }}>
+                <strong>Calculated Total Sum:</strong> Rs {totalCalculated.toLocaleString()}
+              </div>
+            )}
             {errors.amount && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.amount.message}</span>}
           </div>
 
@@ -230,6 +283,7 @@ const AssignmentForm = ({ editId, onSuccess, onClose }) => {
           <div className="form-group">
             <label className="form-label">Status</label>
             <select {...register('status')} className="form-control">
+              <option value="pending">Pending</option>
               <option value="active">Active</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>

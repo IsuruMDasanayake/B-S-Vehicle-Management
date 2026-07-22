@@ -19,7 +19,7 @@ const VehicleRequestForm = ({ editId, onSuccess, onClose }) => {
   const [existingAttachments, setExistingAttachments] = useState([]);
 
   const { register, handleSubmit, reset } = useForm({
-    defaultValues: { request_date: new Date().toISOString().split('T')[0], approval_status: 'pending' },
+    defaultValues: { request_date: new Date().toISOString().split('T')[0], approval_status: 'pending', payment_frequency: 'monthly' },
   });
 
   useEffect(() => {
@@ -96,6 +96,14 @@ const VehicleRequestForm = ({ editId, onSuccess, onClose }) => {
           <div className="form-group">
             <label className="form-label">Return Date</label>
             <input type="date" {...register('return_date')} className="form-control" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Request Type</label>
+            <select {...register('payment_frequency')} className="form-control">
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom Date Range</option>
+              <option value="weekends">Weekends Only</option>
+            </select>
           </div>
           <div className="form-group">
             <label className="form-label">Destination</label>

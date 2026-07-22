@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import Modal from '../../components/ui/Modal';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
@@ -27,6 +27,16 @@ const AssignmentsList = () => {
   };
 
   useEffect(() => { fetchAssignments(); }, []);
+
+  const handleActivate = async (id) => {
+    try {
+      await api.put(`/assignments/${id}`, { status: 'active' });
+      toast.success('Assignment activated!');
+      fetchAssignments();
+    } catch (e) {
+      toast.error('Failed to activate assignment');
+    }
+  };
 
   const openAdd = () => { setEditId(null); setModal('add'); };
   const openEdit = (id) => { setEditId(id); setModal('edit'); };
@@ -95,14 +105,17 @@ const AssignmentsList = () => {
                     )}
                   </td>
                   <td>
-                    <span className={`badge ${a.status === 'active' ? 'badge-success' : a.status === 'completed' ? 'badge-info' : 'badge-danger'}`}>
+                    <span className={`badge ${a.status === 'active' ? 'badge-success' : a.status === 'completed' ? 'badge-info' : a.status === 'pending' ? 'badge-warning' : 'badge-danger'}`}>
                       {a.status}
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
+                      {a.status === 'pending' && (
+                        <button className="icon-btn" style={{ color: 'var(--success)' }} onClick={() => handleActivate(a.id)} title="Activate Assignment"><Play size={16} /></button>
+                      )}
                       <button className="icon-btn edit" onClick={() => openEdit(a.id)}><Edit size={16} /></button>
-                      <button className="icon-btn delete" onClick={() => setDeleteTarget({ id: a.id, name: `${a.vehicle?.vehicle_number} → ${a.driver?.name}` })}><Trash2 size={16} /></button>
+                      <button className="icon-btn delete" onClick={() => setDeleteTarget({ id: a.id, name: `${a.vehicle?.vehicle_number} → ${a.driver?.name || a.vehicle_request?.requester_name}` })}><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>

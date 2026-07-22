@@ -9,7 +9,7 @@ import FileUploadField from '../../components/ui/FileUploadField';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 
 const schema = z.object({
-  payment_month: z.string().min(1, 'Payment month is required'),
+  rental_period: z.string().min(1, 'Rental period is required'),
   amount: z.string().min(1, 'Amount is required').or(z.number()),
   status: z.enum(['paid', 'pending']),
   payment_date: z.string().optional().nullable(),
@@ -81,9 +81,9 @@ const VehiclePaymentForm = ({ vehicleId, editId, onSuccess, onClose }) => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
         
         <div className="form-group">
-          <label className="form-label">Payment Month *</label>
-          <input type="month" {...register('payment_month')} className="form-control" />
-          {errors.payment_month && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.payment_month.message}</span>}
+          <label className="form-label">Rental Period *</label>
+          <input type="text" {...register('rental_period')} className="form-control" placeholder="e.g. 2026-07 or July 22nd to July 24th" />
+          {errors.rental_period && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.rental_period.message}</span>}
         </div>
 
         <div className="form-group">

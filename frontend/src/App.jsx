@@ -35,7 +35,7 @@ import DepartmentsList from './pages/Departments/DepartmentsList';
 import UsersList from './pages/Users/UsersList';
 import VehicleRequestsList from './pages/VehicleRequests/VehicleRequestsList';
 import AuditLogsList from './pages/AuditLogs/AuditLogsList';
-
+import Alerts from './pages/Alerts/Alerts';
 import useAuthStore from './store/authStore';
 
 import { useEffect } from 'react';
@@ -108,6 +108,7 @@ function App() {
         <Route path="departments" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><DepartmentsList /></RoleProtectedRoute>} />
         <Route path="users" element={<RoleProtectedRoute allowedRoles={['super_admin']}><UsersList /></RoleProtectedRoute>} />
         <Route path="audit-logs" element={<RoleProtectedRoute allowedRoles={['super_admin']}><AuditLogsList /></RoleProtectedRoute>} />
+        <Route path="alerts" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><Alerts /></RoleProtectedRoute>} />
         
         {/* Reports & Settings */}
         <Route path="reports" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'dept_manager']}><ReportsDashboard /></RoleProtectedRoute>} />

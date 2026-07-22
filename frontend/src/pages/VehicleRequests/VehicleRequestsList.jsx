@@ -4,11 +4,13 @@ import toast from 'react-hot-toast';
 import { Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
+import ApproveRequestModal from './ApproveRequestModal';
 
 const VehicleRequestsList = () => {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [approveTarget, setApproveTarget] = useState(null);
 
   const fetchItems = async () => { 
     setIsLoading(true); 
@@ -79,7 +81,7 @@ const VehicleRequestsList = () => {
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
                         {item.approval_status === 'pending' && (
                           <>
-                            <button className="icon-btn" style={{ color: 'var(--success)' }} title="Approve" onClick={() => handleStatusUpdate(item.id, 'approved')}><CheckCircle size={18} /></button>
+                            <button className="icon-btn" style={{ color: 'var(--success)' }} title="Approve" onClick={() => setApproveTarget(item)}><CheckCircle size={18} /></button>
                             <button className="icon-btn" style={{ color: 'var(--danger)' }} title="Reject" onClick={() => handleStatusUpdate(item.id, 'rejected')}><XCircle size={18} /></button>
                           </>
                         )}
@@ -99,6 +101,16 @@ const VehicleRequestsList = () => {
         onDeleted={() => { setDeleteTarget(null); fetchItems(); }} 
         endpoint={deleteTarget ? `/vehicle-requests/${deleteTarget.id}` : ''} 
         itemName={deleteTarget?.name} 
+      />
+
+      <ApproveRequestModal 
+        isOpen={!!approveTarget}
+        onClose={() => setApproveTarget(null)}
+        request={approveTarget}
+        onSuccess={() => {
+          setApproveTarget(null);
+          fetchItems();
+        }}
       />
     </div>
   );
