@@ -74,7 +74,8 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
           <table className="table" style={{ minWidth: '600px' }}>
             <thead>
               <tr>
-                <th>Payment Month</th>
+                <th>Rental Period</th>
+                <th>Payer Name</th>
                 <th>Amount (LKR)</th>
                 <th>Status</th>
                 <th>Date Received</th>
@@ -97,7 +98,8 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
                   
                   return (
                     <tr key={p.id}>
-                      <td style={{ fontWeight: 600 }}>{p.payment_month}</td>
+                      <td style={{ fontWeight: 600 }}>{p.rental_period}</td>
+                      <td>{p.payer_name || <span style={{ color: 'var(--text-muted)' }}>Unknown</span>}</td>
                       <td>{Number(p.amount).toLocaleString()}</td>
                       <td>
                         <span className={`badge badge-${p.status === 'paid' ? 'success' : 'warning'}`}>
@@ -110,7 +112,7 @@ const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
                           <button 
                             onClick={() => {
                               setViewPdfUrl(receiptUrl);
-                              setPdfTitle(`Receipt - ${p.payment_month} (${vehicle.vehicle_number})`);
+                              setPdfTitle(`Receipt - ${p.rental_period} (${vehicle.vehicle_number})`);
                             }}
                             className="btn btn-outline"
                             style={{ color: 'var(--primary)', border: 'none', background: 'transparent', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}

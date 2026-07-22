@@ -18,7 +18,7 @@ class VehiclePaymentController extends Controller
 
             // Auto-generate missing monthly payments if currently assigned
             $vehicle = \App\Models\Vehicle::with('currentAssignment')->find($vehicle_id);
-            if ($vehicle && $vehicle->currentAssignment && $vehicle->currentAssignment->amount > 0) {
+            if ($vehicle && $vehicle->currentAssignment && $vehicle->currentAssignment->amount > 0 && $vehicle->currentAssignment->payment_frequency === 'monthly') {
                 $assignment = $vehicle->currentAssignment;
                 $startDate = \Carbon\Carbon::parse($assignment->assignment_date)->startOfMonth();
                 $endDate = \Carbon\Carbon::now()->startOfMonth();
@@ -27,15 +27,16 @@ class VehiclePaymentController extends Controller
                 while ($currentDate->lte($endDate)) {
                     $monthStr = $currentDate->format('Y-m');
                     $exists = \App\Models\VehiclePayment::where('vehicle_id', $vehicle_id)
-                        ->where('payment_month', $monthStr)
+                        ->where('rental_period', $monthStr)
                         ->exists();
 
                     if (!$exists) {
                         \App\Models\VehiclePayment::create([
                             'vehicle_id' => $vehicle_id,
-                            'payment_month' => $monthStr,
+                            'rental_period' => $monthStr,
                             'amount' => $assignment->amount,
                             'status' => 'pending',
+                            'payer_name' => $assignment->driver_id ? $assignment->driver()->value('name') : ($assignment->vehicle_request_id ? $assignment->vehicleRequest()->value('requester_name') : 'Unknown')
                         ]);
                     }
                     $currentDate->addMonth();
@@ -43,14 +44,14 @@ class VehiclePaymentController extends Controller
             }
         }
 
-        return response()->json($query->orderBy('payment_month', 'desc')->get());
+        return response()->json($query->orderBy('rental_period', 'desc')->get());
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'vehicle_id' => 'required|exists:vehicles,id',
-            'payment_month' => 'required|string|max:10', // e.g. "2026-06"
+            'rental_period' => 'required|string|max:255', // e.g. "2026-06" or "2026-07-01 to 2026-07-05"
             'amount' => 'required|numeric',
             'status' => 'required|in:paid,pending',
             'payment_date' => 'nullable|date',
@@ -74,7 +75,7 @@ class VehiclePaymentController extends Controller
     public function update(Request $request, VehiclePayment $vehiclePayment)
     {
         $validated = $request->validate([
-            'payment_month' => 'sometimes|required|string|max:10',
+            'rental_period' => 'sometimes|required|string|max:255',
             'amount' => 'sometimes|required|numeric',
             'status' => 'sometimes|required|in:paid,pending',
             'payment_date' => 'nullable|date',

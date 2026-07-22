@@ -24,6 +24,7 @@ class VehicleRequestController extends Controller
             'requested_vehicle_type' => 'required|string|max:100',
             'request_date' => 'required|date',
             'return_date' => 'required|date|after_or_equal:request_date',
+            'payment_frequency' => 'nullable|in:monthly,custom,weekends',
         ]);
 
         $validated['approval_status'] = 'pending';
@@ -43,6 +44,7 @@ class VehicleRequestController extends Controller
             'purpose' => 'required|string',
             'destination' => 'nullable|string',
             'approval_status' => 'required|in:pending,approved,rejected',
+            'payment_frequency' => 'nullable|in:monthly,custom,weekends',
         ]);
         $validated['requester_id'] = $request->user()->id;
         $vehicle_request = VehicleRequest::create($validated);
@@ -71,6 +73,8 @@ class VehicleRequestController extends Controller
             'destination' => 'nullable|string',
             'approval_status' => 'sometimes|required|in:pending,approved,rejected',
             'rejection_reason' => 'nullable|string',
+            'amount' => 'nullable|numeric',
+            'payment_frequency' => 'nullable|in:monthly,custom,weekends'
         ]);
 
         // Set approver when approving/rejecting
@@ -80,6 +84,24 @@ class VehicleRequestController extends Controller
         }
 
         $vehicle_request->update($validated);
+
+        if ($vehicle_request->approval_status === 'approved' && $vehicle_request->vehicle_id) {
+            \App\Models\Vehicle::where('id', $vehicle_request->vehicle_id)->update(['current_status' => 'requested']);
+            
+            \App\Models\VehicleAssignment::create([
+                'vehicle_id' => $vehicle_request->vehicle_id,
+                'vehicle_request_id' => $vehicle_request->id,
+                'driver_id' => null,
+                'assigned_by' => $request->user()->id,
+                'department_id' => $vehicle_request->department_id,
+                'assignment_date' => $vehicle_request->request_date,
+                'return_date' => $vehicle_request->return_date,
+                'purpose' => $vehicle_request->purpose,
+                'status' => 'pending',
+                'amount' => $request->input('amount', 0),
+                'payment_frequency' => $request->input('payment_frequency', 'monthly')
+            ]);
+        }
 
         if ($request->hasFile('attachments')) {
             $vehicle_request->saveAttachments($request->file('attachments'));

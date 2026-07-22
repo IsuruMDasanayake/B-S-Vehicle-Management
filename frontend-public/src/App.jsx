@@ -21,7 +21,8 @@ function App() {
     requester_contact: '',
     requested_vehicle_type: 'Car',
     request_date: '',
-    return_date: ''
+    return_date: '',
+    payment_frequency: 'monthly'
   });
 
   const handleChange = (e) => {
@@ -78,12 +79,12 @@ function App() {
           {/* <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
             <Car className="w-8 h-8 text-blue-600" />
           </div> */}
-          <h1 className="text-3xl -mt-2 font-extrabold text-slate-900 sm:text-4xl">
+          <h1 className="text-3xl -mt-4 font-extrabold text-slate-900 sm:text-4xl">
             Vehicle Request Portal
           </h1>
-          <p className="mt-4 text-lg text-slate-500 -py-5">
+          {/* <p className="mt-4 text-lg text-slate-500 -py-5">
             Submit a request to book a vehicle from B&S Transport.
-          </p>
+          </p> */}
         </div>
 
         <div className="bg-white py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-slate-100">
@@ -218,6 +219,29 @@ function App() {
                     min={formData.request_date}
                     className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   />
+                </div>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label htmlFor="payment_frequency" className="block text-sm font-medium text-slate-700 mb-1">
+                  Request Type
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <CalendarDays className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <select
+                    name="payment_frequency"
+                    id="payment_frequency"
+                    required
+                    value={formData.payment_frequency}
+                    onChange={handleChange}
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="custom">Custom Date Range</option>
+                    <option value="weekends">Weekends Only</option>
+                  </select>
                 </div>
               </div>
             </div>

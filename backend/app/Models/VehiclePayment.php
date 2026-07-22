@@ -14,7 +14,8 @@ class VehiclePayment extends Model
 
     protected $fillable = [
         'vehicle_id',
-        'payment_month',
+        'rental_period',
+        'payer_name',
         'amount',
         'status',
         'payment_date',
