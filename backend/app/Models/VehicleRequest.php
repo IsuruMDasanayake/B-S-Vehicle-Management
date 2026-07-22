@@ -1,12 +1,14 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasAttachments;
 
 class VehicleRequest extends Model
 {
-    use HasFactory, HasAttachments;
+    use HasFactory, HasAttachments, LogsActivity;
 
     protected $with = ['attachments'];
     protected $fillable = ['requester_id','vehicle_id','department_id','request_date','return_date','purpose','destination','approval_status','approved_by','rejection_reason','approved_at', 'requester_name', 'requester_email', 'requester_contact', 'requested_vehicle_type', 'payment_frequency'];
@@ -15,4 +17,9 @@ class VehicleRequest extends Model
     public function approver() { return $this->belongsTo(User::class,'approved_by'); }
     public function vehicle() { return $this->belongsTo(Vehicle::class); }
     public function department() { return $this->belongsTo(Department::class); }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logAll()->useLogName('vehicle_request');
+    }
 }

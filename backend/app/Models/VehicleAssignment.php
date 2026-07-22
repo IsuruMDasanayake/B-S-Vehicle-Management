@@ -1,12 +1,14 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasAttachments;
 
 class VehicleAssignment extends Model
 {
-    use HasFactory, HasAttachments;
+    use HasFactory, HasAttachments, LogsActivity;
 
     protected $with = ['attachments'];
     protected $fillable = ['vehicle_id','driver_id','vehicle_request_id','assigned_by','department_id','assignment_date','return_date','purpose','amount','status','notes','payment_frequency'];
@@ -92,5 +94,10 @@ class VehicleAssignment extends Model
                 ]);
             }
         }
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logAll()->useLogName('vehicle_assignment');
     }
 }

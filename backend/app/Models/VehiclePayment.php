@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 use App\Traits\HasAttachments;
 
 class VehiclePayment extends Model
 {
-    use HasFactory, HasAttachments;
+    use HasFactory, HasAttachments, LogsActivity;
 
     protected $with = ['attachments'];
 
@@ -25,5 +27,10 @@ class VehiclePayment extends Model
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logAll()->useLogName('vehicle_payment');
     }
 }

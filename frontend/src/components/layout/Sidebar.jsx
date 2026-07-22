@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, CarFront, Users, Fuel, Wrench, AlertTriangle, Map, FileText, 
   Shield, UserSquare2, Settings, Route, Navigation, Receipt, HardHat, FileCheck, 
-  Activity, Users2, Database, Car, Package, DollarSign, Store, LogOut, Briefcase
+  Activity, Users2, Database, Car, Package, DollarSign, Store, LogOut, Briefcase, Bell
 } from 'lucide-react';
 
 import useAuthStore from '../../store/authStore';
@@ -64,15 +64,14 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
       ]
     },
 
-    
-    // {
-    //   title: 'Organization',
-    //   items: [
-    //     // { name: 'Departments', path: '/admin/departments', icon: Database, roles: ['super_admin', 'fleet_manager'] },
-    //     { name: 'Users & Roles', path: '/admin/users', icon: Users2, roles: ['super_admin'] },
-    //     { name: 'Audit Logs', path: '/admin/audit-logs', icon: FileText, roles: ['super_admin'] },
-    //   ]
-    // },
+    {
+      title: 'Organization',
+      items: [
+        // { name: 'Departments', path: '/admin/departments', icon: Database, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Users & Roles', path: '/admin/users', icon: Users2, roles: ['super_admin'] },
+        { name: 'Alerts & Activity', path: '/admin/alerts', icon: Bell, roles: ['super_admin', 'fleet_manager'] },
+      ]
+    },
     // {
     //   title: 'System',
     //   items: [
