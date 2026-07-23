@@ -21,6 +21,7 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
       title: 'Main',
       items: [
         { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic', 'dept_manager'] },
+        { name: 'Alerts & Activity', path: '/admin/alerts', icon: Bell, roles: ['super_admin', 'fleet_manager'] },
       ]
     },
     {
@@ -69,7 +70,6 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
       items: [
         // { name: 'Departments', path: '/admin/departments', icon: Database, roles: ['super_admin', 'fleet_manager'] },
         { name: 'Users & Roles', path: '/admin/users', icon: Users2, roles: ['super_admin'] },
-        { name: 'Alerts & Activity', path: '/admin/alerts', icon: Bell, roles: ['super_admin', 'fleet_manager'] },
       ]
     },
     // {
