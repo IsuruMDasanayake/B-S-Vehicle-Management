@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { Car, CalendarDays, User, Mail, Phone, CheckCircle2 } from 'lucide-react';
+import { Car, CalendarDays, User, Mail, Phone, CheckCircle2, MessageCircle, X, Upload } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 
 const api = axios.create({
@@ -19,11 +19,42 @@ function App() {
     requester_name: '',
     requester_email: '',
     requester_contact: '',
+    whatsapp_number: '',
     requested_vehicle_type: 'Car',
     request_date: '',
     return_date: '',
     payment_frequency: 'monthly'
   });
+
+  const [files, setFiles] = useState({
+    id_card_front: null,
+    id_card_back: null,
+    drivers_license: null,
+    residency_bill: null,
+  });
+  
+  const [previews, setPreviews] = useState({
+    id_card_front: null,
+    id_card_back: null,
+    drivers_license: null,
+    residency_bill: null,
+  });
+
+  const handleFileChange = (e, fieldName) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFiles({ ...files, [fieldName]: file });
+      setPreviews({ ...previews, [fieldName]: URL.createObjectURL(file) });
+    }
+  };
+
+  const removeFile = (fieldName) => {
+    setFiles({ ...files, [fieldName]: null });
+    setPreviews({ ...previews, [fieldName]: null });
+    // Also reset the actual input value so the same file can be selected again
+    const input = document.getElementById(fieldName);
+    if (input) input.value = '';
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -31,10 +62,31 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation for required files
+    if (!files.id_card_front || !files.id_card_back || !files.drivers_license) {
+      toast.error('Please upload ID Card (Front & Back) and Driver\'s License.');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      await api.post('/public/vehicle-requests', formData);
+      const payload = new FormData();
+      Object.keys(formData).forEach(key => {
+        payload.append(key, formData[key]);
+      });
+      
+      Object.keys(files).forEach(key => {
+        if (files[key]) {
+          payload.append(key, files[key]);
+        }
+      });
+      
+      await api.post('/public/vehicle-requests', payload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
       setIsSuccess(true);
       toast.success('Your vehicle request has been submitted successfully!');
     } catch (error) {
@@ -154,7 +206,28 @@ function App() {
                 </div>
               </div>
 
-              <div className="sm:col-span-2">
+              <div>
+                <label htmlFor="whatsapp_number" className="block text-sm font-medium text-slate-700 mb-1">
+                  WhatsApp Number *
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MessageCircle className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    type="tel"
+                    name="whatsapp_number"
+                    id="whatsapp_number"
+                    required
+                    value={formData.whatsapp_number}
+                    onChange={handleChange}
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="07X XXX XXXX"
+                  />
+                </div>
+              </div>
+
+              <div className="sm:col-span-1">
                 <label htmlFor="requested_vehicle_type" className="block text-sm font-medium text-slate-700 mb-1">
                   Requested Vehicle Type
                 </label>
@@ -242,6 +315,89 @@ function App() {
                     <option value="custom">Custom Date Range</option>
                     <option value="weekends">Weekends Only</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="sm:col-span-2 mt-4 pt-4 border-t border-slate-200">
+                <h3 className="text-lg font-medium text-slate-900 mb-4">Verification Documents</h3>
+                <p className="text-sm text-slate-500 mb-4">Please upload clear photos of the following documents. These are required for processing your vehicle request.</p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* ID Card Front */}
+                  <div className="border border-slate-200 rounded-xl p-4 flex flex-col justify-center items-center relative min-h-[150px] bg-slate-50">
+                    <span className="text-sm font-medium text-slate-700 mb-2">ID Card (Front) *</span>
+                    {previews.id_card_front ? (
+                      <div className="relative w-full h-full flex justify-center">
+                        <img src={previews.id_card_front} alt="ID Front Preview" className="max-h-32 object-contain rounded" />
+                        <button type="button" onClick={() => removeFile('id_card_front')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 transition-colors">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-blue-600 transition-colors">
+                        <Upload size={24} className="mb-2" />
+                        <span className="text-xs">Click to upload image</span>
+                        <input type="file" id="id_card_front" accept="image/*" onChange={(e) => handleFileChange(e, 'id_card_front')} className="hidden" />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* ID Card Back */}
+                  <div className="border border-slate-200 rounded-xl p-4 flex flex-col justify-center items-center relative min-h-[150px] bg-slate-50">
+                    <span className="text-sm font-medium text-slate-700 mb-2">ID Card (Back) *</span>
+                    {previews.id_card_back ? (
+                      <div className="relative w-full h-full flex justify-center">
+                        <img src={previews.id_card_back} alt="ID Back Preview" className="max-h-32 object-contain rounded" />
+                        <button type="button" onClick={() => removeFile('id_card_back')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 transition-colors">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-blue-600 transition-colors">
+                        <Upload size={24} className="mb-2" />
+                        <span className="text-xs">Click to upload image</span>
+                        <input type="file" id="id_card_back" accept="image/*" onChange={(e) => handleFileChange(e, 'id_card_back')} className="hidden" />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Driver's License */}
+                  <div className="border border-slate-200 rounded-xl p-4 flex flex-col justify-center items-center relative min-h-[150px] bg-slate-50">
+                    <span className="text-sm font-medium text-slate-700 mb-2">Driver's License *</span>
+                    {previews.drivers_license ? (
+                      <div className="relative w-full h-full flex justify-center">
+                        <img src={previews.drivers_license} alt="License Preview" className="max-h-32 object-contain rounded" />
+                        <button type="button" onClick={() => removeFile('drivers_license')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 transition-colors">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-blue-600 transition-colors">
+                        <Upload size={24} className="mb-2" />
+                        <span className="text-xs">Click to upload image</span>
+                        <input type="file" id="drivers_license" accept="image/*" onChange={(e) => handleFileChange(e, 'drivers_license')} className="hidden" />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Proof of Residency */}
+                  <div className="border border-slate-200 rounded-xl p-4 flex flex-col justify-center items-center relative min-h-[150px] bg-slate-50">
+                    <span className="text-sm font-medium text-slate-700 mb-2 text-center">Proof of Residency (Bill) <br/><span className="text-slate-400 font-normal">(Optional)</span></span>
+                    {previews.residency_bill ? (
+                      <div className="relative w-full h-full flex justify-center">
+                        <img src={previews.residency_bill} alt="Bill Preview" className="max-h-32 object-contain rounded" />
+                        <button type="button" onClick={() => removeFile('residency_bill')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 transition-colors">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-blue-600 transition-colors">
+                        <Upload size={24} className="mb-2" />
+                        <span className="text-xs">Click to upload image</span>
+                        <input type="file" id="residency_bill" accept="image/*" onChange={(e) => handleFileChange(e, 'residency_bill')} className="hidden" />
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
