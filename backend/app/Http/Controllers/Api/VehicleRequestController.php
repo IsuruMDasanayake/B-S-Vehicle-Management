@@ -21,13 +21,34 @@ class VehicleRequestController extends Controller
             'requester_name' => 'required|string|max:255',
             'requester_email' => 'required|email|max:255',
             'requester_contact' => 'required|string|max:50',
+            'whatsapp_number' => 'required|string|max:50',
             'requested_vehicle_type' => 'required|string|max:100',
             'request_date' => 'required|date',
             'return_date' => 'required|date|after_or_equal:request_date',
             'payment_frequency' => 'nullable|in:monthly,custom,weekends',
+            'id_card_front' => 'required|image|max:5120',
+            'id_card_back' => 'required|image|max:5120',
+            'drivers_license' => 'required|image|max:5120',
+            'residency_bill' => 'nullable|image|max:5120',
         ]);
 
         $validated['approval_status'] = 'pending';
+
+        if ($request->hasFile('id_card_front')) {
+            $validated['id_card_front_path'] = $request->file('id_card_front')->store('vehicle-requests/verification', 'public');
+        }
+        if ($request->hasFile('id_card_back')) {
+            $validated['id_card_back_path'] = $request->file('id_card_back')->store('vehicle-requests/verification', 'public');
+        }
+        if ($request->hasFile('drivers_license')) {
+            $validated['drivers_license_path'] = $request->file('drivers_license')->store('vehicle-requests/verification', 'public');
+        }
+        if ($request->hasFile('residency_bill')) {
+            $validated['residency_bill_path'] = $request->file('residency_bill')->store('vehicle-requests/verification', 'public');
+        }
+
+        // Unset the file objects so we don't try to save them in the DB directly
+        unset($validated['id_card_front'], $validated['id_card_back'], $validated['drivers_license'], $validated['residency_bill']);
 
         $vehicle_request = VehicleRequest::create($validated);
 

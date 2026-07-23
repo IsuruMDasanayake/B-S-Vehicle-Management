@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Save } from 'lucide-react';
+import { Save, Eye } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
+import ImageViewerModal from '../../components/ui/ImageViewerModal';
 import { format, differenceInDays, isWeekend, addDays } from 'date-fns';
 
 const ApproveRequestModal = ({ isOpen, onClose, request, onSuccess }) => {
@@ -14,6 +15,13 @@ const ApproveRequestModal = ({ isOpen, onClose, request, onSuccess }) => {
     inputRate: ''
   });
   const [totalCalculated, setTotalCalculated] = useState(0);
+  const [imageViewer, setImageViewer] = useState({ isOpen: false, url: '', title: '' });
+
+  const getImageUrl = (path) => {
+    if (!path) return '';
+    const baseUrl = api.defaults.baseURL?.replace('/api', '') || '';
+    return `${baseUrl}/storage/${path}`;
+  };
 
   useEffect(() => {
     if (isOpen && request) {
@@ -93,8 +101,54 @@ const ApproveRequestModal = ({ isOpen, onClose, request, onSuccess }) => {
           <div><strong>Requested Type:</strong> {request.requested_vehicle_type || 'N/A'}</div>
           <div><strong>Request Date:</strong> {format(new Date(request.request_date), 'MMM dd, yyyy')}</div>
           <div><strong>Return Date:</strong> {request.return_date ? format(new Date(request.return_date), 'MMM dd, yyyy') : 'N/A'}</div>
+          <div><strong>Contact:</strong> {request.requester_contact || 'N/A'}</div>
+          <div><strong>WhatsApp:</strong> {request.whatsapp_number || 'N/A'}</div>
         </div>
       </div>
+
+      {(request.id_card_front_path || request.id_card_back_path || request.drivers_license_path) && (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '0.5rem' }}>
+          <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Verification Documents</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.5rem' }}>
+            {request.id_card_front_path && (
+              <div 
+                style={{ border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px', cursor: 'pointer', textAlign: 'center' }}
+                onClick={() => setImageViewer({ isOpen: true, url: getImageUrl(request.id_card_front_path), title: 'ID Card (Front)' })}
+              >
+                <img src={getImageUrl(request.id_card_front_path)} alt="ID Front" style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '2px' }} />
+                <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>ID Front</div>
+              </div>
+            )}
+            {request.id_card_back_path && (
+              <div 
+                style={{ border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px', cursor: 'pointer', textAlign: 'center' }}
+                onClick={() => setImageViewer({ isOpen: true, url: getImageUrl(request.id_card_back_path), title: 'ID Card (Back)' })}
+              >
+                <img src={getImageUrl(request.id_card_back_path)} alt="ID Back" style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '2px' }} />
+                <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>ID Back</div>
+              </div>
+            )}
+            {request.drivers_license_path && (
+              <div 
+                style={{ border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px', cursor: 'pointer', textAlign: 'center' }}
+                onClick={() => setImageViewer({ isOpen: true, url: getImageUrl(request.drivers_license_path), title: 'Driver\'s License' })}
+              >
+                <img src={getImageUrl(request.drivers_license_path)} alt="License" style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '2px' }} />
+                <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>License</div>
+              </div>
+            )}
+            {request.residency_bill_path && (
+              <div 
+                style={{ border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px', cursor: 'pointer', textAlign: 'center' }}
+                onClick={() => setImageViewer({ isOpen: true, url: getImageUrl(request.residency_bill_path), title: 'Proof of Residency' })}
+              >
+                <img src={getImageUrl(request.residency_bill_path)} alt="Bill" style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '2px' }} />
+                <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>Bill</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -154,8 +208,14 @@ const ApproveRequestModal = ({ isOpen, onClose, request, onSuccess }) => {
           </button>
         </div>
       </form>
+      
+      <ImageViewerModal 
+        isOpen={imageViewer.isOpen} 
+        onClose={() => setImageViewer({ ...imageViewer, isOpen: false })} 
+        imageUrl={imageViewer.url} 
+        title={imageViewer.title} 
+      />
     </Modal>
   );
 };
-
 export default ApproveRequestModal;
