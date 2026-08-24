@@ -69,7 +69,7 @@ const DriverDashboard = () => {
     try {
       // Fetch the specific driver record using the ID from the token
       const driverRes = await api.get(`/drivers/${userId}`);
-      const myDriver = driverRes.data.data;
+      const myDriver = driverRes.data;
       
       if (!myDriver) {
         toast.error('Driver profile not found!');
@@ -84,9 +84,8 @@ const DriverDashboard = () => {
       
       // Fallback: If no assigned vehicles, fetch all available vehicles
       if (vehicleList.length === 0) {
-        const vehiclesRes = await api.get('/vehicles');
-        // Filter those with status Available (case insensitive to be safe)
-        vehicleList = vehiclesRes.data.data.filter(v => v.status?.toLowerCase() === 'available');
+        const vehiclesRes = await api.get('/vehicles?status=Available');
+        vehicleList = vehiclesRes.data.data || [];
       }
 
       setVehicles(vehicleList);
