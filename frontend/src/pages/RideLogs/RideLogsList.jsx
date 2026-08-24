@@ -2,11 +2,19 @@ import { useState, useEffect } from 'react';
 import { FileText, CheckCircle, XCircle, Eye, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import MediaViewerModal from '../../components/ui/MediaViewerModal';
 
 const RideLogsList = () => {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewLog, setViewLog] = useState(null);
+  const [viewerData, setViewerData] = useState({ isOpen: false, url: '', type: '', name: '' });
+
+  const getStorageUrl = (path) => {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+    return `${baseUrl}/storage/${path}`;
+  };
 
   useEffect(() => {
     fetchLogs();
@@ -146,9 +154,19 @@ const RideLogsList = () => {
               {viewLog.attachments && viewLog.attachments.length > 0 ? (
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   {viewLog.attachments.map(att => (
-                    <a key={att.id} href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost'}/storage/${att.file_path}`} target="_blank" rel="noreferrer">
-                      <img src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost'}/storage/${att.file_path}`} alt="Evidence" style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
-                    </a>
+                    <button 
+                      key={att.id} 
+                      onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
+                      style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', outline: 'none' }}
+                    >
+                      <img 
+                        src={getStorageUrl(att.file_path)} 
+                        alt="Evidence" 
+                        style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)', transition: 'opacity 0.2s' }} 
+                        onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+                        onMouseOut={e => e.currentTarget.style.opacity = 1}
+                      />
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -169,6 +187,14 @@ const RideLogsList = () => {
           </div>
         </div>
       )}
+
+      <MediaViewerModal 
+        isOpen={viewerData.isOpen}
+        fileUrl={viewerData.url}
+        fileType={viewerData.type}
+        fileName={viewerData.name}
+        onClose={() => setViewerData({ ...viewerData, isOpen: false })}
+      />
     </div>
   );
 };
