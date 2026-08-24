@@ -4,6 +4,7 @@ import { LogOut, Plus, Clock, FileText, CheckCircle, XCircle } from 'lucide-reac
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import imageCompression from 'browser-image-compression';
+import MediaViewerModal from '../components/ui/MediaViewerModal';
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
@@ -38,6 +39,13 @@ const DriverDashboard = () => {
   });
   const [newAttachments, setNewAttachments] = useState([]);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [viewerData, setViewerData] = useState({ isOpen: false, url: '', type: '', name: '' });
+
+  const getStorageUrl = (path) => {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+    return `${baseUrl}/storage/${path}`;
+  };
 
   // Auto-calculate Net Revenue
   useEffect(() => {
@@ -402,11 +410,12 @@ const DriverDashboard = () => {
                     <p className="text-xs text-gray-500 mb-2">Previously Uploaded Evidence:</p>
                     <div className="flex flex-wrap gap-3">
                       {existingAttachments.map(att => (
-                        <div key={att.id} className="relative inline-block">
+                        <div key={att.id} className="relative inline-block cursor-pointer">
                           <img 
-                            src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost'}/storage/${att.file_path}`} 
+                            src={getStorageUrl(att.file_path)} 
                             alt="evidence" 
                             className="w-20 h-20 object-cover rounded border border-gray-200"
+                            onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
                           />
                           <button
                             type="button"
@@ -501,13 +510,17 @@ const DriverDashboard = () => {
                     <p className="text-xs text-gray-500 mb-2">Evidence Uploaded ({log.attachments.length})</p>
                     <div className="flex gap-2 overflow-x-auto pb-2">
                       {log.attachments.map(att => (
-                        <a key={att.id} href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost'}/storage/${att.file_path}`} target="_blank" rel="noreferrer" className="shrink-0">
+                        <button 
+                          key={att.id} 
+                          onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
+                          className="shrink-0 outline-none"
+                        >
                           <img 
-                            src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost'}/storage/${att.file_path}`} 
+                            src={getStorageUrl(att.file_path)} 
                             alt="evidence" 
-                            className="w-16 h-16 object-cover rounded border border-gray-200"
+                            className="w-16 h-16 object-cover rounded border border-gray-200 hover:opacity-80 transition-opacity"
                           />
-                        </a>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -518,6 +531,14 @@ const DriverDashboard = () => {
         </div>
 
       </main>
+
+      <MediaViewerModal 
+        isOpen={viewerData.isOpen}
+        fileUrl={viewerData.url}
+        fileType={viewerData.type}
+        fileName={viewerData.name}
+        onClose={() => setViewerData({ ...viewerData, isOpen: false })}
+      />
     </div>
   );
 };
