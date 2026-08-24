@@ -67,12 +67,9 @@ const DriverDashboard = () => {
 
   const fetchData = async (userId) => {
     try {
-      // Fetch the driver record for this user
-      const driverRes = await api.get(`/drivers`);
-      // Since it's a driver logged in, ideally the API should filter this, 
-      // but for now we find it manually if needed, or assume backend filters.
-      // Assuming we need to find the driver where user_id = userId
-      const myDriver = driverRes.data.data.find(d => d.user_id === userId);
+      // Fetch the specific driver record using the ID from the token
+      const driverRes = await api.get(`/drivers/${userId}`);
+      const myDriver = driverRes.data.data;
       
       if (!myDriver) {
         toast.error('Driver profile not found!');
@@ -83,11 +80,19 @@ const DriverDashboard = () => {
 
       // Fetch active assignments to get vehicles
       const assignmentsRes = await api.get(`/assignments?driver_id=${myDriver.id}&status=active`);
-      const assignedVehicles = assignmentsRes.data.data.map(a => a.vehicle);
-      setVehicles(assignedVehicles);
+      let vehicleList = assignmentsRes.data.data.map(a => a.vehicle);
       
-      if (assignedVehicles.length > 0) {
-        setFormData(prev => ({ ...prev, vehicle_id: assignedVehicles[0].id }));
+      // Fallback: If no assigned vehicles, fetch all available vehicles
+      if (vehicleList.length === 0) {
+        const vehiclesRes = await api.get('/vehicles');
+        // Filter those with status Available (case insensitive to be safe)
+        vehicleList = vehiclesRes.data.data.filter(v => v.status?.toLowerCase() === 'available');
+      }
+
+      setVehicles(vehicleList);
+      
+      if (vehicleList.length > 0) {
+        setFormData(prev => ({ ...prev, vehicle_id: vehicleList.length === 1 ? vehicleList[0].id : '' }));
       }
 
       // Fetch logs
@@ -192,7 +197,7 @@ const DriverDashboard = () => {
       // Reset form
       setFormData(prev => ({
         ...prev,
-        vehicle_id: vehicles.length > 0 ? vehicles[0].id : '',
+        vehicle_id: vehicles.length === 1 ? vehicles[0].id : '',
         morning_odo: '',
         night_odo: '',
         hire_km: '',
@@ -244,7 +249,7 @@ const DriverDashboard = () => {
     setEditingLogId(null);
     setExistingAttachments([]);
     setFormData({
-      vehicle_id: vehicles.length > 0 ? vehicles[0].id : '',
+      vehicle_id: vehicles.length === 1 ? vehicles[0].id : '',
       date: new Date().toISOString().split('T')[0],
       platform: 'PickMe',
       morning_odo: '',
