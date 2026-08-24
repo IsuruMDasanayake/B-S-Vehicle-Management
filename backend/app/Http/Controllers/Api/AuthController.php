@@ -60,9 +60,40 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role,
-                'roles' => $user->getRoleNames(),
-                'permissions' => $user->getAllPermissions()->pluck('name'),
+                'role' => $user->role ?? 'driver', // Default to driver if it's a driver model
+                'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : ['driver'],
+                'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
+            ]
+        ]);
+    }
+
+    public function driverLogin(Request $request)
+    {
+        $request->validate([
+            'contact_number' => 'required|string',
+        ]);
+
+        $driver = \App\Models\Driver::where('contact_number', $request->contact_number)->first();
+
+        if (!$driver) {
+            return response()->json(['message' => 'Driver not found with this mobile number'], 404);
+        }
+
+        if ($driver->status !== 'active') {
+            return response()->json(['message' => 'Driver account is inactive'], 403);
+        }
+
+        // Generate a token for the Driver model
+        $token = $driver->createToken('driver_auth_token', ['role:driver'])->plainTextToken;
+
+        return response()->json([
+            'message' => 'Logged in successfully',
+            'token' => $token,
+            'user' => [
+                'id' => $driver->id,
+                'name' => $driver->name,
+                'email' => $driver->contact_number, // Fallback for email field
+                'role' => 'driver',
             ]
         ]);
     }

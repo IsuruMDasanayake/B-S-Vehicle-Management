@@ -59,6 +59,7 @@ const Sidebar = ({ isMobileOpen, closeMobileOpen }) => {
         // { name: 'Inspections', path: '/admin/inspections', icon: FileCheck, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
         // { name: 'Breakdowns', path: '/admin/breakdowns', icon: AlertTriangle, roles: ['super_admin', 'fleet_manager', 'driver', 'mechanic'] },
         { name: 'Accidents', path: '/admin/accidents', icon: HardHat, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Ride Logs', path: '/admin/ride-logs', icon: Activity, roles: ['super_admin', 'fleet_manager'] },
         // { name: 'Tires', path: '/admin/tires', icon: Activity, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
         // { name: 'Spare Parts', path: '/admin/spare-parts', icon: Package, roles: ['super_admin', 'fleet_manager', 'mechanic'] },
         // { name: 'Fuel', path: '/admin/fuel', icon: Fuel, roles: ['super_admin', 'fleet_manager', 'driver'] },

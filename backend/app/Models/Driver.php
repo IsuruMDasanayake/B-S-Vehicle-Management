@@ -7,9 +7,11 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use App\Traits\HasAttachments;
 
+use Laravel\Sanctum\HasApiTokens;
+
 class Driver extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity, HasAttachments;
+    use HasApiTokens, HasFactory, SoftDeletes, LogsActivity, HasAttachments;
 
     protected $with = ['attachments'];
 
