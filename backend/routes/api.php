@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes
 Route::post('/auth/login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
+Route::post('/auth/driver/login', [\App\Http\Controllers\Api\AuthController::class, 'driverLogin']);
 
 // GPS Webhook from Traccar (No Auth Required)
 Route::post('/gps/webhook', [\App\Http\Controllers\Api\GpsWebhookController::class, 'handleTraccarWebhook']);
@@ -55,6 +56,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('departments', \App\Http\Controllers\Api\DepartmentController::class);
     Route::apiResource('vehicle-requests', \App\Http\Controllers\Api\VehicleRequestController::class);
     Route::apiResource('users', \App\Http\Controllers\Api\UserController::class);
+    
+    // Daily Ride Logs
+    Route::apiResource('daily-ride-logs', \App\Http\Controllers\Api\DailyRideLogController::class);
+    Route::patch('daily-ride-logs/{daily_ride_log}/status', [\App\Http\Controllers\Api\DailyRideLogController::class, 'updateStatus']);
+    Route::get('daily-ride-logs-analytics', [\App\Http\Controllers\Api\DailyRideLogController::class, 'analytics']);
+    
     Route::delete('attachments/{attachment}', [\App\Http\Controllers\Api\AttachmentController::class, 'destroy']);
     Route::get('/activity-logs', [\App\Http\Controllers\Api\ActivityLogController::class, 'index']);
 

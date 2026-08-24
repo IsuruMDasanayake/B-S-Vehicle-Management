@@ -35,6 +35,7 @@ import DepartmentsList from './pages/Departments/DepartmentsList';
 import UsersList from './pages/Users/UsersList';
 import VehicleRequestsList from './pages/VehicleRequests/VehicleRequestsList';
 import AuditLogsList from './pages/AuditLogs/AuditLogsList';
+import RideLogsList from './pages/RideLogs/RideLogsList';
 import Alerts from './pages/Alerts/Alerts';
 import useAuthStore from './store/authStore';
 
@@ -89,6 +90,7 @@ function App() {
         {/* Operations */}
         <Route path="trips" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><TripsList /></RoleProtectedRoute>} />
         <Route path="routes" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><RoutesList /></RoleProtectedRoute>} />
+        <Route path="ride-logs" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><RideLogsList /></RoleProtectedRoute>} />
         <Route path="fuel" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver']}><FuelList /></RoleProtectedRoute>} />
         
         {/* Maintenance & Safety */}
