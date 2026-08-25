@@ -21,6 +21,8 @@ import Portal from './pages/Portal/Portal';
 import ComingSoon from './pages/Portal/ComingSoon';
 import PerformanceDashboard from './pages/Performance/PerformanceDashboard';
 import PerformanceLayout from './pages/Performance/PerformanceLayout';
+import DriverAnalytics from './pages/Performance/DriverAnalytics';
+import VehicleAnalytics from './pages/Performance/VehicleAnalytics';
 
 // Phase 1 New Imports
 import TripsList from './pages/Trips/TripsList';
@@ -128,6 +130,8 @@ function App() {
       {/* Dedicated Performance Dashboard */}
       <Route path="/admin/performance" element={<RoleProtectedRoute allowedRoles={['super_admin']}><PerformanceLayout /></RoleProtectedRoute>}>
         <Route index element={<PerformanceDashboard />} />
+        <Route path="drivers" element={<DriverAnalytics />} />
+        <Route path="vehicles" element={<VehicleAnalytics />} />
       </Route>
     </Routes>
   );

@@ -162,25 +162,90 @@ class DailyRideLogController extends Controller
 
     public function analytics(Request $request)
     {
-        // Simple analytics for the performance dashboard
-        $query = DailyRideLog::where('status', 'approved');
+        $query = DailyRideLog::with(['driver', 'vehicle'])->where('status', 'approved');
         
-        $totalGross = $query->sum('gross_revenue');
-        $totalNet = $query->sum('net_revenue');
-        $totalFuel = $query->sum('fuel_cost');
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+        }
         
-        $totalKm = $query->get()->sum('total_km');
-        $hireKm = $query->sum('hire_km');
-        $emptyKm = $query->get()->sum('empty_km');
+        $logs = $query->get();
+        
+        $totalGross = $logs->sum('gross_revenue');
+        $totalCommission = $logs->sum('commission');
+        $totalNet = $logs->sum('net_revenue');
+        $totalFuel = $logs->sum('fuel_cost');
+        
+        $totalKm = $logs->sum('total_km');
+        $hireKm = $logs->sum('hire_km');
+        $emptyKm = $logs->sum('empty_km');
+        
+        // Group by platform
+        $platformStats = $logs->groupBy('platform')->map(function ($group, $platform) {
+            return [
+                'platform' => $platform,
+                'gross_revenue' => $group->sum('gross_revenue'),
+                'commission' => $group->sum('commission'),
+                'net_revenue' => $group->sum('net_revenue'),
+                'fuel_cost' => $group->sum('fuel_cost'),
+            ];
+        })->values();
+
+        $groupByDate = $request->boolean('group_by_date', false);
+
+        // Top Drivers
+        $driverGroups = $groupByDate 
+            ? $logs->groupBy(function($item) { return $item->driver_id . '_' . $item->date; })
+            : $logs->groupBy('driver_id');
+
+        $driverStats = $driverGroups->map(function ($group) {
+            $driver = $group->first()->driver;
+            return [
+                'driver_id' => $driver ? $driver->id : null,
+                'driver_name' => $driver ? $driver->name : 'Unknown',
+                'date' => $group->first()->date,
+                'net_revenue' => $group->sum('net_revenue'),
+                'fuel_cost' => $group->sum('fuel_cost'),
+                'total_km' => $group->sum('total_km')
+            ];
+        })->sortByDesc($groupByDate ? 'date' : 'net_revenue')->values();
+
+        if ($request->limit !== 'all') {
+            $driverStats = $driverStats->take(5);
+        }
+
+        // Top Vehicles
+        $vehicleGroups = $groupByDate 
+            ? $logs->groupBy(function($item) { return $item->vehicle_id . '_' . $item->date; })
+            : $logs->groupBy('vehicle_id');
+
+        $vehicleStats = $vehicleGroups->map(function ($group) {
+            $vehicle = $group->first()->vehicle;
+            return [
+                'vehicle_id' => $vehicle ? $vehicle->id : null,
+                'vehicle_number' => $vehicle ? $vehicle->vehicle_number : 'Unknown',
+                'date' => $group->first()->date,
+                'net_revenue' => $group->sum('net_revenue'),
+                'fuel_cost' => $group->sum('fuel_cost'),
+                'total_km' => $group->sum('total_km')
+            ];
+        })->sortByDesc($groupByDate ? 'date' : 'net_revenue')->values();
+
+        if ($request->limit !== 'all') {
+            $vehicleStats = $vehicleStats->take(5);
+        }
         
         return response()->json([
             'data' => [
                 'total_gross' => $totalGross,
+                'total_commission' => $totalCommission,
                 'total_net' => $totalNet,
                 'total_fuel' => $totalFuel,
                 'total_km' => $totalKm,
                 'hire_km' => $hireKm,
                 'empty_km' => $emptyKm,
+                'platforms' => $platformStats,
+                'top_drivers' => $driverStats,
+                'top_vehicles' => $vehicleStats
             ]
         ]);
     }
