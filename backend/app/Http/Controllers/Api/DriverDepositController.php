@@ -94,4 +94,37 @@ class DriverDepositController extends Controller
             'data' => $driver_deposit
         ]);
     }
+
+    public function driverBalances(Request $request)
+    {
+        $drivers = \App\Models\Driver::all();
+        $balances = [];
+
+        foreach ($drivers as $driver) {
+            $totalCashOnHand = \App\Models\DailyRideLog::where('driver_id', $driver->id)
+                ->sum('cash_on_hand');
+
+            // Deduct pending and verified deposits
+            $totalDeposited = \App\Models\DriverDeposit::where('driver_id', $driver->id)
+                ->whereIn('status', ['pending', 'verified'])
+                ->sum('amount');
+
+            $outstanding = round((float)($totalCashOnHand - $totalDeposited), 2);
+
+            $balances[] = [
+                'driver_id' => $driver->id,
+                'driver_name' => $driver->name,
+                'total_cash_on_hand' => round((float)$totalCashOnHand, 2),
+                'total_deposited' => round((float)$totalDeposited, 2),
+                'outstanding_balance' => $outstanding
+            ];
+        }
+
+        // Sort by highest outstanding balance first
+        usort($balances, function($a, $b) {
+            return $b['outstanding_balance'] <=> $a['outstanding_balance'];
+        });
+
+        return response()->json(['data' => $balances]);
+    }
 }

@@ -18,9 +18,26 @@ const DepositReview = () => {
   const [filter, setFilter] = useState('pending'); // pending, verified, rejected, all
   const [viewerData, setViewerData] = useState({ isOpen: false, url: '', type: '', name: '' });
 
+  const [activeTab, setActiveTab] = useState('history');
+  const [balances, setBalances] = useState([]);
+  const [isBalancesLoading, setIsBalancesLoading] = useState(true);
+
   useEffect(() => {
     fetchDeposits();
+    fetchBalances();
   }, []);
+
+  const fetchBalances = async () => {
+    setIsBalancesLoading(true);
+    try {
+      const res = await api.get('/driver-balances');
+      setBalances(res.data.data);
+    } catch (error) {
+      toast.error('Failed to fetch driver balances');
+    } finally {
+      setIsBalancesLoading(false);
+    }
+  };
 
   const fetchDeposits = async () => {
     setIsLoading(true);
@@ -50,37 +67,49 @@ const DepositReview = () => {
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1>Deposit Review</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Review and verify driver cash deposits</p>
+          <h1 style={{ marginBottom: '0.25rem' }}>Deposit Review</h1>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Review and verify driver cash deposits</p>
+        </div>
+
+        <div style={{ display: 'flex', background: 'var(--surface-2, #f3f4f6)', borderRadius: 'var(--radius-lg, 0.5rem)', padding: '0.25rem', width: '100%', maxWidth: '350px' }}>
+          <button 
+            onClick={() => setActiveTab('history')}
+            style={{ flex: 1, padding: '0.5rem 1rem', border: 'none', background: activeTab === 'history' ? 'var(--surface, #ffffff)' : 'transparent', color: activeTab === 'history' ? 'var(--success, #10b981)' : 'var(--text-secondary, #6b7280)', borderRadius: 'var(--radius-md, 0.375rem)', fontWeight: activeTab === 'history' ? 600 : 500, boxShadow: activeTab === 'history' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            Deposit History
+          </button>
+          <button 
+            onClick={() => setActiveTab('balances')}
+            style={{ flex: 1, padding: '0.5rem 1rem', border: 'none', background: activeTab === 'balances' ? 'var(--surface, #ffffff)' : 'transparent', color: activeTab === 'balances' ? 'var(--success, #10b981)' : 'var(--text-secondary, #6b7280)', borderRadius: 'var(--radius-md, 0.375rem)', fontWeight: activeTab === 'balances' ? 600 : 500, boxShadow: activeTab === 'balances' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            Driver Balances
+          </button>
         </div>
       </div>
 
-      <div className="card mb-4" style={{ display: 'flex', gap: '1rem', padding: '1rem', marginTop: '-2rem', marginBottom: '1rem' }}>
-        <button 
-          onClick={() => setFilter('pending')}
-          className={`btn ${filter === 'pending' ? 'btn-primary' : 'btn-outline'}`}
-        >
-          Pending
-        </button>
-        <button 
-          onClick={() => setFilter('verified')}
-          className={`btn ${filter === 'verified' ? 'btn-primary' : 'btn-outline'}`}
-        >
-          Verified
-        </button>
-        <button 
-          onClick={() => setFilter('rejected')}
-          className={`btn ${filter === 'rejected' ? 'btn-primary' : 'btn-outline'}`}
-        >
-          Rejected
-        </button>
-        <button 
-          onClick={() => setFilter('all')}
-          className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-        >
-          All
-        </button>
-      </div>
+      {activeTab === 'history' && (
+        <>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            {['pending', 'verified', 'rejected', 'all'].map(f => (
+              <button 
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{ 
+                  padding: '0.4rem 1.2rem', 
+                  borderRadius: '2rem', 
+                  border: `1px solid ${filter === f ? 'var(--success, #10b981)' : 'var(--border, #e5e7eb)'}`, 
+                  background: filter === f ? 'var(--success-alpha, rgba(16,185,129,0.1))' : 'var(--surface, #ffffff)', 
+                  color: filter === f ? 'var(--success, #10b981)' : 'var(--text-secondary, #6b7280)',
+                  fontWeight: 500,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
 
       <div className="card" style={{ padding: 0 }}>
         {isLoading ? (
@@ -159,6 +188,52 @@ const DepositReview = () => {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {activeTab === 'balances' && (
+        <div className="card" style={{ padding: 0 }}>
+          {isBalancesLoading ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>Loading balances...</div>
+          ) : (
+            <div className="table-responsive" style={{ overflowX: 'auto' }}>
+              <table className="table" style={{ minWidth: '700px' }}>
+                <thead>
+                  <tr>
+                    <th>Driver ID</th>
+                    <th>Driver Name</th>
+                    <th>Total Cash On Hand</th>
+                    <th>Total Deposited</th>
+                    <th>Outstanding Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {balances.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No drivers found</td>
+                    </tr>
+                  ) : (
+                    balances.map(b => (
+                      <tr key={b.driver_id}>
+                        <td>#{b.driver_id}</td>
+                        <td style={{ fontWeight: 600 }}>{b.driver_name}</td>
+                        <td>Rs {b.total_cash_on_hand.toFixed(2)}</td>
+                        <td>Rs {b.total_deposited.toFixed(2)}</td>
+                        <td style={{ 
+                          fontWeight: 'bold', 
+                          color: b.outstanding_balance > 0 ? 'var(--danger-color)' : (b.outstanding_balance < 0 ? 'var(--success-color)' : 'var(--text-color)') 
+                        }}>
+                          Rs {b.outstanding_balance.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <MediaViewerModal 
         isOpen={viewerData.isOpen}
