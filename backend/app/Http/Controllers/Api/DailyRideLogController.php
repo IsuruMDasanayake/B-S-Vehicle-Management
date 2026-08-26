@@ -76,7 +76,7 @@ class DailyRideLogController extends Controller
         $fuel = (float)($validated['fuel_cost'] ?? 0);
         $other = (float)($validated['other_expenses'] ?? 0);
         $extra = (float)($validated['extra_earnings'] ?? 0);
-        $validated['cash_on_hand'] = $net - $fuel - $other + $extra;
+        $validated['cash_on_hand'] = $net - $fuel - $other;
 
         $log = DailyRideLog::create($validated);
         
@@ -129,7 +129,7 @@ class DailyRideLogController extends Controller
         $fuel = (float)($validated['fuel_cost'] ?? $dailyRideLog->fuel_cost);
         $other = (float)($validated['other_expenses'] ?? $dailyRideLog->other_expenses);
         $extra = (float)($validated['extra_earnings'] ?? $dailyRideLog->extra_earnings);
-        $validated['cash_on_hand'] = $net - $fuel - $other + $extra;
+        $validated['cash_on_hand'] = $net - $fuel - $other;
 
         $dailyRideLog->update($validated);
 
