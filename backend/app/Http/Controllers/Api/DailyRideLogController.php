@@ -235,6 +235,21 @@ class DailyRideLogController extends Controller
         if ($request->limit !== 'all') {
             $vehicleStats = $vehicleStats->take(5);
         }
+        // Daily Trend
+        $dailyTrend = $logs->groupBy('date')->map(function ($group, $date) {
+            $data = [
+                'date' => $date,
+                'fuel_cost' => $group->sum('fuel_cost'),
+                'total_km' => $group->sum('total_km')
+            ];
+            
+            $platformGroups = $group->groupBy('platform');
+            foreach ($platformGroups as $platform => $pGroup) {
+                $data["{$platform}_net"] = $pGroup->sum('net_revenue');
+            }
+            
+            return $data;
+        })->sortBy('date')->values();
         
         return response()->json([
             'data' => [
@@ -246,6 +261,7 @@ class DailyRideLogController extends Controller
                 'hire_km' => $hireKm,
                 'empty_km' => $emptyKm,
                 'platforms' => $platformStats,
+                'daily_trend' => $dailyTrend,
                 'top_drivers' => $driverStats,
                 'top_vehicles' => $vehicleStats
             ]
