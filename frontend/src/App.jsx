@@ -39,6 +39,7 @@ import UsersList from './pages/Users/UsersList';
 import VehicleRequestsList from './pages/VehicleRequests/VehicleRequestsList';
 import AuditLogsList from './pages/AuditLogs/AuditLogsList';
 import RideLogsList from './pages/RideLogs/RideLogsList';
+import DepositReview from './pages/Deposits/DepositReview';
 import Alerts from './pages/Alerts/Alerts';
 import useAuthStore from './store/authStore';
 
@@ -133,6 +134,7 @@ function App() {
         <Route index element={<PerformanceDashboard />} />
         <Route path="drivers" element={<DriverAnalytics />} />
         <Route path="vehicles" element={<VehicleAnalytics />} />
+        <Route path="deposits" element={<DepositReview />} />
         <Route path="manage" element={<ManageLogs />} />
       </Route>
     </Routes>

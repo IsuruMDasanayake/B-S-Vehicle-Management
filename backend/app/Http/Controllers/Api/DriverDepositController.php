@@ -12,7 +12,7 @@ class DriverDepositController extends Controller
 {
     public function index(Request $request)
     {
-        $query = DriverDeposit::with('attachments');
+        $query = DriverDeposit::with(['attachments', 'driver']);
 
         if ($request->has('driver_id')) {
             $query->where('driver_id', $request->driver_id);
@@ -79,5 +79,19 @@ class DriverDepositController extends Controller
         }
 
         return response()->json(['data' => $summary]);
+    }
+
+    public function updateStatus(Request $request, DriverDeposit $driver_deposit)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:pending,verified,rejected'
+        ]);
+
+        $driver_deposit->update($validated);
+
+        return response()->json([
+            'message' => 'Status updated successfully',
+            'data' => $driver_deposit
+        ]);
     }
 }

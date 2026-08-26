@@ -74,13 +74,12 @@ const DriverDashboard = () => {
       const net = parseFloat(formData.net_revenue) || 0;
       const fuel = parseFloat(formData.fuel_cost) || 0;
       const other = parseFloat(formData.other_expenses) || 0;
-      const extra = parseFloat(formData.extra_earnings) || 0;
       setFormData(prev => ({
         ...prev,
-        cash_on_hand: (net - fuel - other + extra).toFixed(2)
+        cash_on_hand: (net - fuel - other).toFixed(2)
       }));
     }
-  }, [formData.net_revenue, formData.fuel_cost, formData.other_expenses, formData.extra_earnings, showForm]);
+  }, [formData.net_revenue, formData.fuel_cost, formData.other_expenses, showForm]);
 
   useEffect(() => {
     const token = localStorage.getItem('driver_token');
