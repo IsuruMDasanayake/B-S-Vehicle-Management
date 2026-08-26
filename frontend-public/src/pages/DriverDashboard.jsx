@@ -486,7 +486,7 @@ const DriverDashboard = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-xs font-bold px-2 py-1 bg-gray-100 rounded text-gray-700">{log.platform}</span>
-                    <span className="ml-2 text-sm text-gray-500">{log.date}</span>
+                    <span className="ml-2 text-sm text-gray-500">{new Date(log.created_at).toLocaleString()}</span>
                   </div>
                   {log.status === 'pending' && (
                     <div className="flex items-center gap-2">
