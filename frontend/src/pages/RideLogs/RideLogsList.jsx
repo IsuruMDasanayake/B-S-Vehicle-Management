@@ -142,8 +142,13 @@ const RideLogsList = () => {
                     <tr><td>Commission</td><td>Rs {viewLog.commission}</td></tr>
                     <tr><td>Net Revenue</td><td>Rs {viewLog.net_revenue}</td></tr>
                     <tr><td>Fuel Expenses</td><td>Rs {viewLog.fuel_cost}</td></tr>
+                    <tr><td>Other Expenses</td><td>Rs {viewLog.other_expenses || 0}</td></tr>
+                    <tr><td>Extra Earnings</td><td>Rs {viewLog.extra_earnings || 0}</td></tr>
                     <tr><td>Wallet Balance</td><td>Rs {viewLog.wallet_balance}</td></tr>
-                    <tr><td>Extra</td><td>Rs {viewLog.extra_earnings}</td></tr>
+                    <tr style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
+                      <td>Cash on Hand</td>
+                      <td>Rs {viewLog.cash_on_hand || 0}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -152,7 +157,7 @@ const RideLogsList = () => {
             <div style={{ marginBottom: '2rem' }}>
               <h4 style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Evidence / Attachments</h4>
               {viewLog.attachments && viewLog.attachments.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'row', gap: '1.5rem' }}>
                   {['odo_photo', 'receipt', 'app_screenshot', 'uncategorized'].map(cat => {
                     const catAtts = viewLog.attachments.filter(a => (a.category || 'uncategorized') === cat);
                     if (catAtts.length === 0) return null;

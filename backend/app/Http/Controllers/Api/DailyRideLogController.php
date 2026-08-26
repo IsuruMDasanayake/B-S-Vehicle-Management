@@ -56,6 +56,7 @@ class DailyRideLogController extends Controller
             'wallet_balance' => 'nullable|numeric',
             'extra_earnings' => 'nullable|numeric',
             'fuel_cost' => 'nullable|numeric',
+            'other_expenses' => 'nullable|numeric',
             'notes' => 'nullable|string'
         ]);
 
@@ -70,6 +71,13 @@ class DailyRideLogController extends Controller
         }
 
         $validated['status'] = 'pending';
+        
+        $net = (float)($validated['net_revenue'] ?? 0);
+        $fuel = (float)($validated['fuel_cost'] ?? 0);
+        $other = (float)($validated['other_expenses'] ?? 0);
+        $extra = (float)($validated['extra_earnings'] ?? 0);
+        $validated['cash_on_hand'] = $net - $fuel - $other + $extra;
+
         $log = DailyRideLog::create($validated);
         
         if ($request->hasFile('odo_photos')) {
@@ -113,8 +121,15 @@ class DailyRideLogController extends Controller
             'wallet_balance' => 'nullable|numeric',
             'extra_earnings' => 'nullable|numeric',
             'fuel_cost' => 'nullable|numeric',
+            'other_expenses' => 'nullable|numeric',
             'notes' => 'nullable|string'
         ]);
+
+        $net = (float)($validated['net_revenue'] ?? $dailyRideLog->net_revenue);
+        $fuel = (float)($validated['fuel_cost'] ?? $dailyRideLog->fuel_cost);
+        $other = (float)($validated['other_expenses'] ?? $dailyRideLog->other_expenses);
+        $extra = (float)($validated['extra_earnings'] ?? $dailyRideLog->extra_earnings);
+        $validated['cash_on_hand'] = $net - $fuel - $other + $extra;
 
         $dailyRideLog->update($validated);
 
