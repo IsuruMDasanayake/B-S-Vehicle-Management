@@ -1,14 +1,26 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import PerformanceSidebar from './PerformanceSidebar';
 import Navbar from '../../components/layout/Navbar';
 
 const PerformanceLayout = () => {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const toggleMobileOpen = () => {
+    setIsMobileOpen(!isMobileOpen);
+  };
+
+  const closeMobileOpen = () => {
+    setIsMobileOpen(false);
+  };
+
   return (
     <div className="app-container">
-      <PerformanceSidebar />
+      <PerformanceSidebar isMobileOpen={isMobileOpen} closeMobileOpen={closeMobileOpen} />
+      <div className={`sidebar-overlay ${isMobileOpen ? 'active' : ''}`} onClick={closeMobileOpen}></div>
       <div className="main-content">
-        <Navbar />
-        <main className="page-container">
+        <Navbar toggleMobileOpen={toggleMobileOpen} />
+        <main className="page-container" onClick={() => isMobileOpen && closeMobileOpen()}>
           <Outlet />
         </main>
       </div>
