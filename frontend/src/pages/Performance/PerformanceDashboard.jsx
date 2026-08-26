@@ -3,7 +3,8 @@ import { Activity, TrendingUp, DollarSign, Fuel, Navigation, Calendar, Award } f
 import api from '../../services/api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell,
+  LineChart, Line
 } from 'recharts';
 
 const PerformanceDashboard = () => {
@@ -169,6 +170,38 @@ const PerformanceDashboard = () => {
                   Hire: {analytics.hire_km} km | Empty: {analytics.empty_km} km
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Daily Trend Line Chart */}
+          <div className="card" style={{ marginBottom: '2rem' }}>
+            <h3 style={{ marginBottom: '1.5rem' }}>Daily Net Revenue & Fuel Trend</h3>
+            <div style={{ width: '100%', height: 350 }}>
+              {analytics.daily_trend?.length > 0 ? (
+                <ResponsiveContainer>
+                  <LineChart data={analytics.daily_trend} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <RechartsTooltip formatter={(value) => `Rs ${value?.toLocaleString() || 0}`} />
+                    <Legend />
+                    {analytics.platforms?.map((platform, idx) => (
+                      <Line 
+                        key={platform.platform} 
+                        type="monotone" 
+                        dataKey={`${platform.platform}_net`} 
+                        name={`${platform.platform} Net`} 
+                        stroke={COLORS[idx % COLORS.length]} 
+                        strokeWidth={3} 
+                        activeDot={{ r: 8 }} 
+                      />
+                    ))}
+                    <Line type="monotone" dataKey="fuel_cost" name="Fuel Expenses" stroke="#ef4444" strokeWidth={3} strokeDasharray="5 5" />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>No trend data available for the selected period</div>
+              )}
             </div>
           </div>
 
