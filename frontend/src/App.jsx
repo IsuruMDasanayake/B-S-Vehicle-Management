@@ -23,6 +23,7 @@ import PerformanceDashboard from './pages/Performance/PerformanceDashboard';
 import PerformanceLayout from './pages/Performance/PerformanceLayout';
 import DriverAnalytics from './pages/Performance/DriverAnalytics';
 import VehicleAnalytics from './pages/Performance/VehicleAnalytics';
+import ManageLogs from './pages/Performance/ManageLogs';
 
 // Phase 1 New Imports
 import TripsList from './pages/Trips/TripsList';
@@ -132,6 +133,7 @@ function App() {
         <Route index element={<PerformanceDashboard />} />
         <Route path="drivers" element={<DriverAnalytics />} />
         <Route path="vehicles" element={<VehicleAnalytics />} />
+        <Route path="manage" element={<ManageLogs />} />
       </Route>
     </Routes>
   );

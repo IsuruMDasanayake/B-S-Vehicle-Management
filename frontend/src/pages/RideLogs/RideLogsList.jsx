@@ -47,7 +47,7 @@ const RideLogsList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '2rem' }}>
         <div>
           <h1>Daily Ride Logs</h1>
           <p style={{ color: 'var(--text-muted)' }}>Review and approve daily ride-hailing logs submitted by drivers.</p>
@@ -84,7 +84,7 @@ const RideLogsList = () => {
               ) : (
                 logs.map(log => (
                   <tr key={log.id}>
-                    <td>{log.date}</td>
+                    <td>{new Date(log.created_at).toLocaleString()}</td>
                     <td>{log.driver?.name}</td>
                     <td>{log.vehicle?.vehicle_number}</td>
                     <td><span className="badge badge-secondary">{log.platform}</span></td>
@@ -111,12 +111,12 @@ const RideLogsList = () => {
       {viewLog && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2>Review Log: {viewLog.driver?.name} on {viewLog.date}</h2>
+              <h2>Review Log: {viewLog.driver?.name} on {viewLog.date?.split('T')[0]}</h2>
               <button onClick={() => setViewLog(null)} className="icon-btn">✕</button>
             </div>
             

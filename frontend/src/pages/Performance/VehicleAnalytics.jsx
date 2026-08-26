@@ -138,7 +138,7 @@ const VehicleAnalytics = () => {
               filteredVehicles.map((vehicle, idx) => (
                 <tr key={idx}>
                   <td style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                    {vehicle.date}
+                    {new Date(vehicle.created_at).toLocaleString()}
                   </td>
                   <td style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <CarFront size={16} color="var(--text-muted)" />

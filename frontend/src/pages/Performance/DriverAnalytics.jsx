@@ -139,7 +139,7 @@ const DriverAnalytics = () => {
               filteredDrivers.map((driver, idx) => (
                 <tr key={idx}>
                   <td style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                    {driver.date}
+                    {new Date(driver.created_at).toLocaleString()}
                   </td>
                   <td style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Users size={16} color="var(--text-muted)" />

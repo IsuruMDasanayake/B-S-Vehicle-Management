@@ -203,6 +203,7 @@ class DailyRideLogController extends Controller
                 'driver_id' => $driver ? $driver->id : null,
                 'driver_name' => $driver ? $driver->name : 'Unknown',
                 'date' => $group->first()->date,
+                'created_at' => $group->first()->created_at,
                 'net_revenue' => $group->sum('net_revenue'),
                 'fuel_cost' => $group->sum('fuel_cost'),
                 'total_km' => $group->sum('total_km')
@@ -224,6 +225,7 @@ class DailyRideLogController extends Controller
                 'vehicle_id' => $vehicle ? $vehicle->id : null,
                 'vehicle_number' => $vehicle ? $vehicle->vehicle_number : 'Unknown',
                 'date' => $group->first()->date,
+                'created_at' => $group->first()->created_at,
                 'net_revenue' => $group->sum('net_revenue'),
                 'fuel_cost' => $group->sum('fuel_cost'),
                 'total_km' => $group->sum('total_km')

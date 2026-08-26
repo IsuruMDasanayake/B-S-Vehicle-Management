@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Activity, Users, CarFront, Settings, ArrowLeft, BarChart2
+  Activity, Users, CarFront, Settings, ArrowLeft, BarChart2, CheckSquare
 } from 'lucide-react';
 
 import useAuthStore from '../../store/authStore';
@@ -21,6 +21,7 @@ const PerformanceSidebar = () => {
     {
       title: 'Configuration',
       items: [
+        { name: 'Manage Logs', path: '/admin/performance/manage', icon: CheckSquare, roles: ['super_admin', 'fleet_manager'] },
         { name: 'Settings', path: '/admin/performance/settings', icon: Settings, roles: ['super_admin'] },
       ]
     }
