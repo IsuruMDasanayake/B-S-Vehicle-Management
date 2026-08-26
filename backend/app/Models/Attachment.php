@@ -14,6 +14,7 @@ class Attachment extends Model
         'file_name',
         'file_type',
         'file_size',
+        'category',
     ];
 
     /**

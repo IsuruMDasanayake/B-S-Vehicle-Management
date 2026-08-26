@@ -142,32 +142,49 @@ const RideLogsList = () => {
                     <tr><td>Commission</td><td>Rs {viewLog.commission}</td></tr>
                     <tr><td>Net Revenue</td><td>Rs {viewLog.net_revenue}</td></tr>
                     <tr><td>Fuel Expenses</td><td>Rs {viewLog.fuel_cost}</td></tr>
+                    <tr><td>Other Expenses</td><td>Rs {viewLog.other_expenses || 0}</td></tr>
+                    <tr><td>Extra Earnings</td><td>Rs {viewLog.extra_earnings || 0}</td></tr>
                     <tr><td>Wallet Balance</td><td>Rs {viewLog.wallet_balance}</td></tr>
-                    <tr><td>Extra</td><td>Rs {viewLog.extra_earnings}</td></tr>
+                    <tr style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
+                      <td>Cash on Hand</td>
+                      <td>Rs {viewLog.cash_on_hand || 0}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
             <div style={{ marginBottom: '2rem' }}>
-              <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Evidence / Attachments</h4>
+              <h4 style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Evidence / Attachments</h4>
               {viewLog.attachments && viewLog.attachments.length > 0 ? (
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  {viewLog.attachments.map(att => (
-                    <button 
-                      key={att.id} 
-                      onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
-                      style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', outline: 'none' }}
-                    >
-                      <img 
-                        src={getStorageUrl(att.file_path)} 
-                        alt="Evidence" 
-                        style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)', transition: 'opacity 0.2s' }} 
-                        onMouseOver={e => e.currentTarget.style.opacity = 0.8}
-                        onMouseOut={e => e.currentTarget.style.opacity = 1}
-                      />
-                    </button>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'row', gap: '1.5rem' }}>
+                  {['odo_photo', 'receipt', 'app_screenshot', 'uncategorized'].map(cat => {
+                    const catAtts = viewLog.attachments.filter(a => (a.category || 'uncategorized') === cat);
+                    if (catAtts.length === 0) return null;
+                    const label = { odo_photo: 'Odometer Photos', receipt: 'Receipts', app_screenshot: 'App Screenshots', uncategorized: 'Other Evidence' }[cat];
+                    return (
+                      <div key={cat}>
+                        <h5 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem', margin: 0 }}>{label}</h5>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                          {catAtts.map(att => (
+                            <button 
+                              key={att.id} 
+                              onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
+                              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', outline: 'none' }}
+                            >
+                              <img 
+                                src={getStorageUrl(att.file_path)} 
+                                alt={label} 
+                                style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)', transition: 'opacity 0.2s' }} 
+                                onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+                                onMouseOut={e => e.currentTarget.style.opacity = 1}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p>No attachments uploaded.</p>

@@ -59,6 +59,8 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Daily Ride Logs
     Route::apiResource('daily-ride-logs', \App\Http\Controllers\Api\DailyRideLogController::class);
+    Route::get('driver-deposits/summary', [\App\Http\Controllers\Api\DriverDepositController::class, 'dailySummary']);
+    Route::apiResource('driver-deposits', \App\Http\Controllers\Api\DriverDepositController::class);
     Route::patch('daily-ride-logs/{daily_ride_log}/status', [\App\Http\Controllers\Api\DailyRideLogController::class, 'updateStatus']);
     Route::get('daily-ride-logs-analytics', [\App\Http\Controllers\Api\DailyRideLogController::class, 'analytics']);
     

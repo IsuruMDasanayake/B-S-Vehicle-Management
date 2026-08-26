@@ -26,6 +26,8 @@ class DailyRideLog extends Model
         'wallet_balance',
         'extra_earnings',
         'fuel_cost',
+        'other_expenses',
+        'cash_on_hand',
         'status',
         'notes'
     ];
