@@ -37,7 +37,7 @@ const DriverDashboard = () => {
   const [files, setFiles] = useState({
     attachments: null
   });
-  const [newAttachments, setNewAttachments] = useState([]);
+  const [newAttachments, setNewAttachments] = useState({ odo_photo: [], receipt: [], app_screenshot: [] });
   const [isCompressing, setIsCompressing] = useState(false);
   const [viewerData, setViewerData] = useState({ isOpen: false, url: '', type: '', name: '' });
 
@@ -132,7 +132,7 @@ const DriverDashboard = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e, category) => {
     const selectedFiles = Array.from(e.target.files);
     setIsCompressing(true);
     
@@ -151,7 +151,10 @@ const DriverDashboard = () => {
           return file; // If it's a PDF or something else, return original
         })
       );
-      setNewAttachments(prev => [...prev, ...compressedFiles]);
+      setNewAttachments(prev => ({
+        ...prev,
+        [category]: [...prev[category], ...compressedFiles]
+      }));
     } catch (error) {
       console.error('Image compression error:', error);
       toast.error('Error compressing some images');
@@ -162,8 +165,11 @@ const DriverDashboard = () => {
     }
   };
 
-  const removeNewAttachment = (index) => {
-    setNewAttachments(prev => prev.filter((_, i) => i !== index));
+  const removeNewAttachment = (category, index) => {
+    setNewAttachments(prev => ({
+      ...prev,
+      [category]: prev[category].filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -178,11 +184,13 @@ const DriverDashboard = () => {
         payload.append(key, formData[key]);
       });
 
-      if (newAttachments.length > 0) {
-        for (let i = 0; i < newAttachments.length; i++) {
-          payload.append('attachments[]', newAttachments[i]);
+      ['odo_photo', 'receipt', 'app_screenshot'].forEach(category => {
+        if (newAttachments[category].length > 0) {
+          for (let i = 0; i < newAttachments[category].length; i++) {
+            payload.append(`${category}s[]`, newAttachments[category][i]);
+          }
         }
-      }
+      });
 
       if (editingLogId) {
         payload.append('_method', 'PUT');
@@ -217,7 +225,7 @@ const DriverDashboard = () => {
         notes: ''
       }));
       setFiles({ attachments: null });
-      setNewAttachments([]);
+      setNewAttachments({ odo_photo: [], receipt: [], app_screenshot: [] });
       
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to submit log');
@@ -245,7 +253,7 @@ const DriverDashboard = () => {
     setEditingLogId(log.id);
     setShowForm(true);
     setFiles({ attachments: null });
-    setNewAttachments([]);
+    setNewAttachments({ odo_photo: [], receipt: [], app_screenshot: [] });
     setExistingAttachments(log.attachments || []);
     // scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -402,66 +410,81 @@ const DriverDashboard = () => {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Upload Evidence (Odo Photos, Receipts, App Screenshots)</label>
-                
-                {/* Existing Attachments Display (Edit Mode) */}
-                {editingLogId && existingAttachments.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs text-gray-500 mb-2">Previously Uploaded Evidence:</p>
-                    <div className="flex flex-wrap gap-3">
-                      {existingAttachments.map(att => (
-                        <div key={att.id} className="relative inline-block cursor-pointer">
-                          <img 
-                            src={getStorageUrl(att.file_path)} 
-                            alt="evidence" 
-                            className="w-20 h-20 object-cover rounded border border-gray-200"
-                            onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeExistingAttachment(att.id)}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
-                            title="Remove Evidence"
-                          >
-                            <XCircle size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* New Attachments Preview */}
-                {newAttachments.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs text-gray-500 mb-2">New Evidence to Upload:</p>
-                    <div className="flex flex-wrap gap-3">
-                      {newAttachments.map((file, index) => {
-                        const url = URL.createObjectURL(file);
-                        return (
-                          <div key={index} className="relative inline-block">
-                            <img 
-                              src={url} 
-                              alt={`preview-${index}`} 
-                              className="w-20 h-20 object-cover rounded border border-gray-200"
-                              onLoad={() => URL.revokeObjectURL(url)}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeNewAttachment(index)}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
-                              title="Remove File"
-                            >
-                              <XCircle size={14} />
-                            </button>
+                <label className="block text-sm text-gray-600 mb-2">Upload Evidence</label>
+                <div className="space-y-4">
+                  {[
+                    { key: 'odo_photo', label: 'Odometer Photos' },
+                    { key: 'receipt', label: 'Receipts' },
+                    { key: 'app_screenshot', label: 'App Screenshots' }
+                  ].map(cat => {
+                    const existAtt = existingAttachments.filter(a => a.category === cat.key);
+                    const newAtt = newAttachments[cat.key];
+                    return (
+                      <div key={cat.key} className="p-3 border border-gray-100 rounded-lg bg-gray-50">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">{cat.label}</p>
+                        
+                        {/* Existing Attachments Display (Edit Mode) */}
+                        {editingLogId && existAtt.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500 mb-1">Previously Uploaded:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {existAtt.map(att => (
+                                <div key={att.id} className="relative inline-block cursor-pointer">
+                                  <img 
+                                    src={getStorageUrl(att.file_path)} 
+                                    alt={cat.label} 
+                                    className="w-16 h-16 object-cover rounded border border-gray-200"
+                                    onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeExistingAttachment(att.id)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
+                                    title="Remove Evidence"
+                                  >
+                                    <XCircle size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                        )}
 
-                <input type="file" multiple onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                        {/* New Attachments Preview */}
+                        {newAtt.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500 mb-1">New Evidence:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {newAtt.map((file, index) => {
+                                const url = URL.createObjectURL(file);
+                                return (
+                                  <div key={index} className="relative inline-block">
+                                    <img 
+                                      src={url} 
+                                      alt={`preview-${index}`} 
+                                      className="w-16 h-16 object-cover rounded border border-gray-200"
+                                      onLoad={() => URL.revokeObjectURL(url)}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeNewAttachment(cat.key, index)}
+                                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
+                                      title="Remove File"
+                                    >
+                                      <XCircle size={14} />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <input type="file" multiple onChange={(e) => handleFileChange(e, cat.key)} className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200" />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <button type="submit" disabled={isLoading || isCompressing} className="w-full bg-blue-600 text-white font-medium py-3 rounded-lg mt-4 disabled:opacity-50">
@@ -508,20 +531,32 @@ const DriverDashboard = () => {
                 {log.attachments && log.attachments.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-50">
                     <p className="text-xs text-gray-500 mb-2">Evidence Uploaded ({log.attachments.length})</p>
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {log.attachments.map(att => (
-                        <button 
-                          key={att.id} 
-                          onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
-                          className="shrink-0 outline-none"
-                        >
-                          <img 
-                            src={getStorageUrl(att.file_path)} 
-                            alt="evidence" 
-                            className="w-16 h-16 object-cover rounded border border-gray-200 hover:opacity-80 transition-opacity"
-                          />
-                        </button>
-                      ))}
+                    <div className="flex gap-4 overflow-x-auto pb-2">
+                      {['odo_photo', 'receipt', 'app_screenshot', 'uncategorized'].map(cat => {
+                        const catAtts = log.attachments.filter(a => (a.category || 'uncategorized') === cat);
+                        if (catAtts.length === 0) return null;
+                        const label = { odo_photo: 'Odometer', receipt: 'Receipts', app_screenshot: 'Screenshots', uncategorized: 'Other' }[cat];
+                        return (
+                          <div key={cat} className="flex flex-col gap-1 shrink-0">
+                            <span className="text-[10px] uppercase text-gray-400 font-semibold">{label}</span>
+                            <div className="flex gap-1">
+                              {catAtts.map(att => (
+                                <button 
+                                  key={att.id} 
+                                  onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(att.file_path), type: att.file_type, name: att.file_name })}
+                                  className="shrink-0 outline-none"
+                                >
+                                  <img 
+                                    src={getStorageUrl(att.file_path)} 
+                                    alt="evidence" 
+                                    className="w-12 h-12 object-cover rounded border border-gray-200 hover:opacity-80 transition-opacity"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

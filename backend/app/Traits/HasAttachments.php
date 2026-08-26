@@ -20,7 +20,7 @@ trait HasAttachments
      * Handle saving uploaded files.
      * Expects $files to be an array of UploadedFile objects.
      */
-    public function saveAttachments($files, $directory = 'attachments')
+    public function saveAttachments($files, $directory = 'attachments', $category = 'uncategorized')
     {
         if (empty($files)) {
             return;
@@ -38,6 +38,7 @@ trait HasAttachments
                 'file_name' => $file->getClientOriginalName(),
                 'file_type' => $file->getClientMimeType(),
                 'file_size' => $file->getSize(),
+                'category' => $category,
             ]);
         }
     }

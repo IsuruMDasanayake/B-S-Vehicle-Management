@@ -72,6 +72,15 @@ class DailyRideLogController extends Controller
         $validated['status'] = 'pending';
         $log = DailyRideLog::create($validated);
         
+        if ($request->hasFile('odo_photos')) {
+            $log->saveAttachments($request->file('odo_photos'), 'attachments', 'odo_photo');
+        }
+        if ($request->hasFile('receipts')) {
+            $log->saveAttachments($request->file('receipts'), 'attachments', 'receipt');
+        }
+        if ($request->hasFile('app_screenshots')) {
+            $log->saveAttachments($request->file('app_screenshots'), 'attachments', 'app_screenshot');
+        }
         if ($request->hasFile('attachments')) {
             $log->saveAttachments($request->file('attachments'));
         }
@@ -109,6 +118,15 @@ class DailyRideLogController extends Controller
 
         $dailyRideLog->update($validated);
 
+        if ($request->hasFile('odo_photos')) {
+            $dailyRideLog->saveAttachments($request->file('odo_photos'), 'attachments', 'odo_photo');
+        }
+        if ($request->hasFile('receipts')) {
+            $dailyRideLog->saveAttachments($request->file('receipts'), 'attachments', 'receipt');
+        }
+        if ($request->hasFile('app_screenshots')) {
+            $dailyRideLog->saveAttachments($request->file('app_screenshots'), 'attachments', 'app_screenshot');
+        }
         if ($request->hasFile('attachments')) {
             $dailyRideLog->saveAttachments($request->file('attachments'));
         }
