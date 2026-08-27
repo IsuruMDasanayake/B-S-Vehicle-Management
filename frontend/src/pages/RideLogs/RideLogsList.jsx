@@ -57,9 +57,9 @@ const RideLogsList = () => {
         </button>
       </div>
 
-      <div className="card">
-        <div className="table-responsive">
-          <table className="table">
+      <div className="card" style={{ padding: 0 }}>
+        <div className="table-responsive" style={{ overflowX: 'auto' }}>
+          <table className="table" style={{ minWidth: '900px' }}>
             <thead>
               <tr>
                 <th>Date</th>
@@ -83,19 +83,24 @@ const RideLogsList = () => {
                 </tr>
               ) : (
                 logs.map(log => (
-                  <tr key={log.id}>
-                    <td>{new Date(log.created_at).toLocaleString()}</td>
-                    <td>{log.driver?.name}</td>
-                    <td>{log.vehicle?.vehicle_number}</td>
-                    <td><span className="badge badge-secondary">{log.platform}</span></td>
-                    <td>{log.total_km} km</td>
-                    <td>Rs {log.net_revenue}</td>
-                    <td>
+                  <tr 
+                    key={log.id} 
+                    onClick={() => setViewLog(log)}
+                    style={{ cursor: 'pointer' }}
+                    className="hover-row"
+                  >
+                    <td style={{ padding: '1rem' }}>{new Date(log.created_at).toLocaleString()}</td>
+                    <td style={{ padding: '1rem', fontWeight: 500 }}>{log.driver?.name}</td>
+                    <td style={{ padding: '1rem' }}>{log.vehicle?.vehicle_number}</td>
+                    <td style={{ padding: '1rem' }}><span className="badge badge-secondary">{log.platform}</span></td>
+                    <td style={{ padding: '1rem' }}>{log.total_km} km</td>
+                    <td style={{ padding: '1rem', fontWeight: 600 }}>Rs {log.net_revenue}</td>
+                    <td style={{ padding: '1rem' }}>
                       {log.status === 'pending' && <span className="badge badge-warning">Pending</span>}
                       {log.status === 'approved' && <span className="badge badge-success">Approved</span>}
                       {log.status === 'rejected' && <span className="badge badge-danger">Rejected</span>}
                     </td>
-                    <td>
+                    <td style={{ padding: '1rem' }} onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => setViewLog(log)} className="icon-btn" title="Review Log">
                         <Eye size={18} />
                       </button>
@@ -193,11 +198,11 @@ const RideLogsList = () => {
 
             {viewLog.status === 'pending' && (
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                <button onClick={() => updateStatus(viewLog.id, 'rejected')} className="btn btn-danger" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <XCircle size={18} /> Reject
-                </button>
                 <button onClick={() => updateStatus(viewLog.id, 'approved')} className="btn btn-success" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <CheckCircle size={18} /> Approve
+                </button>
+                <button onClick={() => updateStatus(viewLog.id, 'rejected')} className="btn btn-danger" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <XCircle size={18} /> Reject
                 </button>
               </div>
             )}

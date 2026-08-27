@@ -52,8 +52,8 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/bootstrap/cache 2>/dev/null || true
 
 # ─── PHP Config ───────────────────────────────────────────────────────────────
-RUN echo "upload_max_filesize=50M" >> /usr/local/etc/php/conf.d/custom.ini \
-    && echo "post_max_size=50M" >> /usr/local/etc/php/conf.d/custom.ini \
+RUN echo "upload_max_filesize=500M" >> /usr/local/etc/php/conf.d/custom.ini \
+    && echo "post_max_size=500M" >> /usr/local/etc/php/conf.d/custom.ini \
     && echo "memory_limit=512M" >> /usr/local/etc/php/conf.d/custom.ini
 
 EXPOSE 9000
