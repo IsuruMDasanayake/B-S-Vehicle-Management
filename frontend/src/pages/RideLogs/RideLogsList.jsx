@@ -125,8 +125,8 @@ const RideLogsList = () => {
               <button onClick={() => setViewLog(null)} className="icon-btn">✕</button>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-              <div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div style={{ flex: '1 1 300px' }}>
                 <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Odometer Metrics</h4>
                 <table className="table" style={{ fontSize: '0.9rem' }}>
                   <tbody>
@@ -139,7 +139,7 @@ const RideLogsList = () => {
                 </table>
               </div>
               
-              <div>
+              <div style={{ flex: '1 1 300px' }}>
                 <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Financials</h4>
                 <table className="table" style={{ fontSize: '0.9rem' }}>
                   <tbody>
@@ -162,7 +162,7 @@ const RideLogsList = () => {
             <div style={{ marginBottom: '2rem' }}>
               <h4 style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Evidence / Attachments</h4>
               {viewLog.attachments && viewLog.attachments.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'row', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
                   {['odo_photo', 'receipt', 'app_screenshot', 'uncategorized'].map(cat => {
                     const catAtts = viewLog.attachments.filter(a => (a.category || 'uncategorized') === cat);
                     if (catAtts.length === 0) return null;

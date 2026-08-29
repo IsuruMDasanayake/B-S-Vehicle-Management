@@ -13,28 +13,47 @@ const DriverDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(() => {
+    return localStorage.getItem('driver_draft_showForm') === 'true';
+  });
   const [editingLogId, setEditingLogId] = useState(null);
   const [existingAttachments, setExistingAttachments] = useState([]);
 
   // Form State
-  const [formData, setFormData] = useState({
-    vehicle_id: '',
-    date: new Date().toISOString().split('T')[0],
-    platform: 'PickMe',
-    morning_odo: '',
-    night_odo: '',
-    hire_km: '',
-    gross_revenue: '',
-    commission: '',
-    net_revenue: '',
-    wallet_balance: '',
-    extra_earnings: '0',
-    fuel_cost: '0',
-    other_expenses: '0',
-    cash_on_hand: '0',
-    notes: ''
+  const [formData, setFormData] = useState(() => {
+    const saved = localStorage.getItem('driver_draft_formData');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      vehicle_id: '',
+      date: new Date().toISOString().split('T')[0],
+      platform: 'PickMe',
+      morning_odo: '',
+      night_odo: '',
+      hire_km: '',
+      gross_revenue: '',
+      commission: '',
+      net_revenue: '',
+      wallet_balance: '',
+      extra_earnings: '0',
+      fuel_cost: '0',
+      other_expenses: '0',
+      cash_on_hand: '0',
+      notes: ''
+    };
   });
+
+  // Persist state
+  useEffect(() => {
+    localStorage.setItem('driver_draft_showForm', showForm);
+  }, [showForm]);
+
+  useEffect(() => {
+    localStorage.setItem('driver_draft_formData', JSON.stringify(formData));
+  }, [formData]);
   
   const [files, setFiles] = useState({
     attachments: null
@@ -274,7 +293,9 @@ const DriverDashboard = () => {
       setEditingLogId(null);
       fetchLogs(driver.id);
       
-      // Reset form
+      // Reset form and clear draft
+      localStorage.removeItem('driver_draft_formData');
+      localStorage.removeItem('driver_draft_showForm');
       setFormData(prev => ({
         ...prev,
         vehicle_id: vehicles.length === 1 ? vehicles[0].id : '',
