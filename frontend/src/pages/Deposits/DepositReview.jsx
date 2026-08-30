@@ -15,7 +15,7 @@ const getStorageUrl = (path) => {
 const DepositReview = () => {
   const [deposits, setDeposits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState('pending'); // pending, verified, rejected, all
+  const [filter, setFilter] = useState('all'); // pending, verified, rejected, all
   const [viewerData, setViewerData] = useState({ isOpen: false, url: '', type: '', name: '' });
 
   const [activeTab, setActiveTab] = useState('history');
@@ -124,6 +124,7 @@ const DepositReview = () => {
                   <th>Amount</th>
                   <th>Notes</th>
                   <th>Uploaded At</th>
+                  <th>Receipt</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -142,27 +143,29 @@ const DepositReview = () => {
                       <td>{dep.notes || '-'}</td>
                       <td>{new Date(dep.created_at).toLocaleString()}</td>
                       <td>
+                        {dep.attachments && dep.attachments.length > 0 ? (
+                          <button 
+                            className="icon-btn" 
+                            style={{ padding: '0.25rem', color: 'var(--primary-color)' }}
+                            onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(dep.attachments[0].file_path), type: dep.attachments[0].file_type, name: dep.attachments[0].file_name })}
+                            title="View Receipt"
+                          >
+                            <FileText size={20} />
+                          </button>
+                        ) : '-'}
+                      </td>
+                      <td>
                         <span className={`badge ${dep.status === 'verified' ? 'badge-success' : dep.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
                           {dep.status.toUpperCase()}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          {dep.attachments && dep.attachments.length > 0 && (
-                            <button 
-                              className="btn btn-outline" 
-                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                              onClick={() => setViewerData({ isOpen: true, url: getStorageUrl(dep.attachments[0].file_path), type: dep.attachments[0].file_type, name: dep.attachments[0].file_name })}
-                              title="View Receipt"
-                            >
-                              <FileText size={16} />
-                            </button>
-                          )}
                           {dep.status === 'pending' && (
                             <>
                               <button 
                                 className="btn" 
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', background: 'var(--success-color)', color: 'white', border: 'none' }}
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', background: 'var(--success)', color: 'white', border: 'none' }}
                                 onClick={() => handleStatusUpdate(dep.id, 'verified')}
                                 title="Approve"
                               >
@@ -170,7 +173,7 @@ const DepositReview = () => {
                               </button>
                               <button 
                                 className="btn" 
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', background: 'var(--danger-color)', color: 'white', border: 'none' }}
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', background: 'var(--danger)', color: 'white', border: 'none' }}
                                 onClick={() => handleStatusUpdate(dep.id, 'rejected')}
                                 title="Reject"
                               >
