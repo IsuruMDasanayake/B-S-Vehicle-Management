@@ -155,7 +155,7 @@ const PerformanceDashboard = () => {
               <div>
                 <p style={{ margin: 0, color: 'var(--text-muted)' }}>Total Fuel Expenses</p>
                 <h2 style={{ margin: 0 }}>Rs {analytics.total_fuel?.toLocaleString()}</h2>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Profit/KM: Rs {analytics.hire_km > 0 ? (analytics.total_net / analytics.hire_km).toFixed(2) : 0}</p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cost/KM: Rs {analytics.hire_km > 0 ? (analytics.total_gross / analytics.total_km).toFixed(2) : 0}</p>
               </div>
             </div>
             
