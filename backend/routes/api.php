@@ -65,6 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('driver-deposits/{driver_deposit}/status', [\App\Http\Controllers\Api\DriverDepositController::class, 'updateStatus']);
     Route::patch('daily-ride-logs/{daily_ride_log}/status', [\App\Http\Controllers\Api\DailyRideLogController::class, 'updateStatus']);
     Route::get('daily-ride-logs-analytics', [\App\Http\Controllers\Api\DailyRideLogController::class, 'analytics']);
+    Route::get('intelligence/drivers', [\App\Http\Controllers\Api\PerformanceIntelligenceController::class, 'drivers']);
+    Route::get('intelligence', [\App\Http\Controllers\Api\PerformanceIntelligenceController::class, 'intelligence']);
     
     Route::delete('attachments/{attachment}', [\App\Http\Controllers\Api\AttachmentController::class, 'destroy']);
     Route::get('/activity-logs', [\App\Http\Controllers\Api\ActivityLogController::class, 'index']);

@@ -24,6 +24,7 @@ import PerformanceLayout from './pages/Performance/PerformanceLayout';
 import DriverAnalytics from './pages/Performance/DriverAnalytics';
 import VehicleAnalytics from './pages/Performance/VehicleAnalytics';
 import ManageLogs from './pages/Performance/ManageLogs';
+import PerformanceIntelligence from './pages/Performance/PerformanceIntelligence';
 
 // Phase 1 New Imports
 import TripsList from './pages/Trips/TripsList';
@@ -136,6 +137,7 @@ function App() {
         <Route path="vehicles" element={<VehicleAnalytics />} />
         <Route path="deposits" element={<DepositReview />} />
         <Route path="manage" element={<ManageLogs />} />
+        <Route path="intelligence" element={<PerformanceIntelligence />} />
       </Route>
     </Routes>
   );
