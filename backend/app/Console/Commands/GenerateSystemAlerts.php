@@ -36,7 +36,7 @@ class GenerateSystemAlerts extends Command
         // 1. Insurance Expiry
         foreach ($documentThresholds as $days) {
             $targetDate = $now->copy()->addDays($days)->toDateString();
-            $policies = InsurancePolicy::whereDate('expiry_date', $targetDate)->with('vehicle')->get();
+            $policies = InsurancePolicy::whereDate('expiry_date', $targetDate)->where('status', 'active')->with('vehicle')->get();
             foreach ($policies as $policy) {
                 $vehicleNumber = $policy->vehicle ? $policy->vehicle->vehicle_number : 'Unknown Vehicle';
                 $this->dispatchAlert($notifiableUsers, [
@@ -52,7 +52,7 @@ class GenerateSystemAlerts extends Command
         // 2. Revenue License Renewal
         foreach ($documentThresholds as $days) {
             $targetDate = $now->copy()->addDays($days)->toDateString();
-            $licenses = RevenueLicense::whereDate('expiry_date', $targetDate)->with('vehicle')->get();
+            $licenses = RevenueLicense::whereDate('expiry_date', $targetDate)->where('status', 'active')->with('vehicle')->get();
             foreach ($licenses as $license) {
                 $vehicleNumber = $license->vehicle ? $license->vehicle->vehicle_number : 'Unknown Vehicle';
                 $this->dispatchAlert($notifiableUsers, [
@@ -70,6 +70,10 @@ class GenerateSystemAlerts extends Command
             $targetDate = $now->copy()->addDays($days)->toDateString();
             $tests = EmissionTest::whereDate('expiry_date', $targetDate)->with('vehicle')->get();
             foreach ($tests as $test) {
+                // Ensure it's the latest test for this vehicle
+                $latestTest = EmissionTest::where('vehicle_id', $test->vehicle_id)->orderByDesc('expiry_date')->first();
+                if ($latestTest && $latestTest->id !== $test->id) continue;
+
                 $vehicleNumber = $test->vehicle ? $test->vehicle->vehicle_number : 'Unknown Vehicle';
                 $this->dispatchAlert($notifiableUsers, [
                     'title' => 'Emission Test Expiry',
@@ -115,9 +119,10 @@ class GenerateSystemAlerts extends Command
         // 6. Expired Documents
         $today = $now->toDateString();
         
-        // Expired Insurance
-        $expiredPolicies = InsurancePolicy::whereDate('expiry_date', '<', $today)->with('vehicle')->get();
+        // Expired Insurance (Auto update status and alert)
+        $expiredPolicies = InsurancePolicy::whereDate('expiry_date', '<', $today)->where('status', 'active')->with('vehicle')->get();
         foreach ($expiredPolicies as $policy) {
+            $policy->update(['status' => 'expired']);
             $vehicleNumber = $policy->vehicle ? $policy->vehicle->vehicle_number : 'Unknown';
             $this->dispatchAlert($notifiableUsers, [
                 'title' => 'Insurance Expired',
@@ -128,9 +133,10 @@ class GenerateSystemAlerts extends Command
             ]);
         }
 
-        // Expired Revenue License
-        $expiredLicenses = RevenueLicense::whereDate('expiry_date', '<', $today)->with('vehicle')->get();
+        // Expired Revenue License (Auto update status and alert)
+        $expiredLicenses = RevenueLicense::whereDate('expiry_date', '<', $today)->where('status', 'active')->with('vehicle')->get();
         foreach ($expiredLicenses as $license) {
+            $license->update(['status' => 'expired']);
             $vehicleNumber = $license->vehicle ? $license->vehicle->vehicle_number : 'Unknown';
             $this->dispatchAlert($notifiableUsers, [
                 'title' => 'Revenue License Expired',
@@ -141,9 +147,12 @@ class GenerateSystemAlerts extends Command
             ]);
         }
 
-        // Expired Emission Test
+        // Expired Emission Test (Alert only for the latest one if it's expired)
         $expiredTests = EmissionTest::whereDate('expiry_date', '<', $today)->with('vehicle')->get();
         foreach ($expiredTests as $test) {
+            $latestTest = EmissionTest::where('vehicle_id', $test->vehicle_id)->orderByDesc('expiry_date')->first();
+            if ($latestTest && $latestTest->id !== $test->id) continue;
+
             $vehicleNumber = $test->vehicle ? $test->vehicle->vehicle_number : 'Unknown';
             $this->dispatchAlert($notifiableUsers, [
                 'title' => 'Emission Test Expired',
