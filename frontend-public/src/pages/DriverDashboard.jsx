@@ -745,8 +745,8 @@ const DriverDashboard = () => {
                     <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-semibold text-gray-700">{summary.date ? summary.date.split('T')[0] : summary.date}</span>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${summary.balance > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
-                          {summary.balance > 0 ? 'Due' : 'Settled'}
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${summary.has_rejected ? 'bg-red-100 text-red-700' : (summary.balance > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700')}`}>
+                          {summary.has_rejected ? 'Rejected' : (summary.balance > 0 ? 'Due' : 'Settled')}
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-sm">
