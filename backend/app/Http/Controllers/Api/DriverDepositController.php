@@ -68,13 +68,20 @@ class DriverDepositController extends Controller
 
             $totalDeposited = DriverDeposit::where('driver_id', $driverId)
                 ->whereDate('date', $date)
+                ->whereIn('status', ['pending', 'verified'])
                 ->sum('amount');
+
+            $hasRejected = DriverDeposit::where('driver_id', $driverId)
+                ->whereDate('date', $date)
+                ->where('status', 'rejected')
+                ->exists();
 
             $summary[] = [
                 'date' => $date,
                 'total_cash_on_hand' => round((float)$totalCashOnHand, 2),
                 'total_deposited' => round((float)$totalDeposited, 2),
-                'balance' => round((float)($totalCashOnHand - $totalDeposited), 2)
+                'balance' => round((float)($totalCashOnHand - $totalDeposited), 2),
+                'has_rejected' => $hasRejected
             ];
         }
 
