@@ -756,7 +756,9 @@ const DriverDashboard = () => {
                         </div>
                         <div className="bg-gray-50 p-2 rounded">
                           <p className="text-xs text-gray-500 mb-1">Deposited</p>
-                          <p className="font-semibold text-blue-600">Rs {summary.total_deposited}</p>
+                          <p className={`font-semibold ${summary.has_rejected && summary.total_deposited === 0 ? 'text-red-500 line-through' : 'text-blue-600'}`}>
+                            Rs {summary.has_rejected && summary.total_deposited === 0 ? summary.rejected_amount : summary.total_deposited}
+                          </p>
                         </div>
                         <div className="bg-gray-50 p-2 rounded">
                           <p className="text-xs text-gray-500 mb-1">Balance</p>
