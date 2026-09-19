@@ -12,28 +12,29 @@ const SolarLogin = () => {
   const login = useAuthStore(state => state.login);
   const isLoading = useAuthStore(state => state.isLoading);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/solar/portal');
-    }
-  }, [isAuthenticated, navigate]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const success = await login({ email, password });
-    if (success) {
-      const user = useAuthStore.getState().user;
+    if (isAuthenticated && user) {
       const hasSolarRole = ['super_admin', 'solar_admin']
         .some(role => user?.roles?.includes(role) || user?.role === role);
         
-      if (!hasSolarRole) {
+      if (hasSolarRole) {
+        navigate('/solar/portal');
+      } else {
+        toast.dismiss();
         useAuthStore.getState().logout();
-        toast.error('Unauthorized access to Solar Division.');
-        return;
+        setTimeout(() => {
+          toast.dismiss();
+          toast.error('Unauthorized access to Solar Division.');
+        }, 100);
       }
-      navigate('/solar/portal');
     }
+  }, [isAuthenticated, user, navigate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await login({ email, password });
   };
 
   return (
