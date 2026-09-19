@@ -24,7 +24,7 @@ const PerformanceSidebar = ({ isMobileOpen, closeMobileOpen }) => {
       title: 'Configuration',
       items: [
         { name: 'Manage Logs', path: '/vehicle/admin/performance/manage', icon: CheckSquare, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Settings', path: '/vehicle/admin/performance/settings', icon: Settings, roles: ['super_admin'] },
+        { name: 'Settings', path: '/vehicle/admin/settings', icon: Settings, roles: ['super_admin'] },
       ]
     }
   ];
