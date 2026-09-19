@@ -13,20 +13,20 @@ const GpsSidebar = ({ isMobileOpen, closeMobileOpen }) => {
     {
       title: 'Tracking',
       items: [
-        { name: 'Live Map', path: '/vehicle/admin/gps', icon: Map, roles: ['super_admin', 'fleet_manager', 'driver'] },
-        { name: 'History Playback', path: '/vehicle/admin/gps/history', icon: History, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Live Map', path: '/vehicle/admin/gps', icon: Map, roles: ['super_admin', 'vehicle_admin', 'fleet_manager', 'driver'] },
+        { name: 'History Playback', path: '/vehicle/admin/gps/history', icon: History, roles: ['super_admin', 'vehicle_admin', 'fleet_manager'] },
       ]
     },
     {
       title: 'Geofencing',
       items: [
-        { name: 'Geofences', path: '/vehicle/admin/gps/geofences', icon: MapPin, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Geofences', path: '/vehicle/admin/gps/geofences', icon: MapPin, roles: ['super_admin', 'vehicle_admin', 'fleet_manager'] },
       ]
     },
     {
       title: 'Configuration',
       items: [
-        { name: 'Settings', path: '/vehicle/admin/gps/settings', icon: Settings, roles: ['super_admin'] },
+        { name: 'Settings', path: '/vehicle/admin/gps/settings', icon: Settings, roles: ['super_admin', 'vehicle_admin', 'vehicle_admin'] },
       ]
     }
   ];
@@ -121,5 +121,6 @@ const GpsSidebar = ({ isMobileOpen, closeMobileOpen }) => {
 };
 
 export default GpsSidebar;
+
 
 
