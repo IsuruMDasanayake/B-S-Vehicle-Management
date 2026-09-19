@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import { CarFront } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -21,6 +22,15 @@ const Login = () => {
     e.preventDefault();
     const success = await login({ email, password });
     if (success) {
+      const user = useAuthStore.getState().user;
+      const hasVehicleRole = ['super_admin', 'vehicle_admin', 'fleet_manager', 'driver', 'mechanic', 'department_manager']
+        .some(role => user?.roles?.includes(role) || user?.role === role);
+        
+      if (!hasVehicleRole) {
+        useAuthStore.getState().logout();
+        toast.error('Unauthorized access to Vehicle Division.');
+        return;
+      }
       navigate('/vehicle/portal');
     }
   };

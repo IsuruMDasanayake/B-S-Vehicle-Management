@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sun } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import toast from 'react-hot-toast';
 
 const SolarLogin = () => {
   const navigate = useNavigate();
@@ -22,6 +23,15 @@ const SolarLogin = () => {
     e.preventDefault();
     const success = await login({ email, password });
     if (success) {
+      const user = useAuthStore.getState().user;
+      const hasSolarRole = ['super_admin', 'solar_admin']
+        .some(role => user?.roles?.includes(role) || user?.role === role);
+        
+      if (!hasSolarRole) {
+        useAuthStore.getState().logout();
+        toast.error('Unauthorized access to Solar Division.');
+        return;
+      }
       navigate('/solar/portal');
     }
   };
