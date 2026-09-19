@@ -105,7 +105,7 @@ const DriverDashboard = () => {
     const userData = localStorage.getItem('driver_user');
     
     if (!token || !userData) {
-      navigate('/driver/login');
+      navigate('/login');
       return;
     }
 
@@ -209,7 +209,7 @@ const DriverDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('driver_token');
     localStorage.removeItem('driver_user');
-    navigate('/driver/login');
+    navigate('/login');
   };
 
   const handleInputChange = (e) => {

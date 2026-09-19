@@ -44,19 +44,32 @@ import DepositReview from './pages/Deposits/DepositReview';
 import Alerts from './pages/Alerts/Alerts';
 import useAuthStore from './store/authStore';
 
+// CircleGroup Divisions
+import CircleGroupLanding from './pages/Home/CircleGroupLanding';
+import SolarLogin from './pages/Solar/SolarLogin';
+import SolarPortal from './pages/Solar/SolarPortal';
+
+// Blank placeholder for circlegroup.lk root (future public website)
+const BlankPlaceholder = () => (
+  <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: 'sans-serif', flexDirection: 'column', gap: '1rem' }}>
+    <span style={{ fontSize: '2rem' }}>⭕</span>
+    <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0 }}>circlegroup.lk</p>
+  </div>
+);
+
 import { useEffect } from 'react';
 
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? children : <Navigate to="/vehicle/login" replace />;
 };
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
   const user = useAuthStore(state => state.user);
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/vehicle/login" replace />;
   
   const hasRole = allowedRoles.some(role => user?.roles?.includes(role) || user?.role === role);
-  return hasRole ? children : <Navigate to="/portal" replace />;
+  return hasRole ? children : <Navigate to="/vehicle/portal" replace />;
 };
 
 function App() {
@@ -76,11 +89,17 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/" element={<ComingSoon />} />
-      <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
-      
-      <Route path="/admin" element={<RoleProtectedRoute allowedRoles={['super_admin']}><Layout /></RoleProtectedRoute>}>
+      {/* ── CircleGroup Root — blank placeholder (public website comes later) ── */}
+      <Route path="/" element={<BlankPlaceholder />} />
+
+      {/* ── CircleGroup Division Portal ─────────────────────────────────────── */}
+      <Route path="/portal" element={<CircleGroupLanding />} />
+
+      {/* ── Vehicle Division ─────────────────────────────────────────── */}
+      <Route path="/vehicle/login" element={<Login />} />
+      <Route path="/vehicle/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
+
+      <Route path="/vehicle/admin" element={<RoleProtectedRoute allowedRoles={['super_admin']}><Layout /></RoleProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         
@@ -105,7 +124,6 @@ function App() {
         <Route path="inspections" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic']}><InspectionsList /></RoleProtectedRoute>} />
         <Route path="tires" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic']}><TiresList /></RoleProtectedRoute>} />
         <Route path="spare-parts" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic']}><SparePartsList /></RoleProtectedRoute>} />
-        
 
         {/* Finances & Vendors */}
         <Route path="expenses" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><ExpensesList /></RoleProtectedRoute>} />
@@ -123,7 +141,7 @@ function App() {
       </Route>
 
       {/* Dedicated GPS Dashboard */}
-      <Route path="/admin/gps" element={<RoleProtectedRoute allowedRoles={['super_admin']}><GpsLayout /></RoleProtectedRoute>}>
+      <Route path="/vehicle/admin/gps" element={<RoleProtectedRoute allowedRoles={['super_admin']}><GpsLayout /></RoleProtectedRoute>}>
         <Route index element={<GpsTracking />} />
         <Route path="history" element={<GpsHistory />} />
         <Route path="geofences" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><GpsGeofencing /></RoleProtectedRoute>} />
@@ -131,7 +149,7 @@ function App() {
       </Route>
 
       {/* Dedicated Performance Dashboard */}
-      <Route path="/admin/performance" element={<RoleProtectedRoute allowedRoles={['super_admin']}><PerformanceLayout /></RoleProtectedRoute>}>
+      <Route path="/vehicle/admin/performance" element={<RoleProtectedRoute allowedRoles={['super_admin']}><PerformanceLayout /></RoleProtectedRoute>}>
         <Route index element={<PerformanceDashboard />} />
         <Route path="drivers" element={<DriverAnalytics />} />
         <Route path="vehicles" element={<VehicleAnalytics />} />
@@ -139,6 +157,15 @@ function App() {
         <Route path="manage" element={<ManageLogs />} />
         <Route path="intelligence" element={<PerformanceIntelligence />} />
       </Route>
+
+      {/* ── Solar Division (Skeleton) ─────────────────────────────────── */}
+      <Route path="/solar/login" element={<SolarLogin />} />
+      <Route path="/solar/portal" element={<SolarPortal />} />
+
+      {/* ── Legacy redirect — old /login path ────────────────────────── */}
+      <Route path="/login" element={<Navigate to="/vehicle/login" replace />} />
+      <Route path="/portal" element={<Navigate to="/vehicle/portal" replace />} />
+      <Route path="/admin/*" element={<Navigate to="/vehicle/admin" replace />} />
     </Routes>
   );
 }

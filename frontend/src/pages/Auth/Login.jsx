@@ -13,7 +13,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/portal');
+      navigate('/vehicle/portal');
     }
   }, [isAuthenticated, navigate]);
 
@@ -21,7 +21,7 @@ const Login = () => {
     e.preventDefault();
     const success = await login({ email, password });
     if (success) {
-      navigate('/portal');
+      navigate('/vehicle/portal');
     }
   };
 
@@ -35,6 +35,19 @@ const Login = () => {
       padding: '1rem'
     }}>
       <div className="card" style={{ width: '100%', maxWidth: '400px', padding: 'clamp(1.5rem, 5vw, 2.5rem)' }}>
+        
+        {/* Back link */}
+        <button
+          onClick={() => navigate('/portal')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: '0.82rem', padding: 0,
+            marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem',
+          }}
+        >
+          ← Back to Portal
+        </button>
+
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             background: 'var(--primary)',
@@ -46,7 +59,7 @@ const Login = () => {
           }}>
             <CarFront size={32} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>B&S Transport</h1>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Vehicle Division</h1>
           <p style={{ color: 'var(--text-muted)' }}>Sign in to your account</p>
         </div>
 

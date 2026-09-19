@@ -6,15 +6,16 @@ import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
-    <Router basename="/request">
+    <Router basename="/vehicle/driver">
       <Toaster position="top-right" />
       <Routes>
+        {/* Vehicle Request Form (public) */}
         <Route path="/" element={<VehicleRequestForm />} />
-        
+
         {/* Driver Portal Routes */}
-        <Route path="/driver/login" element={<DriverLogin />} />
-        <Route path="/driver/dashboard" element={<DriverDashboard />} />
-        
+        <Route path="/login" element={<DriverLogin />} />
+        <Route path="/dashboard" element={<DriverDashboard />} />
+
         {/* Redirect unknown routes */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

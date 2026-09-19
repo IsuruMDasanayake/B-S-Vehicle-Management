@@ -1,0 +1,10 @@
+<?php
+// This directory is reserved for CircleGroup Solar Division controllers.
+// Solar module development will be implemented in a future phase.
+// 
+// Planned controllers:
+// - SolarProjectController.php
+// - SolarInstallationController.php
+// - SolarMonitoringController.php
+// - SolarClientController.php
+// - SolarReportController.php

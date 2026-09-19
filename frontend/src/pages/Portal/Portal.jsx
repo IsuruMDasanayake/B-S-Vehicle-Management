@@ -12,7 +12,7 @@ const Portal = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/vehicle/login');
   };
 
   return (
@@ -78,7 +78,7 @@ const Portal = () => {
           {/* Dashboard Card */}
           <div 
             className="card portal-card" 
-            onClick={() => navigate('/admin/dashboard')}
+            onClick={() => navigate('/vehicle/admin/dashboard')}
             style={{ 
               cursor: 'pointer', transition: 'all 0.3s ease',
               border: '1px solid var(--surface-2)'
@@ -98,7 +98,7 @@ const Portal = () => {
           {/* GPS Card */}
           <div 
             className="card portal-card" 
-            onClick={() => navigate('/admin/gps')}
+            onClick={() => navigate('/vehicle/admin/gps')}
             style={{ 
               cursor: 'pointer', transition: 'all 0.3s ease',
               border: '1px solid var(--surface-2)'
@@ -119,7 +119,7 @@ const Portal = () => {
           {!isDriver && (
             <div 
               className="card portal-card" 
-              onClick={() => navigate('/admin/performance')}
+              onClick={() => navigate('/vehicle/admin/performance')}
               style={{ 
                 cursor: 'pointer', transition: 'all 0.3s ease',
                 border: '1px solid var(--surface-2)'
