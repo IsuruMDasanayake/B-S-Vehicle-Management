@@ -1,7 +1,13 @@
 import { useNavigate } from 'react-router-dom';
-
+import useAuthStore from '../../store/authStore';
 const SolarPortal = () => {
   const navigate = useNavigate();
+  const logout = useAuthStore(state => state.logout);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/solar/login');
+  };
 
   return (
     <div style={{
@@ -50,13 +56,22 @@ const SolarPortal = () => {
           ))}
         </div>
 
-        <button
-          onClick={() => navigate('/portal')}
-          className="btn btn-ghost"
-          style={{ border: '1px solid var(--surface-2)' }}
-        >
-          ← Back to Portal
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <button
+            onClick={() => navigate('/portal')}
+            className="btn btn-ghost"
+            style={{ border: '1px solid var(--surface-2)' }}
+          >
+            ← Back to Main Portal
+          </button>
+          <button
+            onClick={handleLogout}
+            className="btn btn-ghost"
+            style={{ border: '1px solid #ef4444', color: '#ef4444' }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </div>
   );

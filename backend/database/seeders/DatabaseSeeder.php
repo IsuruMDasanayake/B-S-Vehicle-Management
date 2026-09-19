@@ -38,8 +38,7 @@ class DatabaseSeeder extends Seeder
 
         $admin->assignRole('super_admin');
 
-        // Remove old admin account if it still exists
-        User::where('email', 'admin@bstransport.lk')->delete();
+        // Both admins can coexist now
 
         // Create a test Fleet Manager
         $fleetManager = User::firstOrCreate(

@@ -1,16 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sun } from 'lucide-react';
+import useAuthStore from '../../store/authStore';
 
 const SolarLogin = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Placeholder — Solar auth will be implemented when the Solar module is built
-  const handleSubmit = (e) => {
+  const login = useAuthStore(state => state.login);
+  const isLoading = useAuthStore(state => state.isLoading);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/solar/portal');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert('Solar division portal is coming soon.');
+    const success = await login({ email, password });
+    if (success) {
+      navigate('/solar/portal');
+    }
   };
 
   return (
@@ -52,24 +65,7 @@ const SolarLogin = () => {
           <p style={{ color: 'var(--text-muted)' }}>Sign in to your account</p>
         </div>
 
-        {/* Coming Soon notice */}
-        <div style={{
-          background: 'rgba(245,158,11,0.06)',
-          border: '1px solid rgba(245,158,11,0.2)',
-          borderRadius: 'var(--radius-md)',
-          padding: '1rem',
-          marginBottom: '1.5rem',
-          textAlign: 'center',
-        }}>
-          <p style={{ color: '#d97706', fontWeight: 600, margin: '0 0 0.4rem', fontSize: '0.9rem' }}>
-            🚧 Solar Module — Coming Soon
-          </p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: 0, lineHeight: 1.5 }}>
-            The Solar portal is currently under development. Login will be available once the module is launched.
-          </p>
-        </div>
-
-        {/* Form (disabled state) */}
+        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
@@ -79,7 +75,7 @@ const SolarLogin = () => {
               placeholder="you@circlegroup.lk"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              disabled
+              required
             />
           </div>
 
@@ -91,7 +87,7 @@ const SolarLogin = () => {
               placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              disabled
+              required
             />
           </div>
 
@@ -100,11 +96,11 @@ const SolarLogin = () => {
             className="btn btn-primary"
             style={{
               width: '100%', padding: '0.75rem', marginTop: '1rem',
-              background: '#f59e0b', borderColor: '#f59e0b', opacity: 0.6,
+              background: '#f59e0b', borderColor: '#f59e0b',
             }}
-            disabled
+            disabled={isLoading}
           >
-            Sign In (Coming Soon)
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
       </div>

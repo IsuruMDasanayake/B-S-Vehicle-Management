@@ -160,7 +160,7 @@ function App() {
 
       {/* ── Solar Division (Skeleton) ─────────────────────────────────── */}
       <Route path="/solar/login" element={<SolarLogin />} />
-      <Route path="/solar/portal" element={<SolarPortal />} />
+      <Route path="/solar/portal" element={<ProtectedRoute><SolarPortal /></ProtectedRoute>} />
 
       {/* ── Legacy redirect — old /login path ────────────────────────── */}
       <Route path="/login" element={<Navigate to="/vehicle/login" replace />} />
