@@ -13,17 +13,17 @@ const PerformanceSidebar = ({ isMobileOpen, closeMobileOpen }) => {
     {
       title: 'Analytics',
       items: [
-        { name: 'Overview', path: '/vehicle/admin/performance', icon: BarChart2, roles: ['super_admin', 'fleet_manager', 'dept_manager'] },
-        { name: 'Driver Analytics', path: '/vehicle/admin/performance/drivers', icon: Users, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Vehicle Analytics', path: '/vehicle/admin/performance/vehicles', icon: CarFront, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Driver Deposits', path: '/vehicle/admin/performance/deposits', icon: Receipt, roles: ['super_admin', 'fleet_manager'] },
-        { name: 'Intelligence', path: '/vehicle/admin/performance/intelligence', icon: Brain, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Overview', path: '/vehicle/admin/performance', icon: BarChart2, roles: ['super_admin', 'vehicle_admin', 'fleet_manager', 'dept_manager'] },
+        { name: 'Driver Analytics', path: '/vehicle/admin/performance/drivers', icon: Users, roles: ['super_admin', 'vehicle_admin', 'fleet_manager'] },
+        { name: 'Vehicle Analytics', path: '/vehicle/admin/performance/vehicles', icon: CarFront, roles: ['super_admin', 'vehicle_admin', 'fleet_manager'] },
+        { name: 'Driver Deposits', path: '/vehicle/admin/performance/deposits', icon: Receipt, roles: ['super_admin', 'vehicle_admin', 'fleet_manager'] },
+        { name: 'Intelligence', path: '/vehicle/admin/performance/intelligence', icon: Brain, roles: ['super_admin', 'vehicle_admin', 'fleet_manager'] },
       ]
     },
     {
       title: 'Configuration',
       items: [
-        { name: 'Manage Logs', path: '/vehicle/admin/performance/manage', icon: CheckSquare, roles: ['super_admin', 'fleet_manager'] },
+        { name: 'Manage Logs', path: '/vehicle/admin/performance/manage', icon: CheckSquare, roles: ['super_admin', 'vehicle_admin', 'fleet_manager'] },
         { name: 'Settings', path: '/vehicle/admin/settings', icon: Settings, roles: ['super_admin'] },
       ]
     }
@@ -118,5 +118,6 @@ const PerformanceSidebar = ({ isMobileOpen, closeMobileOpen }) => {
 };
 
 export default PerformanceSidebar;
+
 
 
