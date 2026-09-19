@@ -19,7 +19,7 @@ const CircleGroupLanding = () => {
     {
       id: 'solar',
       title: 'Solar Division',
-      subtitle: 'Sign in to your account',
+      subtitle: 'Manage Solar Energy',
       description: 'Enterprise solar project management, installations, monitoring & client reporting.',
       icon: '☀️',
       hoverColor: '#f59e0b',
