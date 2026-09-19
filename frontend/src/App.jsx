@@ -97,7 +97,7 @@ function App() {
 
       {/* ── Vehicle Division ─────────────────────────────────────────── */}
       <Route path="/vehicle/login" element={<Login />} />
-      <Route path="/vehicle/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
+      <Route path="/vehicle/portal" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><Portal /></RoleProtectedRoute>} />
 
       <Route path="/vehicle/admin" element={<RoleProtectedRoute allowedRoles={['super_admin']}><Layout /></RoleProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
@@ -160,7 +160,7 @@ function App() {
 
       {/* ── Solar Division (Skeleton) ─────────────────────────────────── */}
       <Route path="/solar/login" element={<SolarLogin />} />
-      <Route path="/solar/portal" element={<ProtectedRoute><SolarPortal /></ProtectedRoute>} />
+      <Route path="/solar/portal" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarPortal /></RoleProtectedRoute>} />
 
       {/* ── Legacy redirect — old /login path ────────────────────────── */}
       <Route path="/login" element={<Navigate to="/vehicle/login" replace />} />
@@ -171,5 +171,6 @@ function App() {
 }
 
 export default App;
+
 
 

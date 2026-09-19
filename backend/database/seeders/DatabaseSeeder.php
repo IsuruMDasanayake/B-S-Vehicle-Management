@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
         // Create Roles
         $roles = [
             'super_admin',
+            'vehicle_admin',
+            'solar_admin',
             'fleet_manager',
             'driver',
             'mechanic',

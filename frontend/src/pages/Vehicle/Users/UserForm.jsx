@@ -65,7 +65,9 @@ const UserForm = ({ editId, onSuccess, onClose }) => {
           <div className="form-group">
             <label className="form-label">Role *</label>
             <select {...register('role', { required: true })} className="form-control">
-              <option value="super_admin">Super Admin</option>
+              <option value="super_admin">System Admin (Both Divisions)</option>
+              <option value="vehicle_admin">Vehicle Division Admin</option>
+              <option value="solar_admin">Solar Division Admin</option>
               <option value="fleet_manager">Fleet Manager</option>
               <option value="driver">Driver</option>
               <option value="mechanic">Mechanic</option>
