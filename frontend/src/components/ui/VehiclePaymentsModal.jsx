@@ -5,7 +5,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import Modal from './Modal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
-import VehiclePaymentForm from '../../pages/Vehicles/VehiclePaymentForm';
+import VehiclePaymentForm from '../../pages/Vehicle/Vehicles/VehiclePaymentForm';
 import PDFViewerModal from './PDFViewerModal';
 
 const VehiclePaymentsModal = ({ isOpen, onClose, vehicle }) => {
