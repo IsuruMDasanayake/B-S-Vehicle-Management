@@ -3,9 +3,9 @@ import Modal from './Modal';
 import { CarFront, Calendar, Fuel, Activity, Image as ImageIcon, Shield, FileText, Wind, Plus, History } from 'lucide-react';
 import api from '../../services/api';
 
-import InsuranceForm from '../../pages/Insurance/InsuranceForm';
-import RevenueLicenseForm from '../../pages/RevenueLicense/RevenueLicenseForm';
-import EmissionTestForm from '../../pages/EmissionTest/EmissionTestForm';
+import InsuranceForm from '../../pages/Vehicle/Insurance/InsuranceForm';
+import RevenueLicenseForm from '../../pages/Vehicle/RevenueLicense/RevenueLicenseForm';
+import EmissionTestForm from '../../pages/Vehicle/EmissionTest/EmissionTestForm';
 import ComplianceHistoryModal from './ComplianceHistoryModal';
 import PDFViewerModal from './PDFViewerModal';
 

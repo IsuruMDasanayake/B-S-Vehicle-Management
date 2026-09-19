@@ -1,47 +1,47 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
-import Dashboard from './pages/Dashboard/Dashboard';
-import VehiclesList from './pages/Vehicles/VehiclesList';
-import HiringDetailsList from './pages/Vehicles/HiringDetailsList';
-import VehiclePaymentsList from './pages/Vehicles/VehiclePaymentsList';
-import DriversList from './pages/Drivers/DriversList';
-import AssignmentsList from './pages/Assignments/AssignmentsList';
-import FuelList from './pages/Fuel/FuelList';
-import MaintenanceList from './pages/Maintenance/MaintenanceList';
-import BreakdownsList from './pages/Breakdowns/BreakdownsList';
-import GpsTracking from './pages/Gps/GpsTracking';
-import GpsHistory from './pages/Gps/GpsHistory';
-import GpsGeofencing from './pages/Gps/GpsGeofencing';
-import GpsSettings from './pages/Gps/GpsSettings';
-import GpsLayout from './pages/Gps/GpsLayout';
-import ReportsDashboard from './pages/Reports/ReportsDashboard';
-import SettingsPage from './pages/Settings/SettingsPage';
+import Dashboard from './pages/Vehicle/Dashboard/Dashboard';
+import VehiclesList from './pages/Vehicle/Vehicles/VehiclesList';
+import HiringDetailsList from './pages/Vehicle/Vehicles/HiringDetailsList';
+import VehiclePaymentsList from './pages/Vehicle/Vehicles/VehiclePaymentsList';
+import DriversList from './pages/Vehicle/Drivers/DriversList';
+import AssignmentsList from './pages/Vehicle/Assignments/AssignmentsList';
+import FuelList from './pages/Vehicle/Fuel/FuelList';
+import MaintenanceList from './pages/Vehicle/Maintenance/MaintenanceList';
+import BreakdownsList from './pages/Vehicle/Breakdowns/BreakdownsList';
+import GpsTracking from './pages/Vehicle/Gps/GpsTracking';
+import GpsHistory from './pages/Vehicle/Gps/GpsHistory';
+import GpsGeofencing from './pages/Vehicle/Gps/GpsGeofencing';
+import GpsSettings from './pages/Vehicle/Gps/GpsSettings';
+import GpsLayout from './pages/Vehicle/Gps/GpsLayout';
+import ReportsDashboard from './pages/Vehicle/Reports/ReportsDashboard';
+import SettingsPage from './pages/Vehicle/Settings/SettingsPage';
 import Login from './pages/Auth/Login';
 import Portal from './pages/Portal/Portal';
 import ComingSoon from './pages/Portal/ComingSoon';
-import PerformanceDashboard from './pages/Performance/PerformanceDashboard';
-import PerformanceLayout from './pages/Performance/PerformanceLayout';
-import DriverAnalytics from './pages/Performance/DriverAnalytics';
-import VehicleAnalytics from './pages/Performance/VehicleAnalytics';
-import ManageLogs from './pages/Performance/ManageLogs';
-import PerformanceIntelligence from './pages/Performance/PerformanceIntelligence';
+import PerformanceDashboard from './pages/Vehicle/Performance/PerformanceDashboard';
+import PerformanceLayout from './pages/Vehicle/Performance/PerformanceLayout';
+import DriverAnalytics from './pages/Vehicle/Performance/DriverAnalytics';
+import VehicleAnalytics from './pages/Vehicle/Performance/VehicleAnalytics';
+import ManageLogs from './pages/Vehicle/Performance/ManageLogs';
+import PerformanceIntelligence from './pages/Vehicle/Performance/PerformanceIntelligence';
 
 // Phase 1 New Imports
-import TripsList from './pages/Trips/TripsList';
-import RoutesList from './pages/Routes/RoutesList';
-import ExpensesList from './pages/Expenses/ExpensesList';
-import VendorsList from './pages/Vendors/VendorsList';
-import SparePartsList from './pages/SpareParts/SparePartsList';
-import TiresList from './pages/Tires/TiresList';
-import AccidentsList from './pages/Accidents/AccidentsList';
-import InspectionsList from './pages/Inspections/InspectionsList';
-import DepartmentsList from './pages/Departments/DepartmentsList';
-import UsersList from './pages/Users/UsersList';
-import VehicleRequestsList from './pages/VehicleRequests/VehicleRequestsList';
-import AuditLogsList from './pages/AuditLogs/AuditLogsList';
-import RideLogsList from './pages/RideLogs/RideLogsList';
-import DepositReview from './pages/Deposits/DepositReview';
-import Alerts from './pages/Alerts/Alerts';
+import TripsList from './pages/Vehicle/Trips/TripsList';
+import RoutesList from './pages/Vehicle/Routes/RoutesList';
+import ExpensesList from './pages/Vehicle/Expenses/ExpensesList';
+import VendorsList from './pages/Vehicle/Vendors/VendorsList';
+import SparePartsList from './pages/Vehicle/SpareParts/SparePartsList';
+import TiresList from './pages/Vehicle/Tires/TiresList';
+import AccidentsList from './pages/Vehicle/Accidents/AccidentsList';
+import InspectionsList from './pages/Vehicle/Inspections/InspectionsList';
+import DepartmentsList from './pages/Vehicle/Departments/DepartmentsList';
+import UsersList from './pages/Vehicle/Users/UsersList';
+import VehicleRequestsList from './pages/Vehicle/VehicleRequests/VehicleRequestsList';
+import AuditLogsList from './pages/Vehicle/AuditLogs/AuditLogsList';
+import RideLogsList from './pages/Vehicle/RideLogs/RideLogsList';
+import DepositReview from './pages/Vehicle/Deposits/DepositReview';
+import Alerts from './pages/Vehicle/Alerts/Alerts';
 import useAuthStore from './store/authStore';
 
 // CircleGroup Divisions
@@ -165,9 +165,11 @@ function App() {
       {/* ── Legacy redirect — old /login path ────────────────────────── */}
       <Route path="/login" element={<Navigate to="/vehicle/login" replace />} />
       <Route path="/portal" element={<Navigate to="/vehicle/portal" replace />} />
-      <Route path="/admin/*" element={<Navigate to="/vehicle/admin" replace />} />
+      <Route path="/vehicle/admin/*" element={<Navigate to="/vehicle/admin" replace />} />
     </Routes>
   );
 }
 
 export default App;
+
+
