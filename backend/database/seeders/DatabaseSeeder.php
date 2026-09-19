@@ -26,17 +26,20 @@ class DatabaseSeeder extends Seeder
         }
 
         // Create Super Admin User
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@bstransport.lk'],
+        $admin = User::updateOrCreate(
+            ['email' => 'circlegroup.lk@gmail.com'],
             [
-                'name' => 'Super Admin',
-                'password' => Hash::make('password123'),
-                'phone' => '0777129147',
-                'status' => 'active',
+                'name'     => 'CircleGroup Admin',
+                'password' => Hash::make('2026@CircleGroup'),
+                'phone'    => '0777129147',
+                'status'   => 'active',
             ]
         );
 
         $admin->assignRole('super_admin');
+
+        // Remove old admin account if it still exists
+        User::where('email', 'admin@bstransport.lk')->delete();
 
         // Create a test Fleet Manager
         $fleetManager = User::firstOrCreate(

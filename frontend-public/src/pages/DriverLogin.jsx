@@ -28,7 +28,7 @@ const DriverLogin = () => {
       localStorage.setItem('driver_user', JSON.stringify(user));
       
       toast.success('Login successful!');
-      navigate('/driver/dashboard');
+      navigate('/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {

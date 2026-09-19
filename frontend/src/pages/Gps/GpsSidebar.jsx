@@ -101,7 +101,7 @@ const GpsSidebar = ({ isMobileOpen, closeMobileOpen }) => {
 
       <div style={{ padding: '1.5rem', borderTop: '1px solid var(--dark-2)', marginTop: 'auto' }}>
         <Link 
-          to="/portal"
+          to="/vehicle/portal"
           onClick={closeMobileOpen}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
