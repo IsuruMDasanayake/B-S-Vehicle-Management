@@ -11,28 +11,29 @@ const Login = () => {
   const isLoading = useAuthStore(state => state.isLoading);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/vehicle/portal');
-    }
-  }, [isAuthenticated, navigate]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const success = await login({ email, password });
-    if (success) {
-      const user = useAuthStore.getState().user;
+    if (isAuthenticated && user) {
       const hasVehicleRole = ['super_admin', 'vehicle_admin', 'fleet_manager', 'driver', 'mechanic', 'department_manager']
         .some(role => user?.roles?.includes(role) || user?.role === role);
         
-      if (!hasVehicleRole) {
+      if (hasVehicleRole) {
+        navigate('/vehicle/portal');
+      } else {
+        toast.dismiss();
         useAuthStore.getState().logout();
-        toast.error('Unauthorized access to Vehicle Division.');
-        return;
+        setTimeout(() => {
+          toast.dismiss();
+          toast.error('Unauthorized access to Vehicle Division.');
+        }, 100);
       }
-      navigate('/vehicle/portal');
     }
+  }, [isAuthenticated, user, navigate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await login({ email, password });
   };
 
   return (
