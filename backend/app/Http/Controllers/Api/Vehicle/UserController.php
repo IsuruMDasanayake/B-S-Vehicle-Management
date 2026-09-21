@@ -31,6 +31,7 @@ class UserController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'] ?? null,
+            'role' => $validated['role'],
             'status' => $validated['status'],
         ]);
         $user->assignRole($validated['role']);
@@ -63,7 +64,6 @@ class UserController extends Controller
 
         if (isset($validated['role'])) {
             $user->syncRoles([$validated['role']]);
-            unset($validated['role']);
         }
 
         $user->update($validated);
