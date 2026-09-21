@@ -59,20 +59,9 @@ const CircleGroupLanding = () => {
       }}>
         {/* Branding */}
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            background: 'linear-gradient(135deg, var(--primary), #059669)',
-            borderRadius: 'var(--radius-lg)',
-            marginBottom: '1rem',
-            boxShadow: '0 4px 14px rgba(16,185,129,0.25)',
-            fontSize: '1.5rem',
-          }}>
-            ⭕
-          </div>
+          
+            
+          
           <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', textAlign: 'center' }}>
             CircleGroup
           </h1>
