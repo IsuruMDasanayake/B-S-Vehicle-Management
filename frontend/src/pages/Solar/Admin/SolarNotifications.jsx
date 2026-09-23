@@ -132,7 +132,7 @@ const SolarNotifications = () => {
         </div>
 
         {/* History Table */}
-        <div className="card" style={{ flex: '2 1 500px' }}>
+        <div className="card" style={{ flex: '2 1 500px', minWidth: 0 }}>
           <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
             <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Notification History</h2>
           </div>
