@@ -96,5 +96,9 @@ class DatabaseSeeder extends Seeder
                 'current_status' => 'available',
             ]
         );
+
+        $this->call([
+            SectionTemplatesSeeder::class,
+        ]);
     }
 }
