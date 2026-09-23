@@ -592,7 +592,7 @@ const SolarProjectDetail = () => {
           setDeleteMilestoneModal({ isOpen: false, sectionId: null });
           fetchProject();
         }}
-        endpoint={deleteMilestoneModal.sectionId ? `/milestones/${deleteMilestoneModal.sectionId}` : null}
+        endpoint={deleteMilestoneModal.sectionId ? `/solar/milestones/${deleteMilestoneModal.sectionId}` : null}
         itemName="Project Milestone"
       />
 
