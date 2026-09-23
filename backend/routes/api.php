@@ -94,5 +94,51 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Geofences
     Route::apiResource('geofences', \App\Http\Controllers\GeofenceController::class);
+
+    // ── Solar Division (Admin) ─────────────────────────────────────────────────
+    Route::prefix('solar')->group(function () {
+        // Sites
+        Route::apiResource('sites', \App\Http\Controllers\Api\Solar\SolarSiteController::class);
+        Route::post('sites/{solarSite}/regenerate-token', [\App\Http\Controllers\Api\Solar\SolarSiteController::class, 'regenerateToken']);
+
+        // Notifications
+        Route::get('notifications/history', [\App\Http\Controllers\Api\Solar\SolarSiteNotificationController::class, 'history']);
+        Route::post('notifications/send', [\App\Http\Controllers\Api\Solar\SolarSiteNotificationController::class, 'sendManual']);
+
+        // Templates
+        Route::apiResource('templates', \App\Http\Controllers\Api\Solar\SectionTemplateController::class);
+
+        // Projects
+        Route::apiResource('projects', \App\Http\Controllers\Api\Solar\SolarProjectController::class);
+        Route::post('projects/{project}/milestones', [\App\Http\Controllers\Api\Solar\SolarProjectController::class, 'addMilestone']);
+        Route::delete('milestones/{solarSection}', [\App\Http\Controllers\Api\Solar\SolarProjectController::class, 'deleteMilestone']);
+
+        // Upload Batches (read + delete)
+        Route::get('upload-batches', [\App\Http\Controllers\Api\Solar\SolarUploadBatchController::class, 'index']);
+        Route::get('upload-batches/{solarUploadBatch}', [\App\Http\Controllers\Api\Solar\SolarUploadBatchController::class, 'show']);
+        Route::put('upload-batches/{solarUploadBatch}', [\App\Http\Controllers\Api\Solar\SolarUploadBatchController::class, 'update']);
+        Route::delete('upload-batches/{solarUploadBatch}', [\App\Http\Controllers\Api\Solar\SolarUploadBatchController::class, 'destroy']);
+        Route::post('upload-batches/{solarUploadBatch}/images', [\App\Http\Controllers\Api\Solar\SolarUploadBatchController::class, 'addImages']);
+
+        // Images (flag + delete)
+        Route::patch('images/{solarImage}/flag', [\App\Http\Controllers\Api\Solar\SolarImageController::class, 'flag']);
+        Route::delete('images/{solarImage}', [\App\Http\Controllers\Api\Solar\SolarImageController::class, 'destroy']);
+
+        // Dashboard stats
+        Route::get('stats', [\App\Http\Controllers\Api\Solar\SolarDashboardController::class, 'stats']);
+    });
 });
+
+// ── Solar Supervisor Upload (Public — no auth, token-based) ───────────────────
+Route::prefix('upload')->group(function () {
+    Route::get('{token}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'getSiteData']);
+    Route::post('{token}/submit', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'submit']);
+    Route::get('{token}/history', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'history']);
+    Route::put('{token}/batches/{batchId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'updateBatch']);
+    Route::post('{token}/batches/{batchId}/images', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'addImages']);
+    Route::delete('{token}/images/{imageId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'deleteImage']);
+    Route::get('{token}/notifications', [\App\Http\Controllers\Api\Solar\SolarSiteNotificationController::class, 'index']);
+    Route::patch('{token}/notifications/{notificationId}/read', [\App\Http\Controllers\Api\Solar\SolarSiteNotificationController::class, 'markAsRead']);
+});
+
 

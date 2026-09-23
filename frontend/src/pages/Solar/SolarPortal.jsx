@@ -35,25 +35,18 @@ const SolarPortal = () => {
 
         <h1 style={{ fontSize: '1.8rem', marginBottom: '0.75rem' }}>Solar Division Portal</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.7, marginBottom: '2rem' }}>
-          The CircleGroup Solar project management portal is under development.
-          This space will house project tracking, installation management,
-          energy monitoring dashboards, and client reporting.
+          Welcome to the CircleGroup Solar project management portal.
+          Here you can manage solar sites, track project milestones, and review supervisor field reports.
         </p>
 
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '2rem' }}>
-          {['Project Management', 'Installation Tracking', 'Energy Monitoring', 'Client Reports', 'Inventory'].map(feature => (
-            <span key={feature} style={{
-              background: 'rgba(245,158,11,0.08)',
-              border: '1px solid rgba(245,158,11,0.2)',
-              color: '#d97706',
-              padding: '0.3rem 0.85rem',
-              borderRadius: '999px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-            }}>
-              {feature}
-            </span>
-          ))}
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '2rem' }}>
+          <button
+            onClick={() => navigate('/solar/admin/dashboard')}
+            className="btn btn-primary"
+            style={{ padding: '0.75rem 2rem' }}
+          >
+            Enter Dashboard →
+          </button>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>

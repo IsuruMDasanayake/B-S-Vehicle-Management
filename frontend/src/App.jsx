@@ -49,6 +49,20 @@ import CircleGroupLanding from './pages/Home/CircleGroupLanding';
 import SolarLogin from './pages/Solar/SolarLogin';
 import SolarPortal from './pages/Solar/SolarPortal';
 
+// Solar Admin
+import SolarLayout from './pages/Solar/Admin/SolarLayout';
+import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
+import SolarSites from './pages/Solar/Admin/SolarSites';
+import SolarProjects from './pages/Solar/Admin/SolarProjects';
+import SolarProjectDetail from './pages/Solar/Admin/SolarProjectDetail';
+import SolarSupervisors from './pages/Solar/Admin/SolarSupervisors';
+import SolarReports from './pages/Solar/Admin/SolarReports';
+import SolarMilestoneTemplates from './pages/Solar/Admin/SolarMilestoneTemplates';
+import SolarNotifications from './pages/Solar/Admin/SolarNotifications';
+
+// Solar Public
+import SupervisorUpload from './pages/Solar/Upload/SupervisorUpload';
+
 // Blank placeholder for circlegroup.lk root (future public website)
 const BlankPlaceholder = () => (
   <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: 'sans-serif', flexDirection: 'column', gap: '1rem' }}>
@@ -164,9 +178,32 @@ function App() {
         <Route path="intelligence" element={<PerformanceIntelligence />} />
       </Route>
 
-      {/* ── Solar Division (Skeleton) ─────────────────────────────────── */}
+      {/* ── Solar Division ─────────────────────────────────── */}
       <Route path="/solar/login" element={<SolarLogin />} />
       <Route path="/solar/portal" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarPortal /></RoleProtectedRoute>} />
+      
+      <Route path="/solar/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarLayout /></RoleProtectedRoute>}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<SolarDashboard />} />
+        <Route path="sites" element={<SolarSites />} />
+        <Route path="projects" element={<SolarProjects />} />
+        <Route path="projects/:id" element={<SolarProjectDetail />} />
+        <Route path="supervisors" element={<SolarSupervisors />} />
+        <Route path="reports" element={<SolarReports />} />
+        <Route path="templates" element={
+          <RoleProtectedRoute allowedRoles={['super_admin']}>
+            <SolarMilestoneTemplates />
+          </RoleProtectedRoute>
+        } />
+        <Route path="notifications" element={
+          <RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}>
+            <SolarNotifications />
+          </RoleProtectedRoute>
+        } />
+      </Route>
+
+      {/* ── Solar Public Upload (No auth) ─────────────────────────────────── */}
+      <Route path="/upload/:token" element={<SupervisorUpload />} />
 
       {/* ── Legacy redirect — old /login path ────────────────────────── */}
       <Route path="/login" element={<Navigate to="/vehicle/login" replace />} />
