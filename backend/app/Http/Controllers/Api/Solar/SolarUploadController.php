@@ -144,7 +144,115 @@ class SolarUploadController extends Controller
         ->take(50)
         ->get();
 
-        return response()->json($batches);
+        $dailyUpdates = \App\Models\SolarDailyUpdate::whereHas('project', function ($q) use ($site) {
+            $q->where('solar_site_id', $site->id);
+        })
+        ->with('images', 'project')
+        ->orderByDesc('created_at')
+        ->take(50)
+        ->get();
+
+        return response()->json([
+            'batches' => $batches,
+            'daily_updates' => $dailyUpdates
+        ]);
+    }
+
+    /**
+     * Submit a daily update (public, token auth)
+     */
+    public function submitDailyUpdate(Request $request, string $token)
+    {
+        $site = SolarSite::where('supervisor_token', $token)->where('is_active', true)->first();
+        if (!$site) {
+            return response()->json(['message' => 'Invalid or expired upload link.'], 404);
+        }
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'solar_project_id' => 'required|exists:solar_projects,id',
+            'report_date' => 'required|date',
+            'start_time' => 'nullable',
+            'manpower' => 'nullable|string',
+            'machines' => 'nullable|string',
+            'weather' => 'nullable|string',
+            'planned_tasks' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'images.*' => 'image|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Verify project belongs to site
+        $project = \App\Models\SolarProject::where('solar_site_id', $site->id)->find($request->solar_project_id);
+        if (!$project) {
+            return response()->json(['message' => 'Invalid project.'], 400);
+        }
+
+        $update = \App\Models\SolarDailyUpdate::create([
+            'solar_project_id' => $project->id,
+            'report_date' => $request->report_date,
+            'start_time' => $request->start_time,
+            'manpower' => $request->manpower,
+            'machines' => $request->machines,
+            'weather' => $request->weather,
+            'planned_tasks' => $request->planned_tasks,
+            'notes' => $request->notes,
+        ]);
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                $dirPath = "solar-images/sites/{$site->id}/daily_updates/" . $update->report_date->format('Y-m-d');
+                $filename = \Illuminate\Support\Str::random(20) . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs($dirPath, $filename, 'public');
+                
+                \App\Models\SolarDailyUpdateImage::create([
+                    'solar_daily_update_id' => $update->id,
+                    'image_path' => $path,
+                    'image_url' => url('storage/' . $path),
+                    'original_name' => $file->getClientOriginalName(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Daily update submitted successfully',
+            'data' => $update->load('images')
+        ], 201);
+    }
+
+    /**
+     * Update a daily update (public, token auth)
+     */
+    public function updateDailyUpdate(Request $request, string $token, $updateId)
+    {
+        $site = SolarSite::where('supervisor_token', $token)->where('is_active', true)->first();
+        if (!$site) {
+            return response()->json(['message' => 'Invalid or expired upload link.'], 404);
+        }
+
+        $update = \App\Models\SolarDailyUpdate::whereHas('project', function($q) use ($site) {
+            $q->where('solar_site_id', $site->id);
+        })->find($updateId);
+
+        if (!$update) {
+            return response()->json(['message' => 'Update not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'report_date' => 'required|date',
+            'start_time' => 'nullable',
+            'manpower' => 'nullable|string',
+            'machines' => 'nullable|string',
+            'weather' => 'nullable|string',
+            'planned_tasks' => 'nullable|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        $update->update($validated);
+        return response()->json(['message' => 'Daily update updated successfully', 'data' => $update]);
     }
 
     /**
@@ -271,6 +379,80 @@ class SolarUploadController extends Controller
         }
         $image->delete();
 
-        return response()->json(['message' => 'Image deleted']);
+        return response()->json(['message' => 'Image deleted successfully.']);
+    }
+
+    /**
+     * Add more images to a daily update
+     */
+    public function addDailyUpdateImages(Request $request, string $token, $updateId)
+    {
+        $site = SolarSite::where('supervisor_token', $token)->where('is_active', true)->first();
+        if (!$site) {
+            return response()->json(['message' => 'Invalid or expired upload link.'], 404);
+        }
+
+        $update = \App\Models\SolarDailyUpdate::whereHas('project', function($q) use ($site) {
+            $q->where('solar_site_id', $site->id);
+        })->find($updateId);
+
+        if (!$update) {
+            return response()->json(['message' => 'Update not found.'], 404);
+        }
+
+        $request->validate([
+            'images'   => 'required|array|min:1|max:30',
+            'images.*' => 'required|image|max:10240',
+        ]);
+
+        $savedImages = [];
+
+        foreach ($request->file('images') as $file) {
+            $dirPath = "solar-images/sites/{$site->id}/daily_updates/" . $update->report_date->format('Y-m-d');
+            $filename = \Illuminate\Support\Str::random(20) . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs($dirPath, $filename, 'public');
+            
+            $image = \App\Models\SolarDailyUpdateImage::create([
+                'solar_daily_update_id' => $update->id,
+                'image_path' => $path,
+                'image_url' => url('storage/' . $path),
+                'original_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+            ]);
+
+            $savedImages[] = $image;
+        }
+
+        return response()->json([
+            'message' => 'Images added successfully! ' . count($savedImages) . ' image(s) saved.',
+            'images'  => $savedImages,
+        ], 201);
+    }
+
+    /**
+     * Delete an image from a daily update
+     */
+    public function deleteDailyUpdateImage(Request $request, string $token, $imageId)
+    {
+        $site = SolarSite::where('supervisor_token', $token)->where('is_active', true)->first();
+        if (!$site) {
+            return response()->json(['message' => 'Invalid or expired upload link.'], 404);
+        }
+
+        $image = \App\Models\SolarDailyUpdateImage::whereHas('dailyUpdate.project', function($q) use ($site) {
+            $q->where('solar_site_id', $site->id);
+        })->find($imageId);
+
+        if (!$image) {
+            return response()->json(['message' => 'Image not found.'], 404);
+        }
+
+        $path = storage_path('app/public/' . $image->image_path);
+        if (file_exists($path)) {
+            unlink($path);
+        }
+        $image->delete();
+
+        return response()->json(['message' => 'Image deleted successfully.']);
     }
 }
