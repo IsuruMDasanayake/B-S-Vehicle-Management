@@ -11,10 +11,12 @@ const SupervisorUpload = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'history'
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'daily_update' | 'history'
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [editingBatch, setEditingBatch] = useState(null);
+  const [editingDailyUpdate, setEditingDailyUpdate] = useState(null);
+  const [editDailyUpdateData, setEditDailyUpdateData] = useState({});
   const [uploadingMore, setUploadingMore] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -35,6 +37,20 @@ const SupervisorUpload = () => {
     has_issue: false,
     issue_description: '',
   });
+
+  const [dailyUpdateData, setDailyUpdateData] = useState({
+    solar_project_id: '',
+    report_date: new Date().toISOString().split('T')[0],
+    start_time: '',
+    manpower: '',
+    machines: '',
+    weather: '',
+    planned_tasks: '',
+    notes: '',
+  });
+
+  const [selectedDailyFiles, setSelectedDailyFiles] = useState([]);
+  const [dailyPreviewUrls, setDailyPreviewUrls] = useState([]);
 
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -81,7 +97,11 @@ const SupervisorUpload = () => {
     setLoadingHistory(true);
     try {
       const { data } = await api.get(`/upload/${token}/history`);
-      setHistory(data);
+      const combined = [
+        ...(data.batches || []).map(b => ({ ...b, type: 'batch' })),
+        ...(data.daily_updates || []).map(d => ({ ...d, type: 'daily' }))
+      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setHistory(combined);
     } catch (error) {
       toast.error('Failed to load history.');
     } finally {
@@ -188,6 +208,82 @@ const SupervisorUpload = () => {
     }
   };
 
+  const handleDailyFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    if (selectedDailyFiles.length + files.length > 20) {
+      toast.error('Maximum 20 images allowed per update.');
+      return;
+    }
+
+    const newFiles = [...selectedDailyFiles, ...files];
+    setSelectedDailyFiles(newFiles);
+
+    const urls = newFiles.map(file => URL.createObjectURL(file));
+    setDailyPreviewUrls(urls);
+  };
+
+  const removeDailyFile = (index) => {
+    const newFiles = [...selectedDailyFiles];
+    newFiles.splice(index, 1);
+    setSelectedDailyFiles(newFiles);
+    
+    const newUrls = [...dailyPreviewUrls];
+    URL.revokeObjectURL(newUrls[index]);
+    newUrls.splice(index, 1);
+    setDailyPreviewUrls(newUrls);
+  };
+
+  const handleDailySubmit = async (e) => {
+    e.preventDefault();
+    if (!dailyUpdateData.solar_project_id) return toast.error('Please select a project.');
+    
+    setSubmitting(true);
+    setUploadProgress(0);
+
+    const fd = new FormData();
+    Object.keys(dailyUpdateData).forEach(key => {
+      if (dailyUpdateData[key] !== null && dailyUpdateData[key] !== '') {
+        fd.append(key, dailyUpdateData[key]);
+      }
+    });
+
+    selectedDailyFiles.forEach(file => {
+      fd.append('images[]', file);
+    });
+
+    try {
+      await api.post(`/upload/${token}/daily-updates`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+      
+      toast.success('Daily update submitted successfully!');
+      
+      setDailyUpdateData(prev => ({
+        ...prev,
+        manpower: '',
+        machines: '',
+        planned_tasks: '',
+        notes: '',
+      }));
+      setSelectedDailyFiles([]);
+      setDailyPreviewUrls([]);
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      fetchHistory();
+      setActiveTab('history');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Upload failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+      setUploadProgress(0);
+    }
+  };
+
   const handleUpdateBatch = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -200,6 +296,69 @@ const SupervisorUpload = () => {
       toast.error(error.response?.data?.message || 'Failed to update batch');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdateDailyUpdate = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.put(`/upload/${token}/daily-updates/${editingDailyUpdate.id}`, editDailyUpdateData);
+      toast.success('Daily update modified successfully');
+      setEditingDailyUpdate(null);
+      fetchHistory();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update daily update');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteDailyImage = async (imageId) => {
+    try {
+      await api.delete(`/upload/${token}/daily-update-images/${imageId}`);
+      toast.success('Image deleted');
+      setEditingDailyUpdate(prev => ({
+        ...prev,
+        images: prev.images.filter(img => img.id !== imageId),
+        images_count: prev.images_count - 1
+      }));
+      fetchHistory();
+    } catch (error) {
+      toast.error('Failed to delete image');
+    }
+  };
+
+  const handleAddMoreDailyImages = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    if ((editingDailyUpdate.images?.length || 0) + files.length > 30) {
+      toast.error('Maximum 30 images allowed per daily update.');
+      return;
+    }
+
+    setUploadingMore(true);
+    const fd = new FormData();
+    files.forEach(file => fd.append('images[]', file));
+
+    try {
+      const { data } = await api.post(`/upload/${token}/daily-updates/${editingDailyUpdate.id}/images`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Images added successfully');
+      
+      setEditingDailyUpdate(prev => ({
+        ...prev,
+        images: [...(prev.images || []), ...data.images],
+        images_count: prev.images_count + data.images.length
+      }));
+      e.target.value = null;
+      fetchHistory();
+    } catch (error) {
+      toast.error('Failed to upload images');
+    } finally {
+      setUploadingMore(false);
     }
   };
 
@@ -257,6 +416,7 @@ const SupervisorUpload = () => {
 
   const handleEditClick = (batch) => {
     setEditingBatch(batch);
+    setEditingDailyUpdate(null);
     setFormData({
       solar_project_id: batch.section?.project?.id || '',
       solar_section_id: batch.solar_section_id || '',
@@ -274,8 +434,24 @@ const SupervisorUpload = () => {
     });
   };
 
+  const handleEditDailyClick = (update) => {
+    setEditingDailyUpdate(update);
+    setEditingBatch(null);
+    setEditDailyUpdateData({
+      report_date: update.report_date ? update.report_date.split('T')[0] : '',
+      start_time: update.start_time ? update.start_time.substring(0, 5) : '',
+      manpower: update.manpower || '',
+      machines: update.machines || '',
+      weather: update.weather || '',
+      planned_tasks: update.planned_tasks || '',
+      notes: update.notes || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const cancelEdit = () => {
     setEditingBatch(null);
+    setEditingDailyUpdate(null);
     setFormData({
       solar_project_id: '',
       solar_section_id: '',
@@ -371,7 +547,13 @@ const SupervisorUpload = () => {
             onClick={() => { setActiveTab('upload'); setEditingBatch(null); }}
             style={{ flex: 1, padding: '1rem', background: activeTab === 'upload' ? 'transparent' : 'var(--surface-2)', border: 'none', borderBottom: activeTab === 'upload' ? '3px solid var(--primary)' : '3px solid transparent', fontWeight: activeTab === 'upload' ? 600 : 500, color: activeTab === 'upload' ? 'var(--text)' : 'var(--text-muted)', cursor: 'pointer' }}
           >
-            New Upload
+            Milestone Upload
+          </button>
+          <button 
+            onClick={() => { setActiveTab('daily_update'); setEditingBatch(null); }}
+            style={{ flex: 1, padding: '1rem', background: activeTab === 'daily_update' ? 'transparent' : 'var(--surface-2)', border: 'none', borderBottom: activeTab === 'daily_update' ? '3px solid var(--primary)' : '3px solid transparent', fontWeight: activeTab === 'daily_update' ? 600 : 500, color: activeTab === 'daily_update' ? 'var(--text)' : 'var(--text-muted)', cursor: 'pointer' }}
+          >
+            Daily Update
           </button>
           <button 
             onClick={() => { setActiveTab('history'); setEditingBatch(null); }}
@@ -382,7 +564,7 @@ const SupervisorUpload = () => {
         </div>
       </div>
 
-      {activeTab === 'upload' && !editingBatch && (
+      {activeTab === 'upload' && !editingBatch && !editingDailyUpdate && (
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Project & Milestone Selection */}
         <div className="card" style={{ padding: '1.25rem' }}>
@@ -577,8 +759,116 @@ const SupervisorUpload = () => {
       </form>
       )}
 
+      {activeTab === 'daily_update' && !editingBatch && !editingDailyUpdate && (
+        <form onSubmit={handleDailySubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Project Details</h3>
+            
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Project</label>
+              <select 
+                className="form-control" 
+                value={dailyUpdateData.solar_project_id} 
+                onChange={e => setDailyUpdateData({...dailyUpdateData, solar_project_id: e.target.value})}
+                required
+                style={{ width: '100%' }}
+              >
+                <option value="">-- Choose Project --</option>
+                {siteData?.projects?.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Date *</label>
+                <input type="date" className="form-control" value={dailyUpdateData.report_date} onChange={e => setDailyUpdateData({...dailyUpdateData, report_date: e.target.value})} required style={{ width: '100%' }} />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Site Start Time</label>
+                <input type="time" className="form-control" value={dailyUpdateData.start_time} onChange={e => setDailyUpdateData({...dailyUpdateData, start_time: e.target.value})} style={{ width: '100%' }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Daily Progress</h3>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>👷 Man Power</label>
+              <input type="text" className="form-control" placeholder="e.g. Operator - 1 / Labour - 3 / Supervisor - 1" value={dailyUpdateData.manpower} onChange={e => setDailyUpdateData({...dailyUpdateData, manpower: e.target.value})} style={{ width: '100%' }} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>🚜 Machines / Vehicle Details</label>
+              <input type="text" className="form-control" placeholder="e.g. Excavator - 1" value={dailyUpdateData.machines} onChange={e => setDailyUpdateData({...dailyUpdateData, machines: e.target.value})} style={{ width: '100%' }} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>🌤️ Weather</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                {['Sunny', 'Cloudy', 'Light Rain', 'Heavy Rain', 'Windy'].map(w => (
+                  <button 
+                    key={w} 
+                    type="button" 
+                    onClick={() => setDailyUpdateData({...dailyUpdateData, weather: dailyUpdateData.weather === w ? '' : w})}
+                    style={{ padding: '0.5rem', borderRadius: 'var(--radius)', border: dailyUpdateData.weather === w ? '2px solid #3b82f6' : '1px solid var(--border)', background: dailyUpdateData.weather === w ? 'rgba(59,130,246,0.1)' : 'var(--surface)', fontSize: '0.9rem' }}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>📋 Planned Task</label>
+              <textarea className="form-control" placeholder="Description of planned work..." value={dailyUpdateData.planned_tasks} onChange={e => setDailyUpdateData({...dailyUpdateData, planned_tasks: e.target.value})} style={{ width: '100%', minHeight: '80px', resize: 'vertical' }} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>📝 Note</label>
+              <textarea className="form-control" placeholder="Any issues, delays, or additional notes..." value={dailyUpdateData.notes} onChange={e => setDailyUpdateData({...dailyUpdateData, notes: e.target.value})} style={{ width: '100%', minHeight: '80px', resize: 'vertical' }} />
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Photos</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
+              {dailyPreviewUrls.map((url, i) => (
+                <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img src={url} alt={`Preview ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button type="button" onClick={() => removeDailyFile(i)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                </div>
+              ))}
+              
+              <label style={{ aspectRatio: '1', borderRadius: 'var(--radius)', border: '2px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📸</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Add Photo</span>
+                <input type="file" multiple accept="image/*" onChange={handleDailyFileChange} style={{ display: 'none' }} />
+              </label>
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={submitting}
+            className="btn btn-primary" 
+            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+          >
+            {submitting ? (
+              <>
+                <span className="spinner" style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></span>
+                Submitting... {uploadProgress}%
+              </>
+            ) : 'Submit Daily Update'}
+          </button>
+        </form>
+      )}
+
       {/* History Tab */}
-      {activeTab === 'history' && !editingBatch && (
+      {activeTab === 'history' && !editingBatch && !editingDailyUpdate && (
         <div style={{ padding: '1.5rem' }}>
           {loadingHistory ? (
             <div style={{ textAlign: 'center', padding: '2rem' }}>Loading history...</div>
@@ -586,41 +876,74 @@ const SupervisorUpload = () => {
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No recent uploads found.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {history.map((batch, index) => (
-                <div key={batch.id} className="card" style={{ padding: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                    <div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        {new Date(batch.created_at).toLocaleString()}
+              {history.map((item, index) => {
+                if (item.type === 'batch') {
+                  return (
+                    <div key={`batch-${item.id}`} className="card" style={{ padding: '1.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: 'var(--primary)', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px', marginBottom: '0.5rem', display: 'inline-block' }}>Milestone Upload</span>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {new Date(item.created_at).toLocaleString()}
+                          </div>
+                          <h3 style={{ margin: '0.25rem 0', fontSize: '1.1rem' }}>{item.section?.name}</h3>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                            Project: {item.section?.project?.name}
+                          </div>
+                        </div>
+                        {index === 0 && (
+                          <button 
+                            onClick={() => handleEditClick(item)}
+                            className="btn btn-primary"
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                          >
+                            Edit Last Update
+                          </button>
+                        )}
                       </div>
-                      <h3 style={{ margin: '0.25rem 0', fontSize: '1.1rem' }}>{batch.section?.name}</h3>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        Project: {batch.section?.project?.name}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem' }}>
+                        <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>🖼️ {item.images_count} Images</span>
+                        {item.uploaded_by && <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>👤 By: {item.uploaded_by}</span>}
+                        {item.table_number && <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>Table {item.table_number}</span>}
                       </div>
                     </div>
-                    {index === 0 && (
-                      <button 
-                        onClick={() => handleEditClick(batch)}
-                        className="btn btn-primary"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                      >
-                        Edit Last Update
-                      </button>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem' }}>
-                    <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>🖼️ {batch.images_count} Images</span>
-                    {batch.uploaded_by && <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>👤 By: {batch.uploaded_by}</span>}
-                    {batch.table_number && <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>Table {batch.table_number}</span>}
-                  </div>
-                </div>
-              ))}
+                  );
+                } else {
+                  return (
+                    <div key={`daily-${item.id}`} className="card" style={{ padding: '1.5rem',  }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: '#3b82f6', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px', marginBottom: '0.5rem', display: 'inline-block' }}>Daily Update</span>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {new Date(item.created_at).toLocaleString()}
+                          </div>
+                          <h3 style={{ margin: '0.25rem 0', fontSize: '1.1rem' }}>{item.project?.name}</h3>
+                        </div>
+                        {index === 0 && (
+                          <button 
+                            onClick={() => handleEditDailyClick(item)}
+                            className="btn btn-primary"
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                          >
+                            Edit Last Update
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem' }}>
+                        <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>🖼️ {item.images ? item.images.length : 0} Images</span>
+                        {item.weather && <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>🌤️ {item.weather}</span>}
+                        <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>👷 {item.manpower || 'N/A'}</span>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* Edit Mode */}
+      {/* Edit Mode - Milestone */}
       {editingBatch && (
         <form onSubmit={handleUpdateBatch} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
@@ -670,9 +993,9 @@ const SupervisorUpload = () => {
             </div>
           </div>
 
-          <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #3b82f6' }}>
+          {/* <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #3b82f6' }}>
             <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Editing Batch Metadata</h3>
-          </div>
+          </div> */}
 
           <div className="card" style={{ padding: '1.25rem' }}>
             <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Field Report</h3>
@@ -718,6 +1041,99 @@ const SupervisorUpload = () => {
           </div>
         </form>
       )}
+
+      {/* Edit Mode - Daily Update */}
+      {editingDailyUpdate && (
+        <form onSubmit={handleUpdateDailyUpdate} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Edit Daily Update</h3>
+              <button type="button" onClick={cancelEdit} className="btn btn-ghost">Cancel</button>
+            </div>
+
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Manage Images</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              {editingDailyUpdate.images?.map(img => (
+                <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img 
+                    src={img.image_url} 
+                    alt="Daily Update" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} 
+                    onClick={() => setSelectedImage(img)}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => handleDeleteDailyImage(img.id)}
+                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: '2rem' }}>
+              <label className="btn btn-outline" style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer', opacity: uploadingMore ? 0.7 : 1 }}>
+                {uploadingMore ? 'Uploading...' : '📸 Add More Images'}
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/jpeg,image/png,image/heic" 
+                  style={{ display: 'none' }}
+                  onChange={handleAddMoreDailyImages}
+                  disabled={uploadingMore}
+                />
+              </label>
+            </div>
+
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Daily Progress</h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Date *</label>
+                  <input type="date" className="form-control" value={editDailyUpdateData.report_date} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, report_date: e.target.value})} required style={{ width: '100%' }} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Start Time</label>
+                  <input type="time" className="form-control" value={editDailyUpdateData.start_time} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, start_time: e.target.value})} style={{ width: '100%' }} />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Man Power</label>
+                <input type="text" className="form-control" value={editDailyUpdateData.manpower} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, manpower: e.target.value})} style={{ width: '100%' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Machines / Vehicles</label>
+                <input type="text" className="form-control" value={editDailyUpdateData.machines} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, machines: e.target.value})} style={{ width: '100%' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Weather</label>
+                <input type="text" className="form-control" value={editDailyUpdateData.weather} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, weather: e.target.value})} style={{ width: '100%' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Planned Task</label>
+                <textarea className="form-control" value={editDailyUpdateData.planned_tasks} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, planned_tasks: e.target.value})} style={{ width: '100%', minHeight: '60px' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Notes</label>
+                <textarea className="form-control" value={editDailyUpdateData.notes} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, notes: e.target.value})} style={{ width: '100%', minHeight: '60px' }} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                <button type="submit" disabled={submitting} className="btn btn-primary">{submitting ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      )}
+
       {/* Fullscreen Image Modal */}
       {selectedImage && (
         <div 

@@ -24,14 +24,28 @@ const SolarProjectDetail = () => {
   
   const [expandedSections, setExpandedSections] = useState({});
   const [templates, setTemplates] = useState([]);
+  const [dailyUpdates, setDailyUpdates] = useState([]);
+  const [dailyUpdateFilter, setDailyUpdateFilter] = useState('');
+  const [editDailyUpdateModal, setEditDailyUpdateModal] = useState({ isOpen: false, update: null });
+  const [editDailyUpdateData, setEditDailyUpdateData] = useState({});
+  const [deleteDailyUpdateModal, setDeleteDailyUpdateModal] = useState({ isOpen: false, updateId: null });
+  const [activeTab, setActiveTab] = useState('milestones'); // 'milestones' | 'daily_updates'
   const [addMilestoneModal, setAddMilestoneModal] = useState({ isOpen: false, templateId: '', insertAfterOrder: 0 });
   const [deleteMilestoneModal, setDeleteMilestoneModal] = useState({ isOpen: false, sectionId: null });
   const [flagReasonModal, setFlagReasonModal] = useState({ isOpen: false, imageId: null, reason: '' });
+  const [expandedDailyUpdates, setExpandedDailyUpdates] = useState({});
 
   const toggleSection = (sectionId) => {
     setExpandedSections(prev => ({
       ...prev,
       [sectionId]: !prev[sectionId]
+    }));
+  };
+
+  const toggleDailyUpdate = (updateId) => {
+    setExpandedDailyUpdates(prev => ({
+      ...prev,
+      [updateId]: !prev[updateId]
     }));
   };
 
@@ -105,10 +119,19 @@ const SolarProjectDetail = () => {
       console.error('Failed to load templates');
     }
   };
+  const fetchDailyUpdates = async () => {
+    try {
+      const { data } = await api.get(`/solar/projects/${id}/daily-updates`);
+      setDailyUpdates(data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch daily updates', error);
+    }
+  };
 
   useEffect(() => {
     fetchProject();
     fetchTemplates();
+    fetchDailyUpdates();
   }, [id]);
 
   const openEditModal = (batch) => {
@@ -138,6 +161,34 @@ const SolarProjectDetail = () => {
       fetchProject();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update batch');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openEditDailyUpdateModal = (update) => {
+    setEditDailyUpdateModal({ isOpen: true, update });
+    setEditDailyUpdateData({
+      report_date: update.report_date ? update.report_date.split('T')[0] : '',
+      start_time: update.start_time ? update.start_time.substring(0, 5) : '',
+      manpower: update.manpower || '',
+      machines: update.machines || '',
+      weather: update.weather || '',
+      planned_tasks: update.planned_tasks || '',
+      notes: update.notes || '',
+    });
+  };
+
+  const handleUpdateDailyUpdate = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.put(`/solar/daily-updates/${editDailyUpdateModal.update.id}`, editDailyUpdateData);
+      toast.success('Daily update modified');
+      setEditDailyUpdateModal({ isOpen: false, update: null });
+      fetchDailyUpdates();
+    } catch (error) {
+      toast.error('Failed to update daily update');
     } finally {
       setSubmitting(false);
     }
@@ -275,9 +326,26 @@ const SolarProjectDetail = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 style={{ margin: 0 }}>Project Milestones</h3>
-        {isSuperAdmin && (
+      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '2rem' }}>
+        <button 
+          onClick={() => setActiveTab('milestones')}
+          style={{ padding: '0.75rem 1.5rem', background: 'transparent', border: 'none', borderBottom: activeTab === 'milestones' ? '3px solid var(--primary)' : '3px solid transparent', fontWeight: activeTab === 'milestones' ? 600 : 500, color: activeTab === 'milestones' ? 'var(--text)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem' }}
+        >
+          Engineering Milestones
+        </button>
+        <button 
+          onClick={() => setActiveTab('daily_updates')}
+          style={{ padding: '0.75rem 1.5rem', background: 'transparent', border: 'none', borderBottom: activeTab === 'daily_updates' ? '3px solid var(--primary)' : '3px solid transparent', fontWeight: activeTab === 'daily_updates' ? 600 : 500, color: activeTab === 'daily_updates' ? 'var(--text)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem' }}
+        >
+          Daily Updates
+        </button>
+      </div>
+
+      {activeTab === 'milestones' && (
+      <>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0 }}>Project Milestones</h3>
+          {isSuperAdmin && (
           <button 
             onClick={() => setAddMilestoneModal({ isOpen: true, templateId: '', insertAfterOrder: 0 })}
             className="btn btn-primary"
@@ -399,6 +467,106 @@ const SolarProjectDetail = () => {
           );
         })}
       </div>
+      </>
+      )}
+
+      {activeTab === 'daily_updates' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>Filter by Date:</label>
+              <input 
+                type="date" 
+                className="form-control" 
+                value={dailyUpdateFilter} 
+                onChange={e => setDailyUpdateFilter(e.target.value)} 
+                style={{ width: '150px' }}
+              />
+              {dailyUpdateFilter && (
+                <button onClick={() => setDailyUpdateFilter('')} className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem' }}>Clear</button>
+              )}
+            </div>
+          </div>
+          {dailyUpdates.length > 0 ? (
+            dailyUpdates.filter(u => !dailyUpdateFilter || u.report_date.startsWith(dailyUpdateFilter)).map(update => (
+              <div key={update.id} className="card" style={{ padding: '1.5rem' }}>
+                <div 
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: expandedDailyUpdates[update.id] ? '1px solid var(--border)' : 'none', paddingBottom: expandedDailyUpdates[update.id] ? '1rem' : 0, marginBottom: expandedDailyUpdates[update.id] ? '1rem' : 0, cursor: 'pointer' }}
+                  onClick={() => toggleDailyUpdate(update.id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                      {expandedDailyUpdates[update.id] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.2rem', color: 'var(--primary)' }}>{new Date(update.report_date).toLocaleDateString()}</h4>
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Start Time: {update.start_time ? update.start_time.substring(0, 5) : 'N/A'}</span>
+                    </div>
+                  </div>
+                  {isSuperAdmin && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={(e) => { e.stopPropagation(); openEditDailyUpdateModal(update); }} className="btn btn-ghost" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Edit</button>
+                      <button onClick={(e) => { e.stopPropagation(); setDeleteDailyUpdateModal({ isOpen: true, updateId: update.id }); }} className="btn btn-ghost" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', color: '#ef4444' }}>Delete</button>
+                    </div>
+                  )}
+                </div>
+
+                {expandedDailyUpdates[update.id] && (
+                  <div style={{ animation: 'slideDown 0.2s ease-out' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                      <div>
+                        <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)' }}>👷 Man Power</h5>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>{update.manpower || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)' }}>🚜 Machines / Vehicles</h5>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>{update.machines || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)' }}>🌤️ Weather</h5>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>{update.weather || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)' }}>📋 Planned Task</h5>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', whiteSpace: 'pre-wrap' }}>{update.planned_tasks || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    {update.notes && (
+                      <div style={{ marginBottom: '1.5rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: 'var(--radius)' }}>
+                        <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)' }}>📝 Notes</h5>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', whiteSpace: 'pre-wrap' }}>{update.notes}</p>
+                      </div>
+                    )}
+
+                    {update.images && update.images.length > 0 && (
+                      <div>
+                        <h5 style={{ margin: '0 0 0.75rem 0', color: 'var(--text)' }}>📸 Photos</h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.5rem' }}>
+                          {update.images.map((img, idx) => (
+                            <div key={img.id} style={{ aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                              <img 
+                                src={img.image_url} 
+                                alt="Daily Update" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedImage({ image: img, images: update.images, currentIndex: idx }); }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', background: 'var(--surface)', borderRadius: 'var(--radius)' }}>
+              No daily updates found for this project.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Fullscreen Image Modal */}
       {selectedImage && (
@@ -478,7 +646,7 @@ const SolarProjectDetail = () => {
             width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto',
             animation: 'slideUp 0.3s ease-out'
           }}>
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{  borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Edit Upload Batch</h2>
               <button onClick={() => setEditModal({ isOpen: false, batch: null })} className="btn btn-ghost" style={{ padding: '0.5rem' }}>✕</button>
             </div>
@@ -486,7 +654,7 @@ const SolarProjectDetail = () => {
             <form onSubmit={handleUpdateBatch} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               
               {/* Images Section */}
-              <div className="card" style={{ padding: '1.25rem' }}>
+              <div>
                 <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Manage Images</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   {editModal.batch.images?.map(img => (
@@ -518,9 +686,9 @@ const SolarProjectDetail = () => {
                 </div>
               </div>
 
-              <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #3b82f6' }}>
+              {/* <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #3b82f6' }}>
                 <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Editing Batch Metadata</h3>
-              </div>
+              </div> */}
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
@@ -595,6 +763,72 @@ const SolarProjectDetail = () => {
         endpoint={deleteMilestoneModal.sectionId ? `/solar/milestones/${deleteMilestoneModal.sectionId}` : null}
         itemName="Project Milestone"
       />
+
+      <ConfirmDeleteModal 
+        isOpen={deleteDailyUpdateModal.isOpen}
+        onClose={() => setDeleteDailyUpdateModal({ isOpen: false, updateId: null })}
+        onDeleted={() => {
+          setDeleteDailyUpdateModal({ isOpen: false, updateId: null });
+          fetchDailyUpdates();
+        }}
+        endpoint={deleteDailyUpdateModal.updateId ? `/solar/daily-updates/${deleteDailyUpdateModal.updateId}` : null}
+        itemName="Daily Update"
+      />
+
+      {/* Edit Daily Update Modal */}
+      {editDailyUpdateModal.isOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '1rem' }}>
+          <div className="card" style={{ padding: '2rem', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Edit Daily Update</h3>
+              <button onClick={() => setEditDailyUpdateModal({ isOpen: false, update: null })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleUpdateDailyUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Date *</label>
+                  <input type="date" className="form-control" value={editDailyUpdateData.report_date} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, report_date: e.target.value})} required style={{ width: '100%' }} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Start Time</label>
+                  <input type="time" className="form-control" value={editDailyUpdateData.start_time} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, start_time: e.target.value})} style={{ width: '100%' }} />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Man Power</label>
+                <input type="text" className="form-control" value={editDailyUpdateData.manpower} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, manpower: e.target.value})} style={{ width: '100%' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Machines / Vehicles</label>
+                <input type="text" className="form-control" value={editDailyUpdateData.machines} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, machines: e.target.value})} style={{ width: '100%' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Weather</label>
+                <input type="text" className="form-control" value={editDailyUpdateData.weather} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, weather: e.target.value})} style={{ width: '100%' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Planned Task</label>
+                <textarea className="form-control" value={editDailyUpdateData.planned_tasks} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, planned_tasks: e.target.value})} style={{ width: '100%', minHeight: '60px' }} />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Notes</label>
+                <textarea className="form-control" value={editDailyUpdateData.notes} onChange={e => setEditDailyUpdateData({...editDailyUpdateData, notes: e.target.value})} style={{ width: '100%', minHeight: '60px' }} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setEditDailyUpdateModal({ isOpen: false, update: null })} className="btn btn-ghost">Cancel</button>
+                <button type="submit" disabled={submitting} className="btn btn-primary">{submitting ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Milestone Modal */}
       {addMilestoneModal.isOpen && (

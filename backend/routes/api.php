@@ -112,6 +112,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('projects', \App\Http\Controllers\Api\Solar\SolarProjectController::class);
         Route::post('projects/{project}/milestones', [\App\Http\Controllers\Api\Solar\SolarProjectController::class, 'addMilestone']);
         Route::delete('milestones/{solarSection}', [\App\Http\Controllers\Api\Solar\SolarProjectController::class, 'deleteMilestone']);
+        Route::get('projects/{project}/daily-updates', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'index']);
+        Route::post('projects/{project}/daily-updates', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'store']);
+        
+        // Daily Updates (Admin)
+        Route::put('daily-updates/{id}', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'update']);
+        Route::delete('daily-updates/{id}', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'destroy']);
 
         // Upload Batches (read + delete)
         Route::get('upload-batches', [\App\Http\Controllers\Api\Solar\SolarUploadBatchController::class, 'index']);
@@ -133,6 +139,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('upload')->group(function () {
     Route::get('{token}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'getSiteData']);
     Route::post('{token}/submit', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'submit']);
+    Route::post('{token}/daily-updates', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'submitDailyUpdate']);
+    Route::put('{token}/daily-updates/{updateId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'updateDailyUpdate']);
+    Route::post('{token}/daily-updates/{updateId}/images', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'addDailyUpdateImages']);
+    Route::delete('{token}/daily-update-images/{imageId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'deleteDailyUpdateImage']);
     Route::get('{token}/history', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'history']);
     Route::put('{token}/batches/{batchId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'updateBatch']);
     Route::post('{token}/batches/{batchId}/images', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'addImages']);
