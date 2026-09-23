@@ -488,7 +488,10 @@ const SolarProjectDetail = () => {
             </div>
           </div>
           {dailyUpdates.length > 0 ? (
-            dailyUpdates.filter(u => !dailyUpdateFilter || u.report_date.startsWith(dailyUpdateFilter)).map(update => (
+            dailyUpdates
+              .filter(u => !dailyUpdateFilter || u.report_date.startsWith(dailyUpdateFilter))
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+              .map(update => (
               <div key={update.id} className="card" style={{ padding: '1.5rem' }}>
                 <div 
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: expandedDailyUpdates[update.id] ? '1px solid var(--border)' : 'none', paddingBottom: expandedDailyUpdates[update.id] ? '1rem' : 0, marginBottom: expandedDailyUpdates[update.id] ? '1rem' : 0, cursor: 'pointer' }}

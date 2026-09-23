@@ -9,6 +9,9 @@ use App\Models\SolarImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManagerStatic as Image;
+use App\Notifications\SupervisorUpdateNotification;
+use App\Models\User;
+use Illuminate\Support\Facades\Notification;
 
 class SolarUploadController extends Controller
 {
@@ -116,6 +119,20 @@ class SolarUploadController extends Controller
             $savedImages[] = $image;
         }
 
+        // Notify admins
+        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, new SupervisorUpdateNotification(
+                "New Site Update (Batch)",
+                "A new field report has been uploaded by {$batch->uploaded_by} at {$site->name}.",
+                $site->id,
+                $batch->section->solar_project_id ?? null,
+                'info',
+                'batch',
+                $batch->id
+            ));
+        }
+
         return response()->json([
             'message'       => 'Upload successful! ' . count($savedImages) . ' image(s) saved.',
             'batch_id'      => $batch->id,
@@ -217,6 +234,20 @@ class SolarUploadController extends Controller
             }
         }
 
+        // Notify admins
+        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, new SupervisorUpdateNotification(
+                "New Daily Update",
+                "A new daily update has been submitted for {$project->name} at {$site->name}.",
+                $site->id,
+                $project->id,
+                'info',
+                'daily_update',
+                $update->id
+            ));
+        }
+
         return response()->json([
             'message' => 'Daily update submitted successfully',
             'data' => $update->load('images')
@@ -252,6 +283,21 @@ class SolarUploadController extends Controller
         ]);
 
         $update->update($validated);
+
+        // Notify admins
+        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, new SupervisorUpdateNotification(
+                "Daily Update Edited",
+                "A daily update has been modified for {$update->project->name} at {$site->name}.",
+                $site->id,
+                $update->project->id,
+                'info',
+                'daily_update',
+                $update->id
+            ));
+        }
+
         return response()->json(['message' => 'Daily update updated successfully', 'data' => $update]);
     }
 
@@ -288,6 +334,21 @@ class SolarUploadController extends Controller
         ]);
 
         $batch->update($validated);
+
+        // Notify admins
+        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, new SupervisorUpdateNotification(
+                "Site Update Edited (Batch)",
+                "A field report batch has been modified at {$site->name}.",
+                $site->id,
+                $batch->section->solar_project_id ?? null,
+                'info',
+                'batch',
+                $batch->id
+            ));
+        }
+
         return response()->json(['message' => 'Batch updated successfully', 'data' => $batch]);
     }
 

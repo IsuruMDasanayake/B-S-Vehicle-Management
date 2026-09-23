@@ -10,10 +10,23 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $division = $request->query('division');
+        
+        $query = $user->notifications();
+        
+        if ($division === 'solar') {
+            $query->where('type', 'like', '%SupervisorUpdateNotification%');
+        } elseif ($division === 'vehicle') {
+            $query->where('type', 'not like', '%SupervisorUpdateNotification%');
+        }
         
         return response()->json([
-            'unread_count' => $user->unreadNotifications()->count(),
-            'notifications' => $user->notifications()->take(50)->get(),
+            'unread_count' => $query->whereNull('read_at')->count(),
+            'notifications' => $user->notifications()->when($division === 'solar', function ($q) {
+                return $q->where('type', 'like', '%SupervisorUpdateNotification%');
+            })->when($division === 'vehicle', function ($q) {
+                return $q->where('type', 'not like', '%SupervisorUpdateNotification%');
+            })->take(50)->get(),
         ]);
     }
 

@@ -31,7 +31,7 @@ const Dashboard = () => {
 
   const fetchAlerts = async () => {
     try {
-      const res = await api.get('/notifications');
+      const res = await api.get('/notifications?division=vehicle');
       setAlerts(res.data.notifications ? res.data.notifications.slice(0, 5) : []);
     } catch (err) {
       console.error('Failed to fetch alerts', err);
