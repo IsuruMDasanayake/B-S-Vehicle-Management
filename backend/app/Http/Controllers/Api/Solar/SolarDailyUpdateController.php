@@ -23,6 +23,8 @@ class SolarDailyUpdateController extends Controller
         $updates = SolarDailyUpdate::where('solar_project_id', $project->id)
             ->with('images')
             ->orderBy('report_date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         return response()->json([

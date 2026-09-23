@@ -69,7 +69,7 @@ const Navbar = ({ toggleMobileOpen }) => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await api.get('/notifications');
+      const res = await api.get('/notifications?division=vehicle');
       setNotifications(res.data.notifications || []);
       setUnreadCount(res.data.unread_count || 0);
     } catch (err) {
