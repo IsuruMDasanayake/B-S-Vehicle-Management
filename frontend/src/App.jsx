@@ -113,37 +113,31 @@ function App() {
       <Route path="/vehicle/login" element={<Login />} />
       <Route path="/vehicle/portal" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'driver', 'mechanic', 'department_manager']}><Portal /></RoleProtectedRoute>} />
 
-      <Route path="/vehicle/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin']}><Layout /></RoleProtectedRoute>}>
+      <Route path="/vehicle/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'driver', 'mechanic', 'department_manager', 'dept_manager']}><Layout /></RoleProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         
         {/* Fleet */}
-        <Route path="vehicles" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><VehiclesList /></RoleProtectedRoute>} />
-        <Route path="hiring-details" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><HiringDetailsList /></RoleProtectedRoute>} />
-        <Route path="vehicle-payments" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><VehiclePaymentsList /></RoleProtectedRoute>} />
-        <Route path="drivers" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><DriversList /></RoleProtectedRoute>} />
-        <Route path="assignments" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver', 'dept_manager']}><AssignmentsList /></RoleProtectedRoute>} />
-        <Route path="vehicle-requests" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'dept_manager']}><VehicleRequestsList /></RoleProtectedRoute>} />
+        <Route path="vehicles" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><VehiclesList /></RoleProtectedRoute>} />
+        <Route path="hiring-details" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><HiringDetailsList /></RoleProtectedRoute>} />
+        <Route path="vehicle-payments" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><VehiclePaymentsList /></RoleProtectedRoute>} />
+        <Route path="drivers" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><DriversList /></RoleProtectedRoute>} />
+        <Route path="assignments" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver', 'department_manager', 'dept_manager', 'vehicle_admin']}><AssignmentsList /></RoleProtectedRoute>} />
+        <Route path="vehicle-requests" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'department_manager', 'dept_manager', 'vehicle_admin']}><VehicleRequestsList /></RoleProtectedRoute>} />
         
         {/* Operations */}
-        <Route path="trips" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><TripsList /></RoleProtectedRoute>} />
-        <Route path="routes" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><RoutesList /></RoleProtectedRoute>} />
-        <Route path="ride-logs" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><RideLogsList /></RoleProtectedRoute>} />
-        <Route path="fuel" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver']}><FuelList /></RoleProtectedRoute>} />
+        <Route path="trips" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><TripsList /></RoleProtectedRoute>} />
+        <Route path="routes" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><RoutesList /></RoleProtectedRoute>} />
+        <Route path="ride-logs" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><RideLogsList /></RoleProtectedRoute>} />
+        <Route path="fuel" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver', 'vehicle_admin']}><FuelList /></RoleProtectedRoute>} />
         
         {/* Maintenance & Safety */}
-        <Route path="maintenance" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic']}><MaintenanceList /></RoleProtectedRoute>} />
-        <Route path="breakdowns" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver', 'mechanic']}><BreakdownsList /></RoleProtectedRoute>} />
-        <Route path="accidents" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><AccidentsList /></RoleProtectedRoute>} />
-        <Route path="inspections" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic']}><InspectionsList /></RoleProtectedRoute>} />
-        <Route path="tires" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic']}><TiresList /></RoleProtectedRoute>} />
-        <Route path="spare-parts" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic']}><SparePartsList /></RoleProtectedRoute>} />
-        <Route path="maintenance" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'mechanic']}><MaintenanceList /></RoleProtectedRoute>} />
-        <Route path="breakdowns" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'driver', 'mechanic']}><BreakdownsList /></RoleProtectedRoute>} />
-        <Route path="accidents" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><AccidentsList /></RoleProtectedRoute>} />
-        <Route path="inspections" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'mechanic']}><InspectionsList /></RoleProtectedRoute>} />
-        <Route path="tires" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'mechanic']}><TiresList /></RoleProtectedRoute>} />
-        <Route path="spare-parts" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'mechanic']}><SparePartsList /></RoleProtectedRoute>} />
+        <Route path="maintenance" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic', 'vehicle_admin']}><MaintenanceList /></RoleProtectedRoute>} />
+        <Route path="breakdowns" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'driver', 'mechanic', 'vehicle_admin']}><BreakdownsList /></RoleProtectedRoute>} />
+        <Route path="accidents" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><AccidentsList /></RoleProtectedRoute>} />
+        <Route path="inspections" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic', 'vehicle_admin']}><InspectionsList /></RoleProtectedRoute>} />
+        <Route path="tires" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic', 'vehicle_admin']}><TiresList /></RoleProtectedRoute>} />
+        <Route path="spare-parts" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'mechanic', 'vehicle_admin']}><SparePartsList /></RoleProtectedRoute>} />
 
         {/* Finances & Vendors */}
         <Route path="expenses" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><ExpensesList /></RoleProtectedRoute>} />
@@ -156,20 +150,20 @@ function App() {
         <Route path="alerts" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><Alerts /></RoleProtectedRoute>} />
         
         {/* Reports & Settings */}
-        <Route path="reports" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'dept_manager']}><ReportsDashboard /></RoleProtectedRoute>} />
+        <Route path="reports" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager', 'department_manager', 'dept_manager']}><ReportsDashboard /></RoleProtectedRoute>} />
         <Route path="settings" element={<RoleProtectedRoute allowedRoles={['super_admin']}><SettingsPage /></RoleProtectedRoute>} />
       </Route>
 
       {/* Dedicated GPS Dashboard */}
-      <Route path="/vehicle/admin/gps" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin']}><GpsLayout /></RoleProtectedRoute>}>
+      <Route path="/vehicle/admin/gps" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><GpsLayout /></RoleProtectedRoute>}>
         <Route index element={<GpsTracking />} />
         <Route path="history" element={<GpsHistory />} />
-        <Route path="geofences" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager']}><GpsGeofencing /></RoleProtectedRoute>} />
-        <Route path="settings" element={<RoleProtectedRoute allowedRoles={['super_admin']}><GpsSettings /></RoleProtectedRoute>} />
+        <Route path="geofences" element={<RoleProtectedRoute allowedRoles={['super_admin', 'fleet_manager', 'vehicle_admin']}><GpsGeofencing /></RoleProtectedRoute>} />
+        <Route path="settings" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin']}><GpsSettings /></RoleProtectedRoute>} />
       </Route>
 
       {/* Dedicated Performance Dashboard */}
-      <Route path="/vehicle/admin/performance" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin']}><PerformanceLayout /></RoleProtectedRoute>}>
+      <Route path="/vehicle/admin/performance" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><PerformanceLayout /></RoleProtectedRoute>}>
         <Route index element={<PerformanceDashboard />} />
         <Route path="drivers" element={<DriverAnalytics />} />
         <Route path="vehicles" element={<VehicleAnalytics />} />
