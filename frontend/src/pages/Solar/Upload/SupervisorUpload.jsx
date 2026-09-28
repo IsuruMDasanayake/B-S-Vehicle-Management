@@ -236,15 +236,16 @@ const SupervisorUpload = () => {
 
   const handleDailySubmit = async (e) => {
     e.preventDefault();
-    if (!dailyUpdateData.solar_project_id) return toast.error('Please select a project.');
     
     setSubmitting(true);
     setUploadProgress(0);
 
     const fd = new FormData();
-    Object.keys(dailyUpdateData).forEach(key => {
-      if (dailyUpdateData[key] !== null && dailyUpdateData[key] !== '') {
-        fd.append(key, dailyUpdateData[key]);
+    // Exclude solar_project_id — daily updates are now site-wise
+    const { solar_project_id, ...dailyFields } = dailyUpdateData;
+    Object.keys(dailyFields).forEach(key => {
+      if (dailyFields[key] !== null && dailyFields[key] !== '') {
+        fd.append(key, dailyFields[key]);
       }
     });
 
@@ -762,24 +763,13 @@ const SupervisorUpload = () => {
       {activeTab === 'daily_update' && !editingBatch && !editingDailyUpdate && (
         <form onSubmit={handleDailySubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="card" style={{ padding: '1.25rem' }}>
-            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Site Details</h3>
-            
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Site</label>
-              <select 
-                className="form-control" 
-                value={dailyUpdateData.solar_project_id} 
-                onChange={e => setDailyUpdateData({...dailyUpdateData, solar_project_id: e.target.value})}
-                required
-                style={{ width: '100%' }}
-              >
-                <option value="">-- Choose Site --</option>
-                {siteData?.projects?.map(p => (
-                  <option key={p.id} value={p.id}>{siteData?.site?.name}</option>
-                ))}
-              </select>
-            </div>
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Site Details</h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              📍 Submitting for: <strong style={{ color: 'var(--text)' }}>{siteData?.site?.name}</strong>
+            </p>
+          </div>
 
+          <div className="card" style={{ padding: '1.25rem' }}>
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
               <div className="form-group" style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Date *</label>

@@ -102,6 +102,7 @@ const SolarProjectDetail = () => {
     try {
       const { data } = await api.get(`/solar/projects/${id}`);
       setProject(data);
+      fetchDailyUpdates(data.solar_site_id);
     } catch (error) {
       toast.error('Failed to load project details');
       navigate('/solar/admin/projects');
@@ -119,9 +120,10 @@ const SolarProjectDetail = () => {
       console.error('Failed to load templates');
     }
   };
-  const fetchDailyUpdates = async () => {
+  const fetchDailyUpdates = async (siteId) => {
+    if (!siteId) return;
     try {
-      const { data } = await api.get(`/solar/projects/${id}/daily-updates`);
+      const { data } = await api.get(`/solar/sites/${siteId}/daily-updates`);
       setDailyUpdates(data.data || []);
     } catch (error) {
       console.error('Failed to fetch daily updates', error);
@@ -131,7 +133,6 @@ const SolarProjectDetail = () => {
   useEffect(() => {
     fetchProject();
     fetchTemplates();
-    fetchDailyUpdates();
   }, [id]);
 
   const openEditModal = (batch) => {

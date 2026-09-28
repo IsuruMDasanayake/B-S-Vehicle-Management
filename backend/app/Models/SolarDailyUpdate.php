@@ -15,6 +15,11 @@ class SolarDailyUpdate extends Model
         'report_date' => 'date',
     ];
 
+    public function site()
+    {
+        return $this->belongsTo(SolarSite::class, 'solar_site_id');
+    }
+
     public function project()
     {
         return $this->belongsTo(SolarProject::class, 'solar_project_id');
