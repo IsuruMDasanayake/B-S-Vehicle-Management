@@ -907,7 +907,7 @@ const SupervisorUpload = () => {
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                             {new Date(item.created_at).toLocaleString()}
                           </div>
-                          <h3 style={{ margin: '0.25rem 0', fontSize: '1.1rem' }}>{item.project?.name}</h3>
+                          <h3 style={{ margin: '0.25rem 0', fontSize: '1.1rem' }}>{item.site?.name}</h3>
                         </div>
                         {index === 0 && (
                           <button 
