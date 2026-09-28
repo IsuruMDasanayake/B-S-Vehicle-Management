@@ -65,13 +65,23 @@ const UserForm = ({ editId, onSuccess, onClose }) => {
           <div className="form-group">
             <label className="form-label">Role *</label>
             <select {...register('role', { required: true })} className="form-control">
-              <option value="super_admin">System Admin (Both Divisions)</option>
-              <option value="vehicle_admin">Vehicle Division Admin</option>
-              <option value="solar_admin">Solar Division Admin</option>
-              <option value="fleet_manager">Fleet Manager</option>
-              <option value="driver">Driver</option>
-              <option value="mechanic">Mechanic</option>
-              <option value="department_manager">Department Manager</option>
+              <optgroup label="System">
+                <option value="super_admin">System Admin (All Divisions)</option>
+              </optgroup>
+              <optgroup label="Vehicle Division">
+                <option value="vehicle_admin">Vehicle Division Admin</option>
+                <option value="fleet_manager">Fleet Manager</option>
+                <option value="driver">Driver</option>
+                <option value="mechanic">Mechanic</option>
+                <option value="department_manager">Department Manager</option>
+              </optgroup>
+              <optgroup label="Solar Division — Projects">
+                <option value="solar_admin">Solar Project Admin</option>
+              </optgroup>
+              <optgroup label="Solar Division — HR">
+                <option value="solar_hr_admin">HR Admin</option>
+                <option value="solar_employee">Employee (Self-Service)</option>
+              </optgroup>
             </select>
           </div>
           <div className="form-group">

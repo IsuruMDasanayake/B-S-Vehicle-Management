@@ -26,7 +26,7 @@ const CircleGroupLanding = () => {
       iconBg: 'rgba(245,158,11,0.1)',
       iconColor: '#f59e0b',
       available: true,
-      path: '/solar/login',
+      path: '/solar/portal',
     },
     {
       id: 'plantation',

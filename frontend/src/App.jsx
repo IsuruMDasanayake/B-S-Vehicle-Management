@@ -51,6 +51,8 @@ import SolarPortal from './pages/Solar/SolarPortal';
 
 // Solar Admin
 import SolarLayout from './pages/Solar/Admin/SolarLayout';
+import SolarHRLogin from './pages/Solar/HR/SolarHRLogin';
+import SolarHRDashboard from './pages/Solar/HR/SolarHRDashboard';
 import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
 import SolarSites from './pages/Solar/Admin/SolarSites';
 import SolarProjects from './pages/Solar/Admin/SolarProjects';
@@ -174,7 +176,11 @@ function App() {
 
       {/* ── Solar Division ─────────────────────────────────── */}
       <Route path="/solar/login" element={<SolarLogin />} />
-      <Route path="/solar/portal" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarPortal /></RoleProtectedRoute>} />
+      <Route path="/solar/portal" element={<SolarPortal />} />
+      
+      {/* ── Solar HR Sub-Division ─────────────────────────────────── */}
+      <Route path="/solar/hr/login" element={<SolarHRLogin />} />
+      <Route path="/solar/hr/dashboard" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_hr_admin', 'solar_employee']}><SolarHRDashboard /></RoleProtectedRoute>} />
       
       <Route path="/solar/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarLayout /></RoleProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
