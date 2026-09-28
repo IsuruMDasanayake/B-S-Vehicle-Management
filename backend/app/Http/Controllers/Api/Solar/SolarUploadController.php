@@ -120,7 +120,7 @@ class SolarUploadController extends Controller
         }
 
         // Notify admins
-        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        $admins = User::role(['super_admin', 'solar_admin'])->get();
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new SupervisorUpdateNotification(
                 "New Site Update (Batch)",
@@ -226,7 +226,7 @@ class SolarUploadController extends Controller
         }
 
         // Notify admins
-        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        $admins = User::role(['super_admin', 'solar_admin'])->get();
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new SupervisorUpdateNotification(
                 "New Daily Update",
@@ -274,7 +274,7 @@ class SolarUploadController extends Controller
         $update->update($validated);
 
         // Notify admins
-        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        $admins = User::role(['super_admin', 'solar_admin'])->get();
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new SupervisorUpdateNotification(
                 "Daily Update Edited",
@@ -325,7 +325,7 @@ class SolarUploadController extends Controller
         $batch->update($validated);
 
         // Notify admins
-        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        $admins = User::role(['super_admin', 'solar_admin'])->get();
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new SupervisorUpdateNotification(
                 "Site Update Edited (Batch)",
@@ -532,7 +532,7 @@ class SolarUploadController extends Controller
         $update->delete();
 
         // Notify admins
-        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        $admins = User::role(['super_admin', 'solar_admin'])->get();
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new SupervisorUpdateNotification(
                 "Daily Update Deleted",
