@@ -161,10 +161,8 @@ class SolarUploadController extends Controller
         ->take(50)
         ->get();
 
-        $dailyUpdates = \App\Models\SolarDailyUpdate::whereHas('project', function ($q) use ($site) {
-            $q->where('solar_site_id', $site->id);
-        })
-        ->with('images', 'project')
+        $dailyUpdates = \App\Models\SolarDailyUpdate::where('solar_site_id', $site->id)
+        ->with('images', 'site')
         ->orderByDesc('created_at')
         ->take(50)
         ->get();
