@@ -112,10 +112,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('projects', \App\Http\Controllers\Api\Solar\SolarProjectController::class);
         Route::post('projects/{project}/milestones', [\App\Http\Controllers\Api\Solar\SolarProjectController::class, 'addMilestone']);
         Route::delete('milestones/{solarSection}', [\App\Http\Controllers\Api\Solar\SolarProjectController::class, 'deleteMilestone']);
-        Route::get('projects/{project}/daily-updates', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'index']);
-        Route::post('projects/{project}/daily-updates', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'store']);
-        
-        // Daily Updates (Admin)
+        // Daily Updates (site-wise)
+        Route::get('sites/{site}/daily-updates', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'index']);
+        Route::post('sites/{site}/daily-updates', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'store']);
         Route::put('daily-updates/{id}', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'update']);
         Route::delete('daily-updates/{id}', [\App\Http\Controllers\Api\Solar\SolarDailyUpdateController::class, 'destroy']);
 

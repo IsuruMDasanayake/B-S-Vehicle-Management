@@ -186,36 +186,29 @@ class SolarUploadController extends Controller
         }
 
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'solar_project_id' => 'required|exists:solar_projects,id',
-            'report_date' => 'required|date',
-            'start_time' => 'nullable',
-            'manpower' => 'nullable|string',
-            'machines' => 'nullable|string',
-            'weather' => 'nullable|string',
+            'report_date'  => 'required|date',
+            'start_time'   => 'nullable',
+            'manpower'     => 'nullable|string',
+            'machines'     => 'nullable|string',
+            'weather'      => 'nullable|string',
             'planned_tasks' => 'nullable|string',
-            'notes' => 'nullable|string',
-            'images.*' => 'image|max:10240',
+            'notes'        => 'nullable|string',
+            'images.*'     => 'image|max:10240',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Verify project belongs to site
-        $project = \App\Models\SolarProject::where('solar_site_id', $site->id)->find($request->solar_project_id);
-        if (!$project) {
-            return response()->json(['message' => 'Invalid project.'], 400);
-        }
-
         $update = \App\Models\SolarDailyUpdate::create([
-            'solar_project_id' => $project->id,
-            'report_date' => $request->report_date,
-            'start_time' => $request->start_time,
-            'manpower' => $request->manpower,
-            'machines' => $request->machines,
-            'weather' => $request->weather,
+            'solar_site_id' => $site->id,
+            'report_date'   => $request->report_date,
+            'start_time'    => $request->start_time,
+            'manpower'      => $request->manpower,
+            'machines'      => $request->machines,
+            'weather'       => $request->weather,
             'planned_tasks' => $request->planned_tasks,
-            'notes' => $request->notes,
+            'notes'         => $request->notes,
         ]);
 
         if ($request->hasFile('images')) {
@@ -239,9 +232,9 @@ class SolarUploadController extends Controller
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new SupervisorUpdateNotification(
                 "New Daily Update",
-                "A new daily update has been submitted for {$project->name} at {$site->name}.",
+                "A new daily update has been submitted for {$site->name}.",
                 $site->id,
-                $project->id,
+                null,
                 'info',
                 'daily_update',
                 $update->id
