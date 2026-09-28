@@ -257,9 +257,7 @@ class SolarUploadController extends Controller
             return response()->json(['message' => 'Invalid or expired upload link.'], 404);
         }
 
-        $update = \App\Models\SolarDailyUpdate::whereHas('project', function($q) use ($site) {
-            $q->where('solar_site_id', $site->id);
-        })->find($updateId);
+        $update = \App\Models\SolarDailyUpdate::where('solar_site_id', $site->id)->find($updateId);
 
         if (!$update) {
             return response()->json(['message' => 'Update not found.'], 404);
@@ -282,9 +280,9 @@ class SolarUploadController extends Controller
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new SupervisorUpdateNotification(
                 "Daily Update Edited",
-                "A daily update has been modified for {$update->project->name} at {$site->name}.",
+                "A daily update has been modified for {$site->name}.",
                 $site->id,
-                $update->project->id,
+                null,
                 'info',
                 'daily_update',
                 $update->id
@@ -446,9 +444,7 @@ class SolarUploadController extends Controller
             return response()->json(['message' => 'Invalid or expired upload link.'], 404);
         }
 
-        $update = \App\Models\SolarDailyUpdate::whereHas('project', function($q) use ($site) {
-            $q->where('solar_site_id', $site->id);
-        })->find($updateId);
+        $update = \App\Models\SolarDailyUpdate::where('solar_site_id', $site->id)->find($updateId);
 
         if (!$update) {
             return response()->json(['message' => 'Update not found.'], 404);
@@ -493,7 +489,7 @@ class SolarUploadController extends Controller
             return response()->json(['message' => 'Invalid or expired upload link.'], 404);
         }
 
-        $image = \App\Models\SolarDailyUpdateImage::whereHas('dailyUpdate.project', function($q) use ($site) {
+        $image = \App\Models\SolarDailyUpdateImage::whereHas('dailyUpdate', function($q) use ($site) {
             $q->where('solar_site_id', $site->id);
         })->find($imageId);
 
@@ -508,5 +504,49 @@ class SolarUploadController extends Controller
         $image->delete();
 
         return response()->json(['message' => 'Image deleted successfully.']);
+    }
+
+    /**
+     * Delete a daily update (public, token auth)
+     */
+    public function deleteDailyUpdate(Request $request, string $token, $updateId)
+    {
+        $site = SolarSite::where('supervisor_token', $token)->where('is_active', true)->first();
+        if (!$site) {
+            return response()->json(['message' => 'Invalid or expired upload link.'], 404);
+        }
+
+        $update = \App\Models\SolarDailyUpdate::where('solar_site_id', $site->id)->find($updateId);
+
+        if (!$update) {
+            return response()->json(['message' => 'Update not found.'], 404);
+        }
+
+        // Delete images from storage
+        foreach ($update->images as $image) {
+            $path = storage_path('app/public/' . $image->image_path);
+            if (file_exists($path)) {
+                unlink($path);
+            }
+        }
+
+        $updateId = $update->id;
+        $update->delete();
+
+        // Notify admins
+        $admins = User::whereIn('role', ['super_admin', 'solar_admin'])->get();
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, new SupervisorUpdateNotification(
+                "Daily Update Deleted",
+                "A daily update has been deleted for {$site->name}.",
+                $site->id,
+                null,
+                'warning',
+                'daily_update',
+                $updateId
+            ));
+        }
+
+        return response()->json(['message' => 'Daily update deleted successfully.']);
     }
 }
