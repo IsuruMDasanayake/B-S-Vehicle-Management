@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun } from 'lucide-react';
-import useAuthStore from '../../store/authStore';
+import { Users } from 'lucide-react';
+import useAuthStore from '../../../store/authStore';
 import toast from 'react-hot-toast';
 
-const SolarLogin = () => {
+const SolarHRLogin = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,17 +16,17 @@ const SolarLogin = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const hasSolarRole = ['super_admin', 'solar_admin']
+      const hasHRRole = ['super_admin', 'solar_hr_admin', 'solar_employee']
         .some(role => user?.roles?.includes(role) || user?.role === role);
         
-      if (hasSolarRole) {
-        navigate('/solar/admin/dashboard');
+      if (hasHRRole) {
+        navigate('/solar/hr/dashboard');
       } else {
         toast.dismiss();
         useAuthStore.getState().logout();
         setTimeout(() => {
           toast.dismiss();
-          toast.error('Unauthorized access to Solar Division.');
+          toast.error('Unauthorized: You do not have access to the Solar HR Division.');
         }, 100);
       }
     }
@@ -48,7 +48,6 @@ const SolarLogin = () => {
     }}>
       <div className="card" style={{ width: '100%', maxWidth: '400px', padding: 'clamp(1.5rem, 5vw, 2.5rem)' }}>
 
-        {/* Back link */}
         <button
           onClick={() => navigate('/solar/portal')}
           style={{
@@ -60,23 +59,21 @@ const SolarLogin = () => {
           ← Back to Solar Portal
         </button>
 
-        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
-            background: 'rgba(245,158,11,0.1)',
-            color: '#f59e0b',
+            background: 'rgba(59,130,246,0.1)',
+            color: '#3b82f6',
             width: '64px', height: '64px',
             borderRadius: 'var(--radius-lg)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 1rem auto',
           }}>
-            <Sun size={32} />
+            <Users size={32} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Project Dashboard Login</h1>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>HR Division Login</h1>
           <p style={{ color: 'var(--text-muted)' }}>Sign in to your account</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
@@ -107,7 +104,7 @@ const SolarLogin = () => {
             className="btn btn-primary"
             style={{
               width: '100%', padding: '0.75rem', marginTop: '1rem',
-              background: '#f59e0b', borderColor: '#f59e0b',
+              background: '#3b82f6', borderColor: '#3b82f6',
             }}
             disabled={isLoading}
           >
@@ -119,4 +116,4 @@ const SolarLogin = () => {
   );
 };
 
-export default SolarLogin;
+export default SolarHRLogin;
