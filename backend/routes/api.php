@@ -143,6 +143,7 @@ Route::prefix('upload')->group(function () {
     Route::post('{token}/daily-updates/{updateId}/images', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'addDailyUpdateImages']);
     Route::delete('{token}/daily-update-images/{imageId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'deleteDailyUpdateImage']);
     Route::get('{token}/history', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'history']);
+    Route::delete('{token}/daily-updates/{updateId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'deleteDailyUpdate']);
     Route::put('{token}/batches/{batchId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'updateBatch']);
     Route::post('{token}/batches/{batchId}/images', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'addImages']);
     Route::delete('{token}/images/{imageId}', [\App\Http\Controllers\Api\Solar\SolarUploadController::class, 'deleteImage']);
