@@ -762,10 +762,10 @@ const SupervisorUpload = () => {
       {activeTab === 'daily_update' && !editingBatch && !editingDailyUpdate && (
         <form onSubmit={handleDailySubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="card" style={{ padding: '1.25rem' }}>
-            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Project Details</h3>
+            <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>Site Details</h3>
             
             <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Project</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Site</label>
               <select 
                 className="form-control" 
                 value={dailyUpdateData.solar_project_id} 
@@ -773,9 +773,9 @@ const SupervisorUpload = () => {
                 required
                 style={{ width: '100%' }}
               >
-                <option value="">-- Choose Project --</option>
+                <option value="">-- Choose Site --</option>
                 {siteData?.projects?.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>{siteData?.site?.name}</option>
                 ))}
               </select>
             </div>

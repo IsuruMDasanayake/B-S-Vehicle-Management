@@ -29,13 +29,13 @@ class SolarSiteController extends Controller
         return response()->json(['message' => 'Site created', 'data' => $site], 201);
     }
 
-    public function show(SolarSite $solarSite)
+    public function show(SolarSite $site)
     {
-        $solarSite->load(['projects.sections']);
-        return response()->json($solarSite);
+        $site->load(['projects.sections']);
+        return response()->json($site);
     }
 
-    public function update(Request $request, SolarSite $solarSite)
+    public function update(Request $request, SolarSite $site)
     {
         $validated = $request->validate([
             'name'      => 'sometimes|required|string|max:255',
@@ -44,22 +44,22 @@ class SolarSiteController extends Controller
             'is_active' => 'sometimes|boolean',
         ]);
 
-        $solarSite->update($validated);
-        return response()->json(['message' => 'Site updated', 'data' => $solarSite]);
+        $site->update($validated);
+        return response()->json(['message' => 'Site updated', 'data' => $site]);
     }
 
-    public function destroy(SolarSite $solarSite)
+    public function destroy(SolarSite $site)
     {
-        $solarSite->delete();
+        $site->delete();
         return response()->json(['message' => 'Site deleted']);
     }
 
-    public function regenerateToken(SolarSite $solarSite)
+    public function regenerateToken(SolarSite $site)
     {
-        $solarSite->update(['supervisor_token' => SolarSite::generateToken()]);
+        $site->update(['supervisor_token' => SolarSite::generateToken()]);
         return response()->json([
             'message' => 'Upload token regenerated. Share the new URL with supervisors.',
-            'token'   => $solarSite->supervisor_token,
+            'token'   => $site->supervisor_token,
         ]);
     }
 }
