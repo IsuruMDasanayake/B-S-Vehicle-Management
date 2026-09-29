@@ -132,6 +132,30 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dashboard stats
         Route::get('stats', [\App\Http\Controllers\Api\Solar\SolarDashboardController::class, 'stats']);
     });
+
+    // ── HR Division ────────────────────────────────────────────────────────────
+    Route::prefix('hr')->group(function () {
+        // Dashboard
+        Route::get('dashboard/stats', [\App\Http\Controllers\Api\HR\HrDashboardController::class, 'stats']);
+
+        // Departments
+        Route::apiResource('departments', \App\Http\Controllers\Api\HR\HrDepartmentController::class)
+            ->parameters(['departments' => 'hrDepartment']);
+
+        // Designations
+        Route::apiResource('designations', \App\Http\Controllers\Api\HR\HrDesignationController::class)
+            ->parameters(['designations' => 'hrDesignation']);
+
+        // Employees
+        Route::apiResource('employees', \App\Http\Controllers\Api\HR\HrEmployeeController::class)
+            ->parameters(['employees' => 'hrEmployee']);
+
+        // Employee Documents & Assets
+        Route::apiResource('employees.documents', \App\Http\Controllers\Api\HR\HrEmployeeDocumentController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+        Route::apiResource('employees.assets', \App\Http\Controllers\Api\HR\HrEmployeeAssetController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+    });
 });
 
 // ── Solar Supervisor Upload (Public — no auth, token-based) ───────────────────
