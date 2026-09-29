@@ -20,7 +20,7 @@ const SolarHRLogin = () => {
         .some(role => user?.roles?.includes(role) || user?.role === role);
         
       if (hasHRRole) {
-        navigate('/solar/hr/dashboard');
+        navigate('/solar/hr/admin/dashboard');
       } else {
         toast.dismiss();
         useAuthStore.getState().logout();

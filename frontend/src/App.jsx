@@ -35,7 +35,7 @@ import SparePartsList from './pages/Vehicle/SpareParts/SparePartsList';
 import TiresList from './pages/Vehicle/Tires/TiresList';
 import AccidentsList from './pages/Vehicle/Accidents/AccidentsList';
 import InspectionsList from './pages/Vehicle/Inspections/InspectionsList';
-import DepartmentsList from './pages/Vehicle/Departments/DepartmentsList';
+import VehicleDepartmentsList from './pages/Vehicle/Departments/DepartmentsList';
 import UsersList from './pages/Vehicle/Users/UsersList';
 import VehicleRequestsList from './pages/Vehicle/VehicleRequests/VehicleRequestsList';
 import AuditLogsList from './pages/Vehicle/AuditLogs/AuditLogsList';
@@ -52,7 +52,15 @@ import SolarPortal from './pages/Solar/SolarPortal';
 // Solar Admin
 import SolarLayout from './pages/Solar/Admin/SolarLayout';
 import SolarHRLogin from './pages/Solar/HR/SolarHRLogin';
-import SolarHRDashboard from './pages/Solar/HR/SolarHRDashboard';
+
+// Solar HR System
+import HRLayout from './pages/Solar/HR/HRLayout';
+import HRDashboard from './pages/Solar/HR/SolarHRDashboard';
+import EmployeesList from './pages/Solar/HR/Employees/EmployeesList';
+import EmployeeForm from './pages/Solar/HR/Employees/EmployeeForm';
+import EmployeeProfile from './pages/Solar/HR/Employees/EmployeeProfile';
+import HRDepartmentsList from './pages/Solar/HR/Departments/DepartmentsList';
+import HRDesignationsList from './pages/Solar/HR/Departments/DesignationsList';
 import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
 import SolarSites from './pages/Solar/Admin/SolarSites';
 import SolarProjects from './pages/Solar/Admin/SolarProjects';
@@ -146,7 +154,7 @@ function App() {
         <Route path="vendors" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><VendorsList /></RoleProtectedRoute>} />
         
         {/* Organization */}
-        <Route path="departments" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><DepartmentsList /></RoleProtectedRoute>} />
+        <Route path="departments" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><VehicleDepartmentsList /></RoleProtectedRoute>} />
         <Route path="users" element={<RoleProtectedRoute allowedRoles={['super_admin']}><UsersList /></RoleProtectedRoute>} />
         <Route path="audit-logs" element={<RoleProtectedRoute allowedRoles={['super_admin']}><AuditLogsList /></RoleProtectedRoute>} />
         <Route path="alerts" element={<RoleProtectedRoute allowedRoles={['super_admin', 'vehicle_admin', 'fleet_manager']}><Alerts /></RoleProtectedRoute>} />
@@ -180,7 +188,23 @@ function App() {
       
       {/* ── Solar HR Sub-Division ─────────────────────────────────── */}
       <Route path="/solar/hr/login" element={<SolarHRLogin />} />
-      <Route path="/solar/hr/dashboard" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_hr_admin', 'solar_employee']}><SolarHRDashboard /></RoleProtectedRoute>} />
+      {/* Legacy redirect — old route before layout refactor */}
+      <Route path="/solar/hr/dashboard" element={<Navigate to="/solar/hr/admin/dashboard" replace />} />
+
+      <Route path="/solar/hr/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_hr_admin']}><HRLayout /></RoleProtectedRoute>}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<HRDashboard />} />
+
+        {/* Employees */}
+        <Route path="employees" element={<EmployeesList />} />
+        <Route path="employees/new" element={<EmployeeForm />} />
+        <Route path="employees/:id" element={<EmployeeProfile />} />
+        <Route path="employees/:id/edit" element={<EmployeeForm />} />
+
+        {/* Departments & Designations */}
+        <Route path="departments" element={<HRDepartmentsList />} />
+        <Route path="designations" element={<HRDesignationsList />} />
+      </Route>
       
       <Route path="/solar/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarLayout /></RoleProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
