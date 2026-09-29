@@ -36,7 +36,7 @@ const MOCK_ATTENDANCE = [
 const MOCK_LEAVE_BALANCES = [
   { type: 'Annual Leave', total: 14, used: 3, remaining: 11 },
   { type: 'Casual Leave', total: 7,  used: 2, remaining: 5  },
-  { type: 'Sick Leave',   total: 7,  used: 1, remaining: 6  },
+  { type: 'Medical Leave',   total: 7,  used: 1, remaining: 6  },
 ];
 
 const InfoRow = ({ label, value }) => (

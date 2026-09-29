@@ -55,6 +55,11 @@ const useAuthStore = create((set) => ({
       localStorage.removeItem('token');
       set({ user: null, token: null, isAuthenticated: false });
     }
+  },
+
+  setAuth: (user, token) => {
+    if (token) localStorage.setItem('token', token);
+    set({ user, token, isAuthenticated: true });
   }
 }));
 
