@@ -61,6 +61,10 @@ import EmployeeForm from './pages/Solar/HR/Employees/EmployeeForm';
 import EmployeeProfile from './pages/Solar/HR/Employees/EmployeeProfile';
 import HRDepartmentsList from './pages/Solar/HR/Departments/DepartmentsList';
 import HRDesignationsList from './pages/Solar/HR/Departments/DesignationsList';
+import AttendanceList from './pages/Solar/HR/Attendance/AttendanceList';
+import LocationsList from './pages/Solar/HR/Attendance/LocationsList';
+import AttendanceCalendar from './pages/Solar/HR/Attendance/AttendanceCalendar';
+import AttendanceReport from './pages/Solar/HR/Attendance/AttendanceReport';
 import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
 import SolarSites from './pages/Solar/Admin/SolarSites';
 import SolarProjects from './pages/Solar/Admin/SolarProjects';
@@ -204,6 +208,12 @@ function App() {
         {/* Departments & Designations */}
         <Route path="departments" element={<HRDepartmentsList />} />
         <Route path="designations" element={<HRDesignationsList />} />
+        
+        {/* Attendance */}
+        <Route path="attendance" element={<AttendanceList />} />
+        <Route path="attendance/calendar" element={<AttendanceCalendar />} />
+        <Route path="attendance/report" element={<AttendanceReport />} />
+        <Route path="locations" element={<LocationsList />} />
       </Route>
       
       <Route path="/solar/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarLayout /></RoleProtectedRoute>}>

@@ -155,6 +155,18 @@ Route::middleware('auth:sanctum')->group(function () {
             ->only(['index', 'store', 'update', 'destroy']);
         Route::apiResource('employees.assets', \App\Http\Controllers\Api\HR\HrEmployeeAssetController::class)
             ->only(['index', 'store', 'update', 'destroy']);
+
+        // Attendance
+        Route::apiResource('locations', \App\Http\Controllers\Api\HR\HrLocationController::class);
+        Route::post('attendance/clock-in', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'clockIn']);
+        Route::post('attendance/clock-out', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'clockOut']);
+        Route::post('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'store']);
+        Route::get('attendance/today', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myToday']);
+        Route::get('attendance/my-history', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myHistory']);
+        Route::get('attendance/report', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'report']);
+        Route::get('attendance/calendar', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'calendar']);
+        Route::get('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'index']);
+        Route::patch('attendance/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'update']);
     });
 });
 

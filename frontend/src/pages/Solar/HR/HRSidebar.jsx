@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Clock, Calendar,
-  FileText, Package, Megaphone, BarChart2, Settings, LogOut, Users2,
+  FileText, Package, Megaphone, BarChart2, Settings, LogOut, Users2, MapPin,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 
@@ -60,6 +60,7 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
       {
         title: 'System',
         items: [
+          { name: 'Clock-In Locations', path: '/solar/hr/admin/locations', icon: MapPin },
           { name: 'Settings', path: '/solar/hr/admin/settings', icon: Settings },
         ],
       },
