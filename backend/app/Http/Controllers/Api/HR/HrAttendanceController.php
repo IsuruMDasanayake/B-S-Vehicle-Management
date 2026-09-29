@@ -86,9 +86,10 @@ class HrAttendanceController extends Controller
             return response()->json(['message' => 'You have already clocked in today.'], 400);
         }
 
+        // Strict Geofencing check
         $location = $this->findValidLocation($request->latitude, $request->longitude);
         if (!$location) {
-            return response()->json(['message' => 'You are not within an approved clock-in location (must be within the allowed radius of a company site).'], 400);
+            return response()->json(['message' => 'You are outside the approved work zone. Clock in denied.'], 403);
         }
 
         $record = HrAttendance::updateOrCreate(
@@ -100,11 +101,14 @@ class HrAttendanceController extends Controller
                 'clock_in_address'     => $request->address,
                 'clock_in_location_id' => $location->id,
                 'status'               => $this->deriveStatus($now, $today),
+                'notes'                => null,
             ]
         );
 
+        $msg = 'Clocked in successfully at ' . $location->name;
+
         return response()->json([
-            'message' => 'Clocked in successfully at ' . $location->name,
+            'message' => $msg,
             'data'    => $record->load('clockInLocation'),
         ]);
     }
@@ -127,6 +131,12 @@ class HrAttendanceController extends Controller
         $att = HrAttendance::where('employee_id', $employee->id)->where('date', $today)->first();
         if (!$att?->clock_in_time) return response()->json(['message' => 'You must clock in before clocking out.'], 400);
         if ($att->clock_out_time)  return response()->json(['message' => 'You have already clocked out today.'], 400);
+
+        // Strict Geofencing check
+        $location = $this->findValidLocation($request->latitude, $request->longitude);
+        if (!$location) {
+            return response()->json(['message' => 'You are outside the approved work zone. Clock out denied.'], 403);
+        }
 
         $att->update(array_merge(
             $this->recalcOnClockOut($att, $now),

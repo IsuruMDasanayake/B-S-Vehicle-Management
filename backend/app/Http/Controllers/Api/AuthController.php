@@ -42,6 +42,7 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
+                'force_password_change' => (bool) $user->force_password_change,
             ]
         ]);
     }
@@ -63,6 +64,7 @@ class AuthController extends Controller
                 'role' => $user->role ?? 'driver', // Default to driver if it's a driver model
                 'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : ['driver'],
                 'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
+                'force_password_change' => isset($user->force_password_change) ? (bool) $user->force_password_change : false,
             ]
         ]);
     }
@@ -92,9 +94,29 @@ class AuthController extends Controller
             'user' => [
                 'id' => $driver->id,
                 'name' => $driver->name,
-                'email' => $driver->contact_number, // Fallback for email field
+                'email' => $driver->contact_number,
                 'role' => 'driver',
             ]
         ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password'          => 'required|string',
+            'new_password'              => 'required|string|min:8',
+            'new_password_confirmation' => 'required|same:new_password',
+        ]);
+
+        $user = $request->user();
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect.'], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+            'force_password_change' => false
+        ]);
+        return response()->json(['message' => 'Password changed successfully']);
     }
 }

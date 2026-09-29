@@ -20,13 +20,13 @@ const MOCK_ATTENDANCE_TREND = Array.from({ length: 30 }, (_, i) => ({
 }));
 
 const MOCK_LEAVE_MONTHLY = [
-  { month: 'Apr', annual: 4, casual: 2, sick: 1 },
-  { month: 'May', annual: 2, casual: 5, sick: 3 },
-  { month: 'Jun', annual: 6, casual: 3, sick: 2 },
-  { month: 'Jul', annual: 3, casual: 4, sick: 4 },
-  { month: 'Aug', annual: 5, casual: 1, sick: 2 },
-  { month: 'Sep', annual: 4, casual: 3, sick: 1 },
-  { month: 'Oct', annual: 2, casual: 2, sick: 0 },
+  { month: 'Apr', annual: 4, casual: 2, medical: 1 },
+  { month: 'May', annual: 2, casual: 5, medical: 3 },
+  { month: 'Jun', annual: 6, casual: 3, medical: 2 },
+  { month: 'Jul', annual: 3, casual: 4, medical: 4 },
+  { month: 'Aug', annual: 5, casual: 1, medical: 2 },
+  { month: 'Sep', annual: 4, casual: 3, medical: 1 },
+  { month: 'Oct', annual: 2, casual: 2, medical: 0 },
 ];
 
 const MOCK_HEADCOUNT = [
@@ -213,7 +213,7 @@ const HRDashboard = () => {
               <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
               <Bar dataKey="annual" name="Annual" fill="#3b82f6" radius={[3, 3, 0, 0]} />
               <Bar dataKey="casual" name="Casual" fill="#f59e0b" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="sick"   name="Sick"   fill="#ef4444" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="medical"   name="Medical"   fill="#ef4444" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

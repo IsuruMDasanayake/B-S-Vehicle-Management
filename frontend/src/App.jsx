@@ -65,6 +65,14 @@ import AttendanceList from './pages/Solar/HR/Attendance/AttendanceList';
 import LocationsList from './pages/Solar/HR/Attendance/LocationsList';
 import AttendanceCalendar from './pages/Solar/HR/Attendance/AttendanceCalendar';
 import AttendanceReport from './pages/Solar/HR/Attendance/AttendanceReport';
+// Employee Portal
+import PortalLogin from './pages/Solar/HR/Portal/PortalLogin';
+import PortalLayout from './pages/Solar/HR/Portal/PortalLayout';
+import PortalHome from './pages/Solar/HR/Portal/PortalHome';
+import PortalAttendance from './pages/Solar/HR/Portal/PortalAttendance';
+import PortalLeave from './pages/Solar/HR/Portal/PortalLeave';
+import PortalProfile from './pages/Solar/HR/Portal/PortalProfile';
+import PortalAnnouncements from './pages/Solar/HR/Portal/PortalAnnouncements';
 import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
 import SolarSites from './pages/Solar/Admin/SolarSites';
 import SolarProjects from './pages/Solar/Admin/SolarProjects';
@@ -92,12 +100,12 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/vehicle/login" replace />;
 };
 
-const RoleProtectedRoute = ({ children, allowedRoles }) => {
+const RoleProtectedRoute = ({ children, allowedRoles, fallbackLogin = "/vehicle/login", fallbackUnauthorized = "/vehicle/portal" }) => {
   const user = useAuthStore(state => state.user);
-  if (!user) return <Navigate to="/vehicle/login" replace />;
+  if (!user) return <Navigate to={fallbackLogin} replace />;
   
   const hasRole = allowedRoles.some(role => user?.roles?.includes(role) || user?.role === role);
-  return hasRole ? children : <Navigate to="/vehicle/portal" replace />;
+  return hasRole ? children : <Navigate to={fallbackUnauthorized} replace />;
 };
 
 function App() {
@@ -214,6 +222,17 @@ function App() {
         <Route path="attendance/calendar" element={<AttendanceCalendar />} />
         <Route path="attendance/report" element={<AttendanceReport />} />
         <Route path="locations" element={<LocationsList />} />
+      </Route>
+
+      {/* ── HR Employee Portal ──────────────────────────────────────────── */}
+      <Route path="/solar/hr/portal/login" element={<PortalLogin />} />
+      <Route path="/solar/hr/portal" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_hr_admin', 'solar_employee']} fallbackLogin="/solar/hr/portal/login" fallbackUnauthorized="/solar/hr/portal/login"><PortalLayout /></RoleProtectedRoute>}>
+        <Route index element={<Navigate to="home" replace />} />
+        <Route path="home" element={<PortalHome />} />
+        <Route path="attendance" element={<PortalAttendance />} />
+        <Route path="leaves" element={<PortalLeave />} />
+        <Route path="profile" element={<PortalProfile />} />
+        <Route path="announcements" element={<PortalAnnouncements />} />
       </Route>
       
       <Route path="/solar/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin']}><SolarLayout /></RoleProtectedRoute>}>

@@ -25,6 +25,7 @@ Route::post('/public/vehicle-requests', [\App\Http\Controllers\Api\Vehicle\Vehic
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
     Route::get('/auth/me', [\App\Http\Controllers\Api\AuthController::class, 'me']);
+    Route::post('/auth/change-password', [\App\Http\Controllers\Api\AuthController::class, 'changePassword']);
     
     // Dashboard & Settings
     Route::get('/dashboard/stats', [\App\Http\Controllers\Api\Vehicle\DashboardController::class, 'stats']);
@@ -147,6 +148,8 @@ Route::middleware('auth:sanctum')->group(function () {
             ->parameters(['designations' => 'hrDesignation']);
 
         // Employees
+        Route::get('employees/me', [\App\Http\Controllers\Api\HR\HrEmployeeController::class, 'me']);
+        Route::patch('employees/{id}/self-update', [\App\Http\Controllers\Api\HR\HrEmployeeController::class, 'selfUpdate']);
         Route::apiResource('employees', \App\Http\Controllers\Api\HR\HrEmployeeController::class)
             ->parameters(['employees' => 'hrEmployee']);
 
@@ -167,6 +170,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('attendance/calendar', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'calendar']);
         Route::get('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'index']);
         Route::patch('attendance/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'update']);
+
+        // Leaves
+        Route::get('leaves/my-balance', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'myBalance']);
+        Route::get('leaves/my-requests', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'myLeaves']);
+        Route::post('leaves', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'store']);
+        Route::patch('leaves/{id}/cancel', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'cancel']);
+        Route::get('leaves', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'index']);
+        Route::patch('leaves/{id}/status', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'updateStatus']);
+
+        // Announcements
+        Route::get('announcements', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'index']);
+        Route::post('announcements', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'store']);
+        Route::delete('announcements/{id}', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'destroy']);
     });
 });
 

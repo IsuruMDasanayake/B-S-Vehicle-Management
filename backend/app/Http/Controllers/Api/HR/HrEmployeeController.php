@@ -86,6 +86,7 @@ class HrEmployeeController extends Controller
                     'name'     => $validated['full_name'],
                     'email'    => $loginEmail,
                     'password' => Hash::make($validated['user_password']),
+                    'force_password_change' => true,
                 ]);
                 $role = Role::where('name', 'solar_employee')->first();
                 if ($role) $user->assignRole($role);
@@ -149,5 +150,34 @@ class HrEmployeeController extends Controller
         
         $hrEmployee->delete();
         return response()->json(['message' => 'Employee deleted']);
+    }
+
+    // ── Employee: View own profile ────────────────────────────────────────────
+    public function me(Request $request)
+    {
+        $employee = HrEmployee::with(['department', 'designation'])
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (!$employee) return response()->json(['message' => 'Employee profile not found'], 404);
+        return response()->json($employee);
+    }
+
+    // ── Employee: Self-update limited fields ──────────────────────────────────
+    public function selfUpdate(Request $request, $id)
+    {
+        $employee = HrEmployee::where('user_id', $request->user()->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'phone'                   => 'nullable|string|max:30',
+            'address'                 => 'nullable|string|max:500',
+            'emergency_contact_name'  => 'nullable|string|max:100',
+            'emergency_contact_phone' => 'nullable|string|max:30',
+        ]);
+
+        $employee->update($validated);
+        return response()->json(['message' => 'Profile updated', 'data' => $employee]);
     }
 }

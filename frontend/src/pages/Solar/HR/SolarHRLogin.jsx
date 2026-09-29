@@ -16,10 +16,13 @@ const SolarHRLogin = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const hasHRRole = ['super_admin', 'solar_hr_admin', 'solar_employee']
-        .some(role => user?.roles?.includes(role) || user?.role === role);
-        
-      if (hasHRRole) {
+      const roles = user?.roles || [];
+      const isEmployee = roles.includes('solar_employee') && !roles.includes('super_admin') && !roles.includes('solar_hr_admin');
+      const isHRAdmin = roles.includes('super_admin') || roles.includes('solar_hr_admin');
+
+      if (isEmployee) {
+        navigate('/solar/hr/portal/home');
+      } else if (isHRAdmin) {
         navigate('/solar/hr/admin/dashboard');
       } else {
         toast.dismiss();
