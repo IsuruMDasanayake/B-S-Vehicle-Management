@@ -11,33 +11,7 @@ import {
 } from 'recharts';
 import api from '../../../services/api';
 
-// ─── Static chart data (will be replaced by attendance/leave API in Phase 2) ──
-const MOCK_ATTENDANCE_TREND = Array.from({ length: 30 }, (_, i) => ({
-  day: `${i + 1}`,
-  present: Math.floor(Math.random() * 4) + 9,
-  absent: Math.floor(Math.random() * 3) + 1,
-  leave: Math.floor(Math.random() * 2),
-}));
 
-const MOCK_LEAVE_MONTHLY = [
-  { month: 'Apr', annual: 4, casual: 2, medical: 1 },
-  { month: 'May', annual: 2, casual: 5, medical: 3 },
-  { month: 'Jun', annual: 6, casual: 3, medical: 2 },
-  { month: 'Jul', annual: 3, casual: 4, medical: 4 },
-  { month: 'Aug', annual: 5, casual: 1, medical: 2 },
-  { month: 'Sep', annual: 4, casual: 3, medical: 1 },
-  { month: 'Oct', annual: 2, casual: 2, medical: 0 },
-];
-
-const MOCK_HEADCOUNT = [
-  { month: 'Apr', count: 10 },
-  { month: 'May', count: 11 },
-  { month: 'Jun', count: 11 },
-  { month: 'Jul', count: 12 },
-  { month: 'Aug', count: 13 },
-  { month: 'Sep', count: 14 },
-  { month: 'Oct', count: 14 },
-];
 
 const DEPT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -162,7 +136,7 @@ const HRDashboard = () => {
         <div className="card">
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem' }}>30-Day Attendance Trend</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={MOCK_ATTENDANCE_TREND} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={stats?.attendance_trend || []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="presentGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -205,7 +179,7 @@ const HRDashboard = () => {
         <div className="card">
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem' }}>Monthly Leave by Type</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={MOCK_LEAVE_MONTHLY} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+            <BarChart data={stats?.leave_monthly || []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-2)" />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
@@ -220,7 +194,7 @@ const HRDashboard = () => {
         <div className="card">
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem' }}>Headcount Growth</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={MOCK_HEADCOUNT} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={stats?.headcount_trend || []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="headGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
