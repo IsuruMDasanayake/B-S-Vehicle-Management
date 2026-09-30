@@ -178,6 +178,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('leaves/{id}/cancel', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'cancel']);
         Route::get('leaves', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'index']);
         Route::patch('leaves/{id}/status', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'updateStatus']);
+        Route::get('leaves/stats', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'stats']);
+        Route::get('leaves/all-balances', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'allBalances']);
 
         // Announcements
         Route::get('announcements', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'index']);

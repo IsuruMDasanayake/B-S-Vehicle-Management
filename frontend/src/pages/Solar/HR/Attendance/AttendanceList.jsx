@@ -152,7 +152,7 @@ const AttendanceList = () => {
       <div style={{ marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 style={{ fontSize: '1.75rem' }}>Daily Attendance</h1>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 0 }}>Shift: 9:00 AM – 5:30 PM · Grace until 10:00 AM</p>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 0 }}>Shift: 9:00 AM – 5:30 PM · Grace until 09:10 AM</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'flex-end' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>

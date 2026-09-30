@@ -63,6 +63,7 @@ import HRDepartmentsList from './pages/Solar/HR/Departments/DepartmentsList';
 import HRDesignationsList from './pages/Solar/HR/Departments/DesignationsList';
 import AttendanceList from './pages/Solar/HR/Attendance/AttendanceList';
 import LocationsList from './pages/Solar/HR/Attendance/LocationsList';
+import LeaveManagement from './pages/Solar/HR/Leave/LeaveManagement';
 import AttendanceCalendar from './pages/Solar/HR/Attendance/AttendanceCalendar';
 import AttendanceReport from './pages/Solar/HR/Attendance/AttendanceReport';
 // Employee Portal
@@ -222,6 +223,7 @@ function App() {
         <Route path="attendance/calendar" element={<AttendanceCalendar />} />
         <Route path="attendance/report" element={<AttendanceReport />} />
         <Route path="locations" element={<LocationsList />} />
+        <Route path="leave" element={<LeaveManagement />} />
       </Route>
 
       {/* ── HR Employee Portal ──────────────────────────────────────────── */}
