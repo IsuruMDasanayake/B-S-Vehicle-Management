@@ -170,9 +170,9 @@ const EmployeesList = () => {
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={() => navigate(`/solar/hr/admin/employees/${emp.id}`)} title="View" style={{ background: 'rgba(59,130,246,0.1)', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: '0.4rem', borderRadius: 'var(--radius-md)', display: 'flex' }}><Eye size={15} /></button>
                         <button onClick={() => navigate(`/solar/hr/admin/employees/${emp.id}/edit`)} title="Edit" style={{ background: 'rgba(245,158,11,0.1)', border: 'none', cursor: 'pointer', color: '#d97706', padding: '0.4rem', borderRadius: 'var(--radius-md)', display: 'flex' }}><Edit2 size={15} /></button>
-                        {isSuperAdmin && (
+                        {/* {isSuperAdmin && (
                           <button onClick={() => setDeleteConfirm(emp)} title="Delete" style={{ background: 'rgba(239,68,68,0.1)', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '0.4rem', borderRadius: 'var(--radius-md)', display: 'flex' }}><Trash2 size={15} /></button>
-                        )}
+                        )} */}
                       </div>
                     </td>
                   </tr>
