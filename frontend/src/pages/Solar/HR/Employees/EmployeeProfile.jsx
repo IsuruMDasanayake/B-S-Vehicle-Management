@@ -255,10 +255,17 @@ const EmployeeProfile = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0 2rem' }}>
             <div>
               <InfoRow label="Employee ID"        value={emp.employee_id} />
+              <InfoRow label="EPF No"             value={emp.epf_no} />
               <InfoRow label="Department"         value={emp.department?.name} />
               <InfoRow label="Designation"        value={emp.designation?.title} />
               <InfoRow label="Reporting Manager"  value={emp.manager?.full_name} />
-              <InfoRow label="Employment Type"    value={emp.employment_type?.replace('_', '-')} />
+              <InfoRow label="Employment Type"    value={{
+                permanent: 'Permanent',
+                part_time: 'Part Time',
+                fixed_term_contract: 'Fixed Term Contract',
+                intern: 'Intern',
+                consultant: 'Consultant',
+              }[emp.employment_type] || emp.employment_type} />
             </div>
             <div>
               <InfoRow label="Joining Date"       value={emp.joined_date ? new Date(emp.joined_date).toLocaleDateString('en-GB') : null} />

@@ -22,8 +22,9 @@ const EmployeeForm = () => {
     full_name: '', nic: '', dob: '', gender: '', phone: '',
     personal_email: '', company_email: '', address: '',
     emergency_contact_name: '', emergency_contact_phone: '',
+    epf_no: '',
     department_id: '', designation_id: '', manager_id: '',
-    employment_type: 'full_time', joined_date: '', probation_end_date: '',
+    employment_type: 'permanent', joined_date: '', probation_end_date: '',
     work_location: 'Office', status: 'active', basic_salary: '',
     create_user_account: true, user_password: '',
   });
@@ -233,9 +234,14 @@ const EmployeeForm = () => {
                     {managers.map(m => <option key={m.id} value={m.id}>{m.full_name} ({m.employee_id})</option>)}
                   </select>
                 </div>
+                <div className="form-group"><label className="form-label">EPF No</label><input className="form-control" style={inputStyle} value={form.epf_no} onChange={e => set('epf_no', e.target.value)} placeholder="e.g. EPF-001234" /></div>
                 <div className="form-group"><label className="form-label">Employment Type</label>
                   <select className="form-control" style={inputStyle} value={form.employment_type} onChange={e => set('employment_type', e.target.value)}>
-                    <option value="full_time">Full Time</option><option value="part_time">Part Time</option><option value="contract">Contract</option><option value="intern">Intern</option>
+                    <option value="permanent">Permanent</option>
+                    <option value="part_time">Part Time</option>
+                    <option value="fixed_term_contract">Fixed Term Contract</option>
+                    <option value="intern">Intern</option>
+                    <option value="consultant">Consultant</option>
                   </select>
                 </div>
                 <div className="form-group"><label className="form-label">Joining Date *</label><input type="date" className="form-control" style={inputStyle} value={form.joined_date} onChange={e => set('joined_date', e.target.value)} required /></div>

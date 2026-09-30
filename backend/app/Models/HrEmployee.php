@@ -14,7 +14,7 @@ class HrEmployee extends Model
         'full_name', 'photo', 'nic', 'dob', 'gender',
         'phone', 'personal_email', 'company_email', 'address',
         'emergency_contact_name', 'emergency_contact_phone',
-        'employment_type', 'joined_date', 'probation_end_date',
+        'epf_no', 'employment_type', 'joined_date', 'probation_end_date',
         'work_location', 'status', 'basic_salary',
     ];
 
