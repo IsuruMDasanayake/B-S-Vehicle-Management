@@ -86,6 +86,18 @@ class HrAttendanceController extends Controller
             return response()->json(['message' => 'You have already clocked in today.'], 400);
         }
 
+        $clientIp = $request->ip();
+
+        // Prevent multiple attendances from the same IP on the same day for different employees
+        $ipExists = HrAttendance::where('date', $today)
+            ->where('ip_address', $clientIp)
+            ->where('employee_id', '!=', $employee->id)
+            ->exists();
+
+        if ($ipExists) {
+            return response()->json(['message' => 'Another employee has already clocked in using this device or network.'], 403);
+        }
+
         // Strict Geofencing check
         $location = $this->findValidLocation($request->latitude, $request->longitude);
         if (!$location) {
@@ -101,6 +113,7 @@ class HrAttendanceController extends Controller
                 'clock_in_address'     => $request->address,
                 'clock_in_location_id' => $location->id,
                 'status'               => $this->deriveStatus($now, $today),
+                'ip_address'           => $clientIp,
                 'notes'                => null,
             ]
         );
@@ -131,6 +144,18 @@ class HrAttendanceController extends Controller
         $att = HrAttendance::where('employee_id', $employee->id)->where('date', $today)->first();
         if (!$att?->clock_in_time) return response()->json(['message' => 'You must clock in before clocking out.'], 400);
         if ($att->clock_out_time)  return response()->json(['message' => 'You have already clocked out today.'], 400);
+
+        $clientIp = $request->ip();
+        
+        // Prevent multiple attendances from the same IP on the same day for different employees
+        $ipExists = HrAttendance::where('date', $today)
+            ->where('ip_address', $clientIp)
+            ->where('employee_id', '!=', $employee->id)
+            ->exists();
+
+        if ($ipExists) {
+            return response()->json(['message' => 'Another employee has already used this device/network today.'], 403);
+        }
 
         // Strict Geofencing check
         $location = $this->findValidLocation($request->latitude, $request->longitude);

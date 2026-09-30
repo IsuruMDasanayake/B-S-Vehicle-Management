@@ -26,6 +26,7 @@ class HrAttendance extends Model
         'working_hours',
         'early_departure',
         'status', // present, absent, late, half_day, wfh
+        'ip_address',
         'notes',
         'is_manual_override',
         'approved_by',
