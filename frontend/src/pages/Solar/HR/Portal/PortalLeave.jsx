@@ -4,16 +4,19 @@ import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 
 const STATUS_STYLE = {
-  pending:   { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  label: 'Pending' },
-  approved:  { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   label: 'Approved' },
-  rejected:  { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   label: 'Rejected' },
-  cancelled: { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: 'Cancelled' },
+  pending:          { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  label: 'Pending' },
+  manager_approved: { color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)',  label: 'Manager Approved' },
+  manager_rejected: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   label: 'Manager Rejected' },
+  approved:         { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   label: 'Approved' },
+  rejected:         { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   label: 'Rejected' },
+  cancelled:        { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: 'Cancelled' },
 };
 
 const LEAVE_TYPES = [
   { key: 'annual',  label: 'Annual Leave' },
   { key: 'casual',  label: 'Casual Leave' },
   { key: 'medical', label: 'Medical Leave' },
+  { key: 'short',   label: 'Short Leave' },
 ];
 
 const PortalLeave = () => {
@@ -21,7 +24,7 @@ const PortalLeave = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ leave_type: 'annual', start_date: '', end_date: '', reason: '' });
+  const [form, setForm] = useState({ leave_type: 'annual', start_date: '', end_date: '', reason: '', hours_count: 1, is_half_day: false });
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(null);
 
@@ -42,10 +45,24 @@ const PortalLeave = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.start_date || !form.end_date) { toast.error('Please select dates'); return; }
+    if (!form.start_date) { toast.error('Please select start date'); return; }
+    
+    let submitData = { ...form };
+    
+    if (form.leave_type === 'short') {
+      submitData.end_date = form.start_date;
+      submitData.days_count = 0;
+    } else {
+      if (!form.end_date) { toast.error('Please select end date'); return; }
+      submitData.hours_count = null;
+      let d = calcDays(form.start_date, form.end_date);
+      if (form.is_half_day && form.start_date === form.end_date) d = 0.5;
+      submitData.days_count = d;
+    }
+
     setSubmitting(true);
     try {
-      await api.post('/hr/leaves', form);
+      await api.post('/hr/leaves', submitData);
       toast.success('Leave request submitted!');
       setShowForm(false);
       fetchData();
@@ -105,10 +122,10 @@ const PortalLeave = () => {
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{b.used} used · {b.total} total</span>
             </div>
             <div style={{ background: 'var(--surface-2)', borderRadius: '999px', height: '8px', overflow: 'hidden' }}>
-              <div style={{ width: `${(b.used / b.total) * 100}%`, height: '100%', background: b.remaining > 2 ? '#22c55e' : b.remaining > 0 ? '#f59e0b' : '#ef4444', borderRadius: '999px', transition: 'width 0.5s ease' }} />
+              <div style={{ width: `${Math.min(100, (b.used / b.total) * 100)}%`, height: '100%', background: b.remaining > 2 ? '#22c55e' : b.remaining > 0 ? '#f59e0b' : '#ef4444', borderRadius: '999px', transition: 'width 0.5s ease' }} />
             </div>
             <div style={{ textAlign: 'right', fontSize: '0.8rem', marginTop: '0.3rem', fontWeight: 700, color: b.remaining > 0 ? '#22c55e' : '#ef4444' }}>
-              {b.remaining} days remaining
+              {b.remaining} {b.unit} remaining
             </div>
           </div>
         ))}
@@ -128,13 +145,16 @@ const PortalLeave = () => {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.875rem', textTransform: 'capitalize' }}>{r.leave_type} Leave</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      {r.start_date} → {r.end_date} · {r.days_count} day{r.days_count > 1 ? 's' : ''}
+                      {r.leave_type === 'short' 
+                        ? `${r.start_date.split('T')[0]} · ${r.hours_count} hour(s)` 
+                        : `${r.start_date.split('T')[0]} → ${r.end_date.split('T')[0]} · ${r.days_count} day(s)`}
                     </div>
                     {r.reason && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem', fontStyle: 'italic' }}>"{r.reason}"</div>}
+                    {r.manager_notes && <div style={{ fontSize: '0.72rem', color: '#0ea5e9', marginTop: '0.25rem' }}>Mgr: {r.manager_notes}</div>}
                     {r.hr_notes && <div style={{ fontSize: '0.72rem', color: '#3b82f6', marginTop: '0.25rem' }}>HR: {r.hr_notes}</div>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                    <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>
+                    <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 700, background: s?.bg, color: s?.color }}>{s?.label || r.status}</span>
                     {r.status === 'pending' && (
                       <button
                         onClick={() => handleCancel(r.id)}
@@ -167,19 +187,44 @@ const PortalLeave = () => {
                   {LEAVE_TYPES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: form.leave_type === 'short' ? '1fr' : '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Start Date</label>
+                  <label className="form-label">{form.leave_type === 'short' ? 'Date' : 'Start Date'}</label>
                   <input type="date" className="form-control" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} required min={new Date().toISOString().split('T')[0]} />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">End Date</label>
-                  <input type="date" className="form-control" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} required min={form.start_date || new Date().toISOString().split('T')[0]} />
-                </div>
+                {form.leave_type !== 'short' && (
+                  <div className="form-group">
+                    <label className="form-label">End Date</label>
+                    <input type="date" className="form-control" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} required min={form.start_date || new Date().toISOString().split('T')[0]} />
+                  </div>
+                )}
               </div>
-              {days > 0 && (
+              
+              {form.leave_type === 'short' && (
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Hours</label>
+                  <select className="form-control" value={form.hours_count} onChange={e => setForm({ ...form, hours_count: parseInt(e.target.value) })}>
+                    <option value={1}>1 Hour</option>
+                    <option value={2}>2 Hours</option>
+                  </select>
+                </div>
+              )}
+
+              {form.leave_type !== 'short' && form.start_date === form.end_date && form.start_date && (
+                <div className="form-group" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input type="checkbox" id="half_day" checked={form.is_half_day} onChange={e => setForm({ ...form, is_half_day: e.target.checked })} />
+                  <label htmlFor="half_day" style={{ margin: 0, fontSize: '0.875rem' }}>This is a half-day leave (0.5 days)</label>
+                </div>
+              )}
+
+              {form.leave_type !== 'short' && days > 0 && !form.is_half_day && (
                 <div style={{ background: 'rgba(59,130,246,0.08)', padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.82rem', color: '#3b82f6', fontWeight: 600 }}>
                   📅 {days} working day{days > 1 ? 's' : ''}
+                </div>
+              )}
+              {form.leave_type !== 'short' && days > 0 && form.is_half_day && (
+                <div style={{ background: 'rgba(59,130,246,0.08)', padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.82rem', color: '#3b82f6', fontWeight: 600 }}>
+                  📅 0.5 working days
                 </div>
               )}
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>

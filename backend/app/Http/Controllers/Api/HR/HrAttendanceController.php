@@ -13,7 +13,7 @@ class HrAttendanceController extends Controller
 {
     // ── Company Shift Configuration ────────────────────────────────────────────
     const SHIFT_START  = '09:00:00'; // Official shift start
-    const GRACE_END    = '10:00:00'; // Late after this (grace period 9–10 AM)
+    const GRACE_END    = '09:10:00'; // Late after this (grace period 9–9:10 AM)
     const SHIFT_END    = '17:30:00'; // Official end (5:30 PM)
     const HALF_DAY_HRS = 4.5;        // Below this = half day
 

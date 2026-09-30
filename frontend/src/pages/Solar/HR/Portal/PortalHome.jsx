@@ -168,7 +168,7 @@ const PortalHome = () => {
           {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </div>
         <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem' }}>
-          Shift: 9:00 AM – 5:30 PM · Grace until 10:00 AM
+          Shift: 9:00 AM – 5:30 PM · Grace until 9:10 AM
         </div>
       </div>
 
