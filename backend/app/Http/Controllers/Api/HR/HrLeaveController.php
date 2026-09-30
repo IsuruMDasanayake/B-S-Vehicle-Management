@@ -219,8 +219,8 @@ class HrLeaveController extends Controller
             $query->whereHas('employee', fn($q) => $q->where('department_id', $request->department_id));
         }
         if ($request->has('month') && $request->month !== '') {
-            $query->whereYear('start_date', substr($request->month, 0, 4))
-                  ->whereMonth('start_date', substr($request->month, 5, 2));
+            $query->whereYear('created_at', substr($request->month, 0, 4))
+                  ->whereMonth('created_at', substr($request->month, 5, 2));
         }
 
         return response()->json($query->paginate(20));
@@ -236,14 +236,14 @@ class HrLeaveController extends Controller
         $year = $request->get('year', Carbon::now()->year);
         $month = $request->get('month', Carbon::now()->month);
 
-        $base = HrLeave::whereYear('start_date', $year);
+        $base = HrLeave::whereYear('created_at', $year);
 
         return response()->json([
             'pending'          => (clone $base)->where('status', 'pending')->count(),
             'manager_approved' => (clone $base)->where('status', 'manager_approved')->count(),
             'approved'         => (clone $base)->where('status', 'approved')->count(),
             'rejected'         => (clone $base)->where('status', 'rejected')->count(),
-            'total_this_month' => (clone $base)->whereMonth('start_date', $month)->count(),
+            'total_this_month' => (clone $base)->whereMonth('created_at', $month)->count(),
             'by_type'          => (clone $base)->whereIn('status', ['approved', 'pending', 'manager_approved'])
                 ->selectRaw('leave_type, count(*) as count')
                 ->groupBy('leave_type')
@@ -272,6 +272,20 @@ class HrLeaveController extends Controller
             'joined_date'=> $emp->joined_date,
             'balances'   => $this->calculateLeaveBalances($emp, $year),
         ]));
+    }
+
+    public function employeeBalances(Request $request, $employeeId)
+    {
+        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $year = $request->get('year', Carbon::now()->year);
+        $emp = HrEmployee::findOrFail($employeeId);
+        
+        return response()->json([
+            'balances' => $this->calculateLeaveBalances($emp, $year)
+        ]);
     }
 
     // ── HR Admin / Manager: Approve / Reject ──────────────────────────────────

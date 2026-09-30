@@ -23,21 +23,9 @@ const ATTENDANCE_STATUS = {
   late:    { label: 'Late',    color: '#d97706', bg: 'rgba(245,158,11,0.12)' },
   absent:  { label: 'Absent',  color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
   leave:   { label: 'Leave',   color: '#2563eb', bg: 'rgba(59,130,246,0.12)' },
+  half_day:{ label: 'Half Day',color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+  wfh:     { label: 'WFH',     color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)' },
 };
-
-const MOCK_ATTENDANCE = [
-  { date: '2026-09-29', clock_in: '08:32', clock_out: '17:45', hours: '9h 13m', status: 'present' },
-  { date: '2026-09-26', clock_in: '09:10', clock_out: '17:30', hours: '8h 20m', status: 'late' },
-  { date: '2026-09-25', clock_in: '08:28', clock_out: '17:05', hours: '8h 37m', status: 'present' },
-  { date: '2026-09-24', clock_in: null,    clock_out: null,    hours: '—',       status: 'leave' },
-  { date: '2026-09-23', clock_in: '08:41', clock_out: '18:00', hours: '9h 19m', status: 'present' },
-];
-
-const MOCK_LEAVE_BALANCES = [
-  { type: 'Annual Leave', total: 14, used: 3, remaining: 11 },
-  { type: 'Casual Leave', total: 7,  used: 2, remaining: 5  },
-  { type: 'Medical Leave',   total: 7,  used: 1, remaining: 6  },
-];
 
 const InfoRow = ({ label, value }) => (
   <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 0', borderBottom: '1px solid var(--surface-2)', alignItems: 'flex-start' }}>
@@ -54,6 +42,8 @@ const EmployeeProfile = () => {
   const [emp, setEmp] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [assets, setAssets] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [leaveBalances, setLeaveBalances] = useState([]);
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('personal');
@@ -70,14 +60,18 @@ const EmployeeProfile = () => {
 
   const fetchData = async () => {
     try {
-      const [empRes, docRes, assetRes] = await Promise.all([
+      const [empRes, docRes, assetRes, attRes, leaveRes] = await Promise.all([
         api.get(`/hr/employees/${id}`),
         api.get(`/hr/employees/${id}/documents`),
         api.get(`/hr/employees/${id}/assets`),
+        api.get(`/hr/attendance/employee/${id}/history`),
+        api.get(`/hr/leaves/employee/${id}/balances`),
       ]);
       setEmp(empRes.data);
       setDocuments(docRes.data);
       setAssets(assetRes.data);
+      setAttendance(attRes.data);
+      setLeaveBalances(leaveRes.data?.balances || []);
     } catch (err) {
       toast.error('Failed to load profile data');
       if (!emp) navigate('/solar/hr/admin/employees');
@@ -282,7 +276,6 @@ const EmployeeProfile = () => {
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--surface-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Recent Attendance</h3>
-            <span style={{ fontSize: '0.75rem', background: 'rgba(245,158,11,0.1)', color: '#d97706', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: 600 }}>Phase 2 Placeholder</span>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -293,14 +286,20 @@ const EmployeeProfile = () => {
               </tr>
             </thead>
             <tbody>
-              {MOCK_ATTENDANCE.map((a, i) => {
+              {attendance.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No attendance records found.</td></tr>
+              ) : attendance.slice(0, 10).map((a, i) => { // show only last 10
                 const st = ATTENDANCE_STATUS[a.status] || ATTENDANCE_STATUS.present;
+                const clockIn = a.clock_in_time ? new Date(a.clock_in_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+                const clockOut = a.clock_out_time ? new Date(a.clock_out_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+                const hours = a.worked_hours ? `${parseFloat(a.worked_hours).toFixed(2)}h` : '—';
+                
                 return (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--surface-2)' }}>
+                  <tr key={a.id || i} style={{ borderBottom: '1px solid var(--surface-2)' }}>
                     <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', fontWeight: 500 }}>{new Date(a.date).toLocaleDateString('en-GB')}</td>
-                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{a.clock_in || '—'}</td>
-                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{a.clock_out || '—'}</td>
-                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{a.hours}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{clockIn}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{clockOut}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{hours}</td>
                     <td style={{ padding: '0.875rem 1.25rem' }}><span style={{ padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600, background: st.bg, color: st.color }}>{st.label}</span></td>
                   </tr>
                 );
@@ -314,18 +313,23 @@ const EmployeeProfile = () => {
       {activeTab === 'leave' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-            {MOCK_LEAVE_BALANCES.map((lb, i) => (
-              <div key={i} className="card" style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 500 }}>{lb.type}</div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '0.75rem' }}>
-                  <div><div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#3b82f6' }}>{lb.remaining}</div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Remaining</div></div>
-                  <div><div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#6b7280' }}>{lb.used}</div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Used</div></div>
+            {leaveBalances.map((lb, i) => {
+              const pct = lb.total > 0 ? Math.min(100, (lb.used / lb.total) * 100) : 0;
+              const barColor = pct >= 100 ? '#ef4444' : pct >= 75 ? '#f59e0b' : '#3b82f6';
+
+              return (
+                <div key={i} className="card" style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 500 }}>{lb.type}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '0.75rem' }}>
+                    <div><div style={{ fontSize: '1.5rem', fontWeight: 700, color: barColor }}>{lb.remaining}</div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Remaining</div></div>
+                    <div><div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#6b7280' }}>{lb.used}</div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Used</div></div>
+                  </div>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: '999px', height: '6px', overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: '999px' }} />
+                  </div>
                 </div>
-                <div style={{ background: 'var(--surface-2)', borderRadius: '999px', height: '6px', overflow: 'hidden' }}>
-                  <div style={{ width: `${(lb.used / lb.total) * 100}%`, height: '100%', background: '#3b82f6', borderRadius: '999px' }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

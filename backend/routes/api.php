@@ -166,6 +166,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'store']);
         Route::get('attendance/today', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myToday']);
         Route::get('attendance/my-history', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myHistory']);
+        Route::get('attendance/employee/{id}/history', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'employeeHistory']);
         Route::get('attendance/report', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'report']);
         Route::get('attendance/calendar', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'calendar']);
         Route::get('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'index']);
@@ -180,6 +181,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('leaves/{id}/status', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'updateStatus']);
         Route::get('leaves/stats', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'stats']);
         Route::get('leaves/all-balances', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'allBalances']);
+        Route::get('leaves/employee/{id}/balances', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'employeeBalances']);
 
         // Announcements
         Route::get('announcements', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'index']);

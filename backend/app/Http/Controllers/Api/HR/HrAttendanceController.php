@@ -200,7 +200,22 @@ class HrAttendanceController extends Controller
             HrAttendance::with('clockInLocation')
                 ->where('employee_id', $employee->id)
                 ->where('date', 'like', $month . '%')
-                ->orderBy('date')
+                ->orderBy('date', 'desc')
+                ->get()
+        );
+    }
+
+    public function employeeHistory(Request $request, $employeeId)
+    {
+        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $month = $request->get('month', Carbon::now()->format('Y-m'));
+        return response()->json(
+            HrAttendance::with('clockInLocation')
+                ->where('employee_id', $employeeId)
+                ->orderBy('date', 'desc')
                 ->get()
         );
     }
