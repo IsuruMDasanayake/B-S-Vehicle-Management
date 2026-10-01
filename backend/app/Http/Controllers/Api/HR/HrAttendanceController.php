@@ -86,23 +86,28 @@ class HrAttendanceController extends Controller
             return response()->json(['message' => 'You have already clocked in today.'], 400);
         }
 
-        $clientIp = $request->ip();
-
-        // Prevent multiple attendances from the same IP on the same day for different employees
-        $ipExists = HrAttendance::where('date', $today)
-            ->where('ip_address', $clientIp)
-            ->where('employee_id', '!=', $employee->id)
-            ->exists();
-
-        if ($ipExists) {
-            return response()->json(['message' => 'Another employee has already clocked in using this device or network.'], 403);
-        }
-
         // Strict Geofencing check
         $location = $this->findValidLocation($request->latitude, $request->longitude);
         if (!$location) {
-            return response()->json(['message' => 'You are outside the approved work zone. Clock in denied.'], 403);
+            $nearest = null;
+            $minDistance = null;
+            foreach (\App\Models\HrLocation::where('status', 'active')->get() as $loc) {
+                $dist = $this->getDistance($request->latitude, $request->longitude, $loc->latitude, $loc->longitude);
+                if ($minDistance === null || $dist < $minDistance) {
+                    $minDistance = $dist;
+                    $nearest = $loc;
+                }
+            }
+            
+            $msg = 'You are outside the approved work zone. Clock in denied.';
+            if ($nearest) {
+                $msg = "You are outside the approved work zone (Nearest zone: {$nearest->name}, Distance: " . round($minDistance) . "m). Clock in denied.";
+            }
+
+            return response()->json(['message' => $msg], 403);
         }
+
+        $clientIp = $request->ip();
 
         $record = HrAttendance::updateOrCreate(
             ['employee_id' => $employee->id, 'date' => $today],
@@ -145,22 +150,25 @@ class HrAttendanceController extends Controller
         if (!$att?->clock_in_time) return response()->json(['message' => 'You must clock in before clocking out.'], 400);
         if ($att->clock_out_time)  return response()->json(['message' => 'You have already clocked out today.'], 400);
 
-        $clientIp = $request->ip();
-        
-        // Prevent multiple attendances from the same IP on the same day for different employees
-        $ipExists = HrAttendance::where('date', $today)
-            ->where('ip_address', $clientIp)
-            ->where('employee_id', '!=', $employee->id)
-            ->exists();
-
-        if ($ipExists) {
-            return response()->json(['message' => 'Another employee has already used this device/network today.'], 403);
-        }
-
         // Strict Geofencing check
         $location = $this->findValidLocation($request->latitude, $request->longitude);
         if (!$location) {
-            return response()->json(['message' => 'You are outside the approved work zone. Clock out denied.'], 403);
+            $nearest = null;
+            $minDistance = null;
+            foreach (\App\Models\HrLocation::where('status', 'active')->get() as $loc) {
+                $dist = $this->getDistance($request->latitude, $request->longitude, $loc->latitude, $loc->longitude);
+                if ($minDistance === null || $dist < $minDistance) {
+                    $minDistance = $dist;
+                    $nearest = $loc;
+                }
+            }
+            
+            $msg = 'You are outside the approved work zone. Clock out denied.';
+            if ($nearest) {
+                $msg = "You are outside the approved work zone (Nearest zone: {$nearest->name}, Distance: " . round($minDistance) . "m). Clock out denied.";
+            }
+
+            return response()->json(['message' => $msg], 403);
         }
 
         $att->update(array_merge(
