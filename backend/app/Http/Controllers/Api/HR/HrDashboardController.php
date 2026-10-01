@@ -19,14 +19,15 @@ class HrDashboardController extends Controller
             ->whereIn('status', ['present', 'half_day', 'late', 'wfh'])->count();
         $lateToday = \App\Models\HrAttendance::where('date', $today->toDateString())
             ->where('status', 'late')->count();
-        $absentToday = \App\Models\HrAttendance::where('date', $today->toDateString())
-            ->where('status', 'absent')->count();
         
         $pendingLeaves = \App\Models\HrLeave::where('status', 'pending')->count();
         $onLeaveToday = \App\Models\HrLeave::whereIn('status', ['manager_approved', 'approved'])
             ->where('start_date', '<=', $today->toDateString())
             ->where('end_date', '>=', $today->toDateString())
             ->count();
+
+        // Calculate absent employees (who haven't clocked in and aren't on leave)
+        $absentToday = max(0, $total - $presentToday - $onLeaveToday);
 
         $newThisMonth = HrEmployee::where('joined_date', '>=', $monthStart)->count();
 
