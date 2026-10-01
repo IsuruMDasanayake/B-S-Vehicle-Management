@@ -25,6 +25,17 @@ const formatHours = (decimal) => {
   return `${h}h ${m}m`;
 };
 
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Earth radius in meters
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLon = (lon2 - lon1) * rad;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
+
 const PortalHome = () => {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
@@ -35,6 +46,10 @@ const PortalHome = () => {
   const [loading, setLoading] = useState(true);
   const [clocking, setClocking] = useState(false);
   const [now, setNow] = useState(new Date());
+  
+  // Location alert state
+  const [locations, setLocations] = useState([]);
+  const [zoneAlert, setZoneAlert] = useState({ loading: true, msg: 'Checking location...', color: 'var(--text-muted)', bg: 'var(--surface-2)' });
 
   // Live clock
   useEffect(() => {
@@ -44,13 +59,15 @@ const PortalHome = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const [empRes, todayRes, histRes] = await Promise.all([
+      const [empRes, todayRes, histRes, locRes] = await Promise.all([
         api.get('/hr/employees/me'),
         api.get('/hr/attendance/today'),
         api.get('/hr/attendance/my-history'),
+        api.get('/hr/locations'),
       ]);
       setEmployee(empRes.data);
       setToday(todayRes.data);
+      setLocations(locRes.data);
 
       // Calculate month stats
       const records = histRes.data || [];
@@ -90,6 +107,44 @@ const PortalHome = () => {
       return data.display_name || null;
     } catch { return null; }
   };
+
+  const hasClockIn  = !!today?.clock_in_time;
+  const hasClockOut = !!today?.clock_out_time;
+  const canClockIn  = !hasClockIn;
+  const canClockOut = hasClockIn && !hasClockOut;
+  const needsClocking = canClockIn || canClockOut;
+
+  // Background GPS check for the alert banner
+  useEffect(() => {
+    if (!loading && needsClocking && locations.length > 0) {
+      getGPS().then(gps => {
+        if (!gps) {
+          setZoneAlert({ loading: false, msg: 'Location access denied. Please enable GPS to clock in.', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' });
+          return;
+        }
+        let nearest = null;
+        let minDistance = null;
+        locations.forEach(loc => {
+          if (loc.status !== 'active') return;
+          const dist = getDistance(gps.lat, gps.lng, parseFloat(loc.latitude), parseFloat(loc.longitude));
+          if (minDistance === null || dist < minDistance) {
+            minDistance = dist;
+            nearest = loc;
+          }
+        });
+
+        if (nearest) {
+          if (minDistance <= nearest.radius_meters) {
+            setZoneAlert({ loading: false, msg: `📍 You are inside the approved zone (${nearest.name}). Ready to clock in!`, color: '#22c55e', bg: 'rgba(34,197,94,0.1)' });
+          } else {
+            setZoneAlert({ loading: false, msg: `⚠️ You are ${Math.round(minDistance)}m away from the nearest zone (${nearest.name}).`, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' });
+          }
+        } else {
+          setZoneAlert({ loading: false, msg: 'No active work zones found.', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' });
+        }
+      });
+    }
+  }, [loading, needsClocking, locations]);
 
   const handleClockIn = async () => {
     setClocking(true);
@@ -139,10 +194,7 @@ const PortalHome = () => {
     } finally { setClocking(false); }
   };
 
-  const hasClockIn  = !!today?.clock_in_time;
-  const hasClockOut = !!today?.clock_out_time;
-  const canClockIn  = !hasClockIn;
-  const canClockOut = hasClockIn && !hasClockOut;
+
 
   const month = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' });
@@ -213,6 +265,14 @@ const PortalHome = () => {
             )}
           </div>
         </div>
+
+        {/* GPS Status Alert */}
+        {needsClocking && (
+          <div style={{ marginBottom: '1.25rem', padding: '0.85rem', borderRadius: 'var(--radius-md)', background: zoneAlert.bg, color: zoneAlert.color, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {zoneAlert.loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <AlertCircle size={18} />}
+            {zoneAlert.msg}
+          </div>
+        )}
 
         {/* Clock In/Out Button */}
         {canClockIn && (
