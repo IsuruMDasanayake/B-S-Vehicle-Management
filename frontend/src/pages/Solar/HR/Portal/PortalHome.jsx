@@ -135,7 +135,8 @@ const PortalHome = () => {
 
         if (nearest) {
           if (minDistance <= nearest.radius_meters) {
-            setZoneAlert({ loading: false, msg: `📍 You are inside the approved zone (${nearest.name}). Ready to clock in!`, color: '#22c55e', bg: 'rgba(34,197,94,0.1)' });
+            const action = canClockOut ? 'clock out' : 'clock in';
+            setZoneAlert({ loading: false, msg: `📍 You are inside the approved zone (${nearest.name}). Ready to ${action}!`, color: '#22c55e', bg: 'rgba(34,197,94,0.1)' });
           } else {
             setZoneAlert({ loading: false, msg: `⚠️ You are ${Math.round(minDistance)}m away from the nearest zone (${nearest.name}).`, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' });
           }
