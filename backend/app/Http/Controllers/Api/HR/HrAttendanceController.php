@@ -43,17 +43,20 @@ class HrAttendanceController extends Controller
     /** Determine status from clock-in time. Grace: 9:00–10:00 = present. After 10:00 = late. */
     private function deriveStatus(Carbon $clockIn, string $date): string
     {
-        $graceEnd = Carbon::parse($date . ' ' . self::GRACE_END);
-        return $clockIn->greaterThan($graceEnd) ? 'late' : 'present';
+        $localClockIn = $clockIn->copy()->timezone('Asia/Colombo');
+        $graceEnd = Carbon::parse($localClockIn->toDateString() . ' ' . self::GRACE_END, 'Asia/Colombo');
+        return $localClockIn->greaterThan($graceEnd) ? 'late' : 'present';
     }
 
     /** Recalculate hours and status on clock-out */
     private function recalcOnClockOut(HrAttendance $att, Carbon $clockOut): array
     {
-        $clockIn     = Carbon::parse($att->clock_in_time);
+        $clockIn = Carbon::parse($att->clock_in_time);
         $hoursWorked = round($clockIn->diffInMinutes($clockOut) / 60, 2);
-        $shiftEnd    = Carbon::parse($att->date->toDateString() . ' ' . self::SHIFT_END);
-        $earlyDepart = $clockOut->lessThan($shiftEnd);
+        
+        $localClockOut = $clockOut->copy()->timezone('Asia/Colombo');
+        $shiftEnd = Carbon::parse($localClockOut->toDateString() . ' ' . self::SHIFT_END, 'Asia/Colombo');
+        $earlyDepart = $localClockOut->lessThan($shiftEnd);
 
         // Less than half a day worked → mark as half_day
         $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $att->status;
