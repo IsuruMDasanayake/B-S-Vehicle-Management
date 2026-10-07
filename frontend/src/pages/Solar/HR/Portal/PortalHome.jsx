@@ -90,13 +90,23 @@ const PortalHome = () => {
 
   const getGPS = () => new Promise((resolve) => {
     if (!navigator.geolocation) { resolve(null); return; }
+    
+    // Attempt 1: High accuracy, 15s timeout, cache for 1 minute
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => {
-        console.error('GPS Error:', err);
-        resolve(null);
+      (err1) => {
+        console.warn('High accuracy GPS failed, falling back to low accuracy...', err1);
+        // Attempt 2: Low accuracy (network/cell tower), 25s timeout, cache for 5 mins
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          (err2) => {
+            console.error('Low accuracy GPS also failed:', err2);
+            resolve(null);
+          },
+          { enableHighAccuracy: false, timeout: 25000, maximumAge: 300000 }
+        );
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
   });
 
