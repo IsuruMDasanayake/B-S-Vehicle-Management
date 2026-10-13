@@ -431,7 +431,7 @@ const PortalHome = () => {
             gap: '0.5rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.76rem', color: '#065f46' }}>
+          {/* <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.76rem', color: '#065f46' }}>
             <span style={{
               width: '8px',
               height: '8px',
@@ -443,7 +443,7 @@ const PortalHome = () => {
             }} />
             <span style={{ fontWeight: 600 }}>Lock-Screen Alerts Active</span>
             <span style={{ color: '#047857', opacity: 0.85 }}>· 5:30 PM reminder set</span>
-          </div>
+          </div> */}
           <button
             type="button"
             onClick={handleTestPush}
