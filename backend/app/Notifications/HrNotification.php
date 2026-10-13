@@ -35,11 +35,25 @@ class HrNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', \App\Channels\WebPushChannel::class];
     }
 
     public function toArray(object $notifiable): array
     {
         return $this->data;
+    }
+
+    public function toWebPush(object $notifiable): array
+    {
+        return [
+            'title'     => $this->data['title'] ?? 'HR Alert',
+            'body'      => $this->data['message'] ?? '',
+            'url'       => $this->data['link'] ?? '/solar/hr/admin/dashboard',
+            'category'  => $this->data['category'] ?? 'general',
+            'severity'  => $this->data['severity'] ?? 'info',
+            'source_id' => $this->data['source_id'] ?? null,
+            'icon'      => '/favicon.svg',
+            'badge'     => '/favicon.svg',
+        ];
     }
 }
