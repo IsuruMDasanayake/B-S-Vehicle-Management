@@ -146,6 +146,7 @@ export default function LeaveManagement() {
       toast.success('Leave status updated');
       setModalOpen(false);
       fetchLeaves(); fetchStats();
+      window.dispatchEvent(new CustomEvent('hr-leaves-updated'));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update status');
     } finally { setIsProcessing(false); }

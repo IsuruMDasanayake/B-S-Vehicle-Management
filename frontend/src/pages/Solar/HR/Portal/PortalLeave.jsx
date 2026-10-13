@@ -70,6 +70,7 @@ const PortalLeave = () => {
       toast.success('Leave request submitted!');
       setShowForm(false);
       fetchData();
+      window.dispatchEvent(new CustomEvent('hr-leaves-updated'));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit');
     } finally { setSubmitting(false); }
@@ -81,6 +82,7 @@ const PortalLeave = () => {
       await api.patch(`/hr/leaves/${id}/cancel`);
       toast.success('Request cancelled');
       fetchData();
+      window.dispatchEvent(new CustomEvent('hr-leaves-updated'));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Cannot cancel');
     } finally { setCancelling(null); }
