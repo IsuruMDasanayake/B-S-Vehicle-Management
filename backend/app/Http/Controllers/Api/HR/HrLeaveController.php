@@ -254,6 +254,24 @@ class HrLeaveController extends Controller
         ]);
     }
 
+    // ── HR Admin / Super Admin: Unapproved leave counts for sidebar badge ─────
+    public function unapprovedCounts(Request $request)
+    {
+        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $pendingCount = HrLeave::where('status', 'pending')->count();
+        $mgrApprovedCount = HrLeave::where('status', 'manager_approved')->count();
+
+        return response()->json([
+            'pending'           => $pendingCount,
+            'manager_approved'  => $mgrApprovedCount,
+            'super_admin_count' => $pendingCount,
+            'hr_admin_count'    => $pendingCount + $mgrApprovedCount,
+        ]);
+    }
+
     // ── HR Admin: All employees' leave balances ───────────────────────────────
     public function allBalances(Request $request)
     {

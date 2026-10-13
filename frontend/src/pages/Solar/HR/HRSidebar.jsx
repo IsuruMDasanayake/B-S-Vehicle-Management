@@ -1,9 +1,11 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Clock, Calendar,
   FileText, Package, Megaphone, BarChart2, Settings, LogOut, Users2, MapPin,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import api from '../../../services/api';
 
 const HR_BLUE = '#3b82f6';
 
@@ -12,6 +14,36 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
   const user = useAuthStore(state => state.user);
   const isSuperAdmin = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
   const isHRAdmin = isSuperAdmin || user?.role === 'solar_hr_admin' || user?.roles?.includes('solar_hr_admin');
+
+  const [leaveCount, setLeaveCount] = useState(0);
+
+  const fetchLeaveCount = useCallback(async () => {
+    if (!isHRAdmin) return;
+    try {
+      const res = await api.get('/hr/leaves/unapproved-counts');
+      if (res.data) {
+        if (isSuperAdmin && user?.role !== 'solar_hr_admin' && !user?.roles?.includes('solar_hr_admin')) {
+          setLeaveCount(res.data.super_admin_count ?? 0);
+        } else {
+          setLeaveCount(res.data.hr_admin_count ?? 0);
+        }
+      }
+    } catch {
+      // silent
+    }
+  }, [isHRAdmin, isSuperAdmin, user]);
+
+  useEffect(() => {
+    fetchLeaveCount();
+    const interval = setInterval(fetchLeaveCount, 30000);
+    const handleUpdate = () => fetchLeaveCount();
+    window.addEventListener('hr-leaves-updated', handleUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('hr-leaves-updated', handleUpdate);
+    };
+  }, [fetchLeaveCount, location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -38,7 +70,7 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
         title: 'Time & Attendance',
         items: [
           { name: 'Attendance', path: '/solar/hr/admin/attendance', icon: Clock },
-          { name: 'Leave', path: '/solar/hr/admin/leave', icon: Calendar },
+          { name: 'Leave', path: '/solar/hr/admin/leave', icon: Calendar, badge: leaveCount },
         ],
       },
       {
@@ -122,7 +154,28 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
                       }}
                     >
                       <Icon size={18} color={isActive ? HR_BLUE : 'currentColor'} />
-                      {item.name}
+                      <span style={{ flex: 1 }}>{item.name}</span>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span
+                          style={{
+                            background: '#ef4444',
+                            color: '#ffffff',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '0.1rem 0.45rem',
+                            borderRadius: '999px',
+                            minWidth: '18px',
+                            textAlign: 'center',
+                            lineHeight: 1.25,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)',
+                          }}
+                        >
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
