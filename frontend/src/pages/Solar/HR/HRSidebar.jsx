@@ -16,17 +16,26 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
   const isHRAdmin = isSuperAdmin || user?.role === 'solar_hr_admin' || user?.roles?.includes('solar_hr_admin');
 
   const [leaveCount, setLeaveCount] = useState(0);
+  const [attendanceCount, setAttendanceCount] = useState(0);
 
-  const fetchLeaveCount = useCallback(async () => {
+  const fetchCounts = useCallback(async () => {
     if (!isHRAdmin) return;
     try {
-      const res = await api.get('/hr/leaves/unapproved-counts');
-      if (res.data) {
+      const [leaveRes, attRes] = await Promise.allSettled([
+        api.get('/hr/leaves/unapproved-counts'),
+        api.get('/hr/attendance/regularizations', { params: { status: 'pending' } }),
+      ]);
+
+      if (leaveRes.status === 'fulfilled' && leaveRes.value.data) {
         if (isSuperAdmin && user?.role !== 'solar_hr_admin' && !user?.roles?.includes('solar_hr_admin')) {
-          setLeaveCount(res.data.super_admin_count ?? 0);
+          setLeaveCount(leaveRes.value.data.super_admin_count ?? 0);
         } else {
-          setLeaveCount(res.data.hr_admin_count ?? 0);
+          setLeaveCount(leaveRes.value.data.hr_admin_count ?? 0);
         }
+      }
+
+      if (attRes.status === 'fulfilled' && attRes.value.data) {
+        setAttendanceCount(attRes.value.data.pending_count ?? 0);
       }
     } catch {
       // silent
@@ -34,16 +43,18 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
   }, [isHRAdmin, isSuperAdmin, user]);
 
   useEffect(() => {
-    fetchLeaveCount();
-    const interval = setInterval(fetchLeaveCount, 30000);
-    const handleUpdate = () => fetchLeaveCount();
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+    const handleUpdate = () => fetchCounts();
     window.addEventListener('hr-leaves-updated', handleUpdate);
+    window.addEventListener('hr-attendance-updated', handleUpdate);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('hr-leaves-updated', handleUpdate);
+      window.removeEventListener('hr-attendance-updated', handleUpdate);
     };
-  }, [fetchLeaveCount, location.pathname]);
+  }, [fetchCounts, location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -69,7 +80,7 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
       {
         title: 'Time & Attendance',
         items: [
-          { name: 'Attendance', path: '/solar/hr/admin/attendance', icon: Clock },
+          { name: 'Attendance', path: '/solar/hr/admin/attendance', icon: Clock, badge: attendanceCount },
           { name: 'Leave', path: '/solar/hr/admin/leave', icon: Calendar, badge: leaveCount },
         ],
       },

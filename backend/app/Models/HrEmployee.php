@@ -59,6 +59,11 @@ class HrEmployee extends Model
         return $this->hasMany(HrAttendance::class, 'employee_id');
     }
 
+    public function attendanceRegularizations()
+    {
+        return $this->hasMany(HrAttendanceRegularization::class, 'employee_id');
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     public function getPhotoUrlAttribute(): ?string

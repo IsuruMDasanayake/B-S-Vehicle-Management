@@ -14,6 +14,10 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('alerts:generate')->everyMinute();
         $schedule->command('payments:generate-weekends')->dailyAt('00:05');
+
+        // HR Attendance Reminders & Auto Clock-Out
+        $schedule->command('hr:remind-clock-out')->dailyAt('17:30');
+        $schedule->command('hr:auto-clock-out')->dailyAt('23:59');
     }
 
     /**

@@ -29,6 +29,7 @@ class HrAttendance extends Model
         'ip_address',
         'notes',
         'is_manual_override',
+        'is_auto_clock_out',
         'approved_by',
     ];
 
@@ -42,6 +43,7 @@ class HrAttendance extends Model
         'clock_out_lat' => 'decimal:8',
         'clock_out_lng' => 'decimal:8',
         'is_manual_override' => 'boolean',
+        'is_auto_clock_out' => 'boolean',
     ];
 
     public function employee()
@@ -57,5 +59,10 @@ class HrAttendance extends Model
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function regularization()
+    {
+        return $this->hasOne(HrAttendanceRegularization::class, 'attendance_id');
     }
 }
