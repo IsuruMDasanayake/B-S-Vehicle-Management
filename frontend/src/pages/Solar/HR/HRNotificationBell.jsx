@@ -2,9 +2,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell, Check, Calendar, Clock, AlertTriangle, CheckCircle,
-  XCircle, ExternalLink, Trash2, CheckCheck
+  XCircle, ExternalLink, Trash2, CheckCheck, Send, Radio,
+  Loader2, BellOff, BellRing, RefreshCw
 } from 'lucide-react';
 import api from '../../../services/api';
+import {
+  isPushNotificationSupported,
+  getPushNotificationStatus,
+  subscribeToPushNotifications,
+  unsubscribeFromPushNotifications,
+  sendTestPushNotification,
+} from '../../../utils/pushNotifications';
 
 const formatTimeAgo = (dateStr) => {
   if (!dateStr) return '';
@@ -28,8 +36,28 @@ export const HRNotificationBell = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread' | 'leave' | 'attendance'
   const [loading, setLoading] = useState(false);
+
+  // Push notifications state
+  const [pushStatus, setPushStatus] = useState({
+    supported: false,
+    permission: 'default',
+    isSubscribed: false,
+  });
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushFeedback, setPushFeedback] = useState(null);
+
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  // Load push status
+  const checkPushStatus = useCallback(async () => {
+    try {
+      const status = await getPushNotificationStatus();
+      setPushStatus(status);
+    } catch (e) {
+      console.warn('Failed to query push status:', e);
+    }
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -45,6 +73,7 @@ export const HRNotificationBell = () => {
 
   useEffect(() => {
     fetchNotifications();
+    checkPushStatus();
     const interval = setInterval(fetchNotifications, 30000);
 
     const handleUpdate = () => fetchNotifications();
@@ -56,7 +85,7 @@ export const HRNotificationBell = () => {
       window.removeEventListener('hr-leaves-updated', handleUpdate);
       window.removeEventListener('hr-notifications-updated', handleUpdate);
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, checkPushStatus]);
 
   // Click outside listener
   useEffect(() => {
@@ -101,6 +130,52 @@ export const HRNotificationBell = () => {
     navigate(link);
   };
 
+  // Push subscription actions
+  const handleEnablePush = async () => {
+    setPushLoading(true);
+    setPushFeedback(null);
+    try {
+      await subscribeToPushNotifications();
+      await checkPushStatus();
+      setPushFeedback({ type: 'success', text: 'Push notifications enabled! You will receive alerts even when tabs are closed.' });
+      setTimeout(() => setPushFeedback(null), 5000);
+    } catch (err) {
+      setPushFeedback({ type: 'error', text: err.message || 'Failed to enable push notifications.' });
+      await checkPushStatus();
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleDisablePush = async () => {
+    setPushLoading(true);
+    setPushFeedback(null);
+    try {
+      await unsubscribeFromPushNotifications();
+      await checkPushStatus();
+      setPushFeedback({ type: 'info', text: 'Push notifications disabled on this browser.' });
+      setTimeout(() => setPushFeedback(null), 4000);
+    } catch (err) {
+      setPushFeedback({ type: 'error', text: err.message || 'Failed to disable push notifications.' });
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    setPushLoading(true);
+    setPushFeedback(null);
+    try {
+      const res = await sendTestPushNotification();
+      setPushFeedback({ type: 'success', text: 'Test push alert sent! Look for the native notification on your desktop.' });
+      setTimeout(() => setPushFeedback(null), 5000);
+    } catch (err) {
+      setPushFeedback({ type: 'error', text: err.response?.data?.message || err.message || 'Test push notification failed.' });
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
   const getCategoryIcon = (category, severity) => {
     if (category === 'attendance') {
       return <Clock size={16} color="#f97316" />;
@@ -128,7 +203,10 @@ export const HRNotificationBell = () => {
     <div style={{ position: 'relative' }} ref={dropdownRef}>
       {/* Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) checkPushStatus();
+        }}
         aria-label="HR Notifications"
         style={{
           position: 'relative',
@@ -186,11 +264,11 @@ export const HRNotificationBell = () => {
             position: 'absolute',
             top: 'calc(100% + 0.6rem)',
             right: 0,
-            width: '380px',
+            width: '410px',
             maxWidth: 'calc(100vw - 2rem)',
             background: 'var(--white)',
             borderRadius: 'var(--radius-lg, 12px)',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 12px 30px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
             border: '1px solid var(--surface-2)',
             zIndex: 1100,
             overflow: 'hidden',
@@ -252,6 +330,148 @@ export const HRNotificationBell = () => {
             )}
           </div>
 
+          {/* Web Push Notification Status Banner */}
+          {pushStatus.supported && (
+            <div
+              style={{
+                margin: '0.65rem 0.85rem 0.4rem',
+                padding: '0.7rem 0.85rem',
+                borderRadius: '9px',
+                background: pushStatus.isSubscribed
+                  ? 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(16,185,129,0.04) 100%)'
+                  : pushStatus.permission === 'denied'
+                  ? 'rgba(239,68,68,0.06)'
+                  : 'linear-gradient(135deg, rgba(59,130,246,0.09) 0%, rgba(99,102,241,0.06) 100%)',
+                border: '1px solid',
+                borderColor: pushStatus.isSubscribed
+                  ? 'rgba(34,197,94,0.3)'
+                  : pushStatus.permission === 'denied'
+                  ? 'rgba(239,68,68,0.25)'
+                  : 'rgba(59,130,246,0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.45rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  {pushStatus.isSubscribed ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#16a34a', fontWeight: 700, fontSize: '0.78rem' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 6px #22c55e' }} />
+                      Web Push Active
+                    </span>
+                  ) : pushStatus.permission === 'denied' ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#dc2626', fontWeight: 700, fontSize: '0.78rem' }}>
+                      <BellOff size={14} /> Desktop Alerts Blocked
+                    </span>
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#2563eb', fontWeight: 700, fontSize: '0.78rem' }}>
+                      <BellRing size={14} /> Web Push Notifications
+                    </span>
+                  )}
+                </div>
+
+                <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', background: 'var(--white)', padding: '0.1rem 0.4rem', borderRadius: '4px', border: '1px solid var(--surface-2)' }}>
+                  Option 2: VAPID Push
+                </span>
+              </div>
+
+              {pushStatus.isSubscribed ? (
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+                    You will receive native desktop notifications even when this browser tab is completely closed.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.45rem', alignItems: 'center' }}>
+                    <button
+                      onClick={handleSendTestPush}
+                      disabled={pushLoading}
+                      style={{
+                        background: '#22c55e',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '5px',
+                        padding: '0.25rem 0.6rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        boxShadow: '0 1px 3px rgba(34,197,94,0.3)',
+                      }}
+                    >
+                      {pushLoading ? <Loader2 size={12} className="spin" /> : <Send size={11} />}
+                      Test Alert
+                    </button>
+                    <button
+                      onClick={handleDisablePush}
+                      disabled={pushLoading}
+                      style={{
+                        background: 'transparent',
+                        color: 'var(--text-muted)',
+                        border: '1px solid var(--surface-2)',
+                        borderRadius: '5px',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.7rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Disable
+                    </button>
+                  </div>
+                </div>
+              ) : pushStatus.permission === 'denied' ? (
+                <div style={{ fontSize: '0.72rem', color: '#b91c1c', lineHeight: 1.35 }}>
+                  Browser permission is currently denied. Click the lock/info icon next to your browser address bar to allow Notifications.
+                </div>
+              ) : (
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+                    Receive real-time desktop popups for leave requests & late arrivals even when this tab is closed.
+                  </p>
+                  <button
+                    onClick={handleEnablePush}
+                    disabled={pushLoading}
+                    style={{
+                      marginTop: '0.45rem',
+                      background: '#3b82f6',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '5px',
+                      padding: '0.32rem 0.75rem',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      boxShadow: '0 2px 4px rgba(59,130,246,0.3)',
+                    }}
+                  >
+                    {pushLoading ? <Loader2 size={13} className="spin" /> : <BellRing size={13} />}
+                    Enable Desktop Alerts
+                  </button>
+                </div>
+              )}
+
+              {pushFeedback && (
+                <div
+                  style={{
+                    fontSize: '0.71rem',
+                    padding: '0.3rem 0.5rem',
+                    borderRadius: '4px',
+                    background: pushFeedback.type === 'error' ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.12)',
+                    color: pushFeedback.type === 'error' ? '#ef4444' : '#15803d',
+                    fontWeight: 500,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {pushFeedback.text}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Filter Tabs */}
           <div
             style={{
@@ -293,9 +513,8 @@ export const HRNotificationBell = () => {
           <div
             className="no-scrollbar"
             style={{
-              maxHeight: '340px',
+              maxHeight: '320px',
               overflowY: 'auto',
-              divideY: '1px solid var(--surface-2)',
             }}
           >
             {filteredNotifications.length === 0 ? (

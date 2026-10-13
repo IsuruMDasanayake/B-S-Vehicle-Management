@@ -77,6 +77,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
     Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
     Route::post('/notifications/{id}/mark-read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+
+    // Web Push Notifications (VAPID)
+    Route::get('/push/vapid-public-key', [\App\Http\Controllers\Api\WebPushController::class, 'getPublicKey']);
+    Route::post('/push/subscribe', [\App\Http\Controllers\Api\WebPushController::class, 'subscribe']);
+    Route::post('/push/unsubscribe', [\App\Http\Controllers\Api\WebPushController::class, 'unsubscribe']);
+    Route::post('/push/test', [\App\Http\Controllers\Api\WebPushController::class, 'test']);
     
     // Owner Payments
     Route::apiResource('owner-payments', OwnerPaymentController::class);
