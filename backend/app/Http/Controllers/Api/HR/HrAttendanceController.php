@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Api\HR;
 
 use App\Http\Controllers\Controller;
 use App\Models\HrAttendance;
+use App\Models\HrAttendanceRegularization;
 use App\Models\HrEmployee;
 use App\Models\HrLocation;
+use App\Models\User;
+use App\Notifications\HrNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 class HrAttendanceController extends Controller
 {
@@ -80,6 +85,9 @@ class HrAttendanceController extends Controller
 
         $employee = HrEmployee::where('user_id', $request->user()->id)->first();
         if (!$employee) return response()->json(['message' => 'Employee profile not found.'], 404);
+
+        // Self-heal any unclosed past attendance records
+        $this->autoClosePastAttendances($employee->id);
 
         $today = Carbon::today()->toDateString();
         $now   = Carbon::now();
@@ -212,6 +220,9 @@ class HrAttendanceController extends Controller
     {
         $employee = HrEmployee::where('user_id', $request->user()->id)->first();
         if (!$employee) return response()->json(null);
+
+        // Self-heal any unclosed past attendance records
+        $this->autoClosePastAttendances($employee->id);
 
         return response()->json(
             HrAttendance::with('clockInLocation')
@@ -404,5 +415,237 @@ class HrAttendanceController extends Controller
             if (!$d->isWeekend()) $days++;
         }
         return $days;
+    }
+
+    /**
+     * Self-heal unclosed past attendances for an employee
+     */
+    private function autoClosePastAttendances(int $employeeId): void
+    {
+        $today = Carbon::today('Asia/Colombo')->toDateString();
+        $unclosed = HrAttendance::where('employee_id', $employeeId)
+            ->where('date', '<', $today)
+            ->whereNotNull('clock_in_time')
+            ->whereNull('clock_out_time')
+            ->get();
+
+        foreach ($unclosed as $att) {
+            $dateStr = Carbon::parse($att->date)->toDateString();
+            $clockIn = Carbon::parse($att->clock_in_time);
+            $clockOut = Carbon::parse($dateStr . ' ' . self::SHIFT_END, 'Asia/Colombo');
+            if ($clockIn->greaterThan($clockOut)) {
+                $clockOut = $clockIn->copy()->addHour();
+            }
+            $hoursWorked = round($clockIn->diffInMinutes($clockOut) / 60, 2);
+            $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $att->status;
+
+            $att->update([
+                'clock_out_time'    => $clockOut,
+                'working_hours'     => $hoursWorked,
+                'status'            => $status,
+                'is_auto_clock_out' => true,
+                'notes'             => trim(($att->notes ? $att->notes . ' | ' : '') . 'Auto clocked-out at 5:30 PM (System fallback: employee forgot to clock out)'),
+            ]);
+        }
+    }
+
+    /**
+     * Employee: Fetch past unclosed or auto-clocked-out attendances eligible for time adjustment
+     */
+    public function unclosedOrAutoAttendances(Request $request)
+    {
+        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        if (!$employee) return response()->json([]);
+
+        $this->autoClosePastAttendances($employee->id);
+
+        $cutoff = Carbon::now('Asia/Colombo')->subDays(14)->toDateString();
+        $records = HrAttendance::with(['regularization', 'clockInLocation'])
+            ->where('employee_id', $employee->id)
+            ->where('date', '>=', $cutoff)
+            ->where(function($q) {
+                $q->where('is_auto_clock_out', true)
+                  ->orWhere(function($sub) {
+                      $sub->whereNotNull('clock_in_time')->whereNull('clock_out_time');
+                  });
+            })
+            ->orderByDesc('date')
+            ->get();
+
+        return response()->json($records);
+    }
+
+    /**
+     * Employee: Request clock-out adjustment/regularization
+     */
+    public function requestRegularization(Request $request)
+    {
+        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        if (!$employee) return response()->json(['message' => 'Employee profile not found.'], 404);
+
+        $validated = $request->validate([
+            'attendance_id'            => 'required|exists:hr_attendances,id',
+            'requested_clock_out_time' => 'required|date',
+            'reason'                   => 'required|string|max:500',
+        ]);
+
+        $att = HrAttendance::where('id', $validated['attendance_id'])
+            ->where('employee_id', $employee->id)
+            ->firstOrFail();
+
+        $requestedTime = Carbon::parse($validated['requested_clock_out_time']);
+
+        if ($att->clock_in_time && $requestedTime->lessThan(Carbon::parse($att->clock_in_time))) {
+            return response()->json(['message' => 'Requested clock-out time must be after clock-in time.'], 422);
+        }
+
+        $regularization = HrAttendanceRegularization::updateOrCreate(
+            [
+                'attendance_id' => $att->id,
+                'employee_id'   => $employee->id,
+            ],
+            [
+                'requested_clock_out_time' => $requestedTime,
+                'reason'                   => $validated['reason'],
+                'status'                   => 'pending',
+                'reviewed_by'              => null,
+                'admin_notes'              => null,
+            ]
+        );
+
+        try {
+            $adminUsers = User::where(function($q) {
+                $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+            })->get();
+
+            $dateFormatted = Carbon::parse($att->date)->format('d M');
+            $timeFormatted = $requestedTime->format('h:i A');
+
+            Notification::send($adminUsers, new HrNotification([
+                'division'   => 'hr',
+                'category'   => 'attendance',
+                'severity'   => 'warning',
+                'title'      => 'Clock-Out Adjustment Request',
+                'message'    => "{$employee->full_name} submitted a clock-out adjustment for {$dateFormatted} ({$timeFormatted}).",
+                'link'       => '/solar/hr/admin/attendance',
+                'source_id'  => $regularization->id,
+            ]));
+        } catch (\Throwable $e) {
+            Log::error('Regularization notification error: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'Clock-out adjustment request submitted successfully.',
+            'data'    => $regularization->load('attendance'),
+        ], 201);
+    }
+
+    /**
+     * HR Admin: List regularization requests
+     */
+    public function listRegularizations(Request $request)
+    {
+        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $status = $request->get('status', 'pending');
+
+        $query = HrAttendanceRegularization::with([
+            'employee.department',
+            'attendance.clockInLocation',
+            'reviewer',
+        ])->orderByDesc('created_at');
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $records = $query->get();
+        $pendingCount = HrAttendanceRegularization::where('status', 'pending')->count();
+
+        return response()->json([
+            'data'          => $records,
+            'pending_count' => $pendingCount,
+        ]);
+    }
+
+    /**
+     * HR Admin: Approve or reject clock-out adjustment
+     */
+    public function updateRegularization(Request $request, $id)
+    {
+        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'status'      => 'required|in:approved,rejected',
+            'admin_notes' => 'nullable|string|max:500',
+        ]);
+
+        $reg = HrAttendanceRegularization::with(['attendance', 'employee.user'])->findOrFail($id);
+
+        if ($reg->status !== 'pending') {
+            return response()->json(['message' => 'This request has already been reviewed.'], 422);
+        }
+
+        $att = $reg->attendance;
+        $emp = $reg->employee;
+
+        if ($validated['status'] === 'approved') {
+            $newClockOut = Carbon::parse($reg->requested_clock_out_time);
+            $clockIn = Carbon::parse($att->clock_in_time);
+            $hoursWorked = round($clockIn->diffInMinutes($newClockOut) / 60, 2);
+
+            $localClockOut = $newClockOut->copy()->timezone('Asia/Colombo');
+            $shiftEnd = Carbon::parse($localClockOut->toDateString() . ' ' . self::SHIFT_END, 'Asia/Colombo');
+            $earlyDepart = $localClockOut->lessThan($shiftEnd);
+            $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $att->status;
+
+            $att->update([
+                'clock_out_time'     => $newClockOut,
+                'working_hours'      => $hoursWorked,
+                'early_departure'    => $earlyDepart && $hoursWorked >= self::HALF_DAY_HRS,
+                'status'             => $status,
+                'is_manual_override' => true,
+                'is_auto_clock_out'  => false,
+                'approved_by'        => $request->user()->id,
+                'notes'              => trim(($att->notes ? $att->notes . ' | ' : '') . 'Regularized by HR: ' . $reg->reason),
+            ]);
+        }
+
+        $reg->update([
+            'status'      => $validated['status'],
+            'reviewed_by' => $request->user()->id,
+            'admin_notes' => $validated['admin_notes'] ?? null,
+        ]);
+
+        // Notify employee
+        try {
+            if ($emp?->user) {
+                $dateStr = Carbon::parse($att->date)->format('d M');
+                $isApp = $validated['status'] === 'approved';
+                $emp->user->notify(new HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'attendance',
+                    'severity'   => $isApp ? 'success' : 'danger',
+                    'title'      => $isApp ? 'Clock-Out Adjustment Approved' : 'Clock-Out Adjustment Rejected',
+                    'message'    => $isApp 
+                        ? "HR approved your clock-out adjustment for {$dateStr}."
+                        : "HR rejected your clock-out adjustment for {$dateStr}." . ($validated['admin_notes'] ? " Note: {$validated['admin_notes']}" : ''),
+                    'link'       => '/solar/hr/portal/home',
+                    'source_id'  => $reg->id,
+                ]));
+            }
+        } catch (\Throwable $e) {
+            Log::error('Regularization employee notification error: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => "Request has been {$validated['status']}.",
+            'data'    => $reg->load(['attendance', 'reviewer']),
+        ]);
     }
 }

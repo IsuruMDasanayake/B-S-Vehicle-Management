@@ -51,6 +51,13 @@ const PortalHome = () => {
   const [locations, setLocations] = useState([]);
   const [zoneAlert, setZoneAlert] = useState({ loading: true, msg: 'Checking location...', color: 'var(--text-muted)', bg: 'var(--surface-2)' });
 
+  // Missed clock-out & regularization state
+  const [unclosedPast, setUnclosedPast] = useState([]);
+  const [selectedReg, setSelectedReg] = useState(null);
+  const [regModalOpen, setRegModalOpen] = useState(false);
+  const [regForm, setRegForm] = useState({ requested_time: '17:30', reason: '' });
+  const [regSubmitting, setRegSubmitting] = useState(false);
+
   // Live clock
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -59,15 +66,17 @@ const PortalHome = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const [empRes, todayRes, histRes, locRes] = await Promise.all([
+      const [empRes, todayRes, histRes, locRes, unclosedRes] = await Promise.all([
         api.get('/hr/employees/me'),
         api.get('/hr/attendance/today'),
         api.get('/hr/attendance/my-history'),
         api.get('/hr/locations'),
+        api.get('/hr/attendance/unclosed-past'),
       ]);
       setEmployee(empRes.data);
       setToday(todayRes.data);
       setLocations(locRes.data);
+      setUnclosedPast(unclosedRes.data || []);
 
       // Calculate month stats
       const records = histRes.data || [];
@@ -87,6 +96,41 @@ const PortalHome = () => {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleOpenRegModal = (att) => {
+    setSelectedReg(att);
+    let defaultTime = '17:30';
+    if (att.clock_out_time) {
+      const d = new Date(att.clock_out_time);
+      defaultTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    setRegForm({ requested_time: defaultTime, reason: '' });
+    setRegModalOpen(true);
+  };
+
+  const handleRegularizeSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedReg) return;
+    setRegSubmitting(true);
+    try {
+      const datePart = selectedReg.date.split('T')[0];
+      const targetDateTime = `${datePart} ${regForm.requested_time}:00`;
+
+      await api.post('/hr/attendance/regularize', {
+        attendance_id: selectedReg.id,
+        requested_clock_out_time: targetDateTime,
+        reason: regForm.reason,
+      });
+
+      toast.success('Time adjustment request submitted to HR.');
+      setRegModalOpen(false);
+      await fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit adjustment request.');
+    } finally {
+      setRegSubmitting(false);
+    }
+  };
 
   const getGPS = () => new Promise((resolve) => {
     if (!navigator.geolocation) { resolve(null); return; }
@@ -238,6 +282,99 @@ const PortalHome = () => {
         </div>
       </div>
 
+      {/* Missed Clock-Out Notices */}
+      {unclosedPast.length > 0 && (
+        <div
+          className="card"
+          style={{
+            padding: '1.25rem',
+            marginBottom: '1.25rem',
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(217,119,6,0.04) 100%)',
+            border: '1px solid rgba(245,158,11,0.25)',
+            borderRadius: 'var(--radius-lg, 12px)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              background: 'rgba(245,158,11,0.15)', color: '#d97706',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <AlertCircle size={18} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--dark)' }}>
+                Missed Clock-Out Notice ({unclosedPast.length})
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                You forgot to clock out on shift(s) below. The system recorded departure at 5:30 PM.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {unclosedPast.map(att => {
+              const reg = att.regularization;
+              const dateStr = new Date(att.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+              return (
+                <div
+                  key={att.id}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    background: 'var(--white)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(245,158,11,0.2)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dark)' }}>{dateStr}</span>
+                      <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(245,158,11,0.15)', color: '#d97706', fontWeight: 600 }}>
+                        Auto Clocked-Out (5:30 PM)
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      Clock-in: {formatTime(att.clock_in_time)} · Recorded Hours: {formatHours(att.working_hours) || '8h 30m'}
+                    </div>
+                    {reg && (
+                      <div style={{ fontSize: '0.72rem', marginTop: '0.3rem', fontWeight: 500, color: reg.status === 'pending' ? '#d97706' : reg.status === 'approved' ? '#16a34a' : '#dc2626' }}>
+                        {reg.status === 'pending' && `⏳ Adjustment to ${formatTime(reg.requested_clock_out_time)} pending HR approval`}
+                        {reg.status === 'approved' && `✅ Adjustment approved (${formatTime(reg.requested_clock_out_time)})`}
+                        {reg.status === 'rejected' && `❌ Adjustment rejected by HR`}
+                      </div>
+                    )}
+                  </div>
+
+                  {(!reg || reg.status === 'rejected') && (
+                    <button
+                      onClick={() => handleOpenRegModal(att)}
+                      style={{
+                        background: '#f59e0b',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(245,158,11,0.3)',
+                      }}
+                    >
+                      Request Time Adjustment
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Today status */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -386,6 +523,75 @@ const PortalHome = () => {
           </div>
         </button>
       </div>
+
+      {/* Clock-Out Adjustment Modal */}
+      {regModalOpen && selectedReg && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem',
+          backdropFilter: 'blur(2px)',
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '440px', padding: '1.5rem', background: 'var(--white)', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--dark)' }}>
+              Request Clock-Out Adjustment
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
+              For shift on <strong>{new Date(selectedReg.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}</strong> (Clock-in: {formatTime(selectedReg.clock_in_time)}).
+            </p>
+
+            <form onSubmit={handleRegularizeSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem', color: 'var(--dark)' }}>
+                  Actual Departure Time <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="time"
+                  required
+                  className="form-control"
+                  value={regForm.requested_time}
+                  onChange={e => setRegForm(prev => ({ ...prev, requested_time: e.target.value }))}
+                  style={{ width: '100%', padding: '0.6rem', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem', color: 'var(--dark)' }}>
+                  Reason for Adjustment <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  className="form-control"
+                  placeholder="e.g. Worked on project with client until 6:30 PM, forgot to clock out before leaving..."
+                  value={regForm.reason}
+                  onChange={e => setRegForm(prev => ({ ...prev, reason: e.target.value }))}
+                  style={{ width: '100%', padding: '0.6rem', fontSize: '0.82rem', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setRegModalOpen(false)}
+                  className="btn btn-ghost"
+                  style={{ border: '1px solid var(--surface-2)', padding: '0.5rem 1rem' }}
+                  disabled={regSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ background: '#f59e0b', borderColor: '#f59e0b', padding: '0.5rem 1.25rem', fontWeight: 600 }}
+                  disabled={regSubmitting}
+                >
+                  {regSubmitting ? 'Submitting...' : 'Submit to HR'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

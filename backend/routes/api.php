@@ -177,6 +177,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('attendance/calendar', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'calendar']);
         Route::get('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'index']);
         Route::patch('attendance/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'update']);
+        Route::get('attendance/unclosed-past', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'unclosedOrAutoAttendances']);
+        Route::post('attendance/regularize', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'requestRegularization']);
+        Route::get('attendance/regularizations', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'listRegularizations']);
+        Route::patch('attendance/regularizations/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'updateRegularization']);
 
         // Leaves
         Route::get('leaves/my-balance', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'myBalance']);
