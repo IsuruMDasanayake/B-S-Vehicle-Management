@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Search, Bell, User, LogOut } from 'lucide-react';
+import { Menu, Search, User, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../../store/authStore';
+import { HRNotificationBell } from './HRNotificationBell';
 
 export const HRNavbar = ({ toggleMobileOpen }) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -66,8 +67,8 @@ export const HRNavbar = ({ toggleMobileOpen }) => {
         </div>
       </div>
 
-      {/* Right side: date/time + user */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+      {/* Right side: date/time + notifications + user */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
 
         {/* Live Date & Time */}
         {!isMobile && (
@@ -84,6 +85,9 @@ export const HRNavbar = ({ toggleMobileOpen }) => {
             </div>
           </div>
         )}
+
+        {/* HR Notification Bell */}
+        <HRNotificationBell />
 
         {/* Divider */}
         {!isMobile && <div style={{ width: '1px', height: '32px', background: 'var(--surface-2)' }} />}

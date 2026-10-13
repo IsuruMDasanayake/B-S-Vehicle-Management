@@ -1,17 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, UserCheck, UserX, Umbrella, Clock, UserPlus,
   Cake, FileWarning, CalendarClock, Banknote,
-  TrendingUp, RefreshCw,
+  TrendingUp, RefreshCw, Bell, ArrowRight,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import api from '../../../services/api';
-
-
 
 const DEPT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -55,6 +53,7 @@ const HRDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
+  const [recentAlerts, setRecentAlerts] = useState([]);
 
   const fetchStats = async () => {
     try {
@@ -67,13 +66,34 @@ const HRDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchStats().finally(() => setLoading(false));
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const res = await api.get('/notifications', { params: { division: 'hr', unread_only: true } });
+      if (res.data) setRecentAlerts(res.data.notifications || []);
+    } catch {
+      // silent
+    }
   }, []);
+
+  useEffect(() => {
+    Promise.all([fetchStats(), fetchAlerts()]).finally(() => setLoading(false));
+
+    const handleUpdate = () => {
+      fetchAlerts();
+      fetchStats();
+    };
+    window.addEventListener('hr-leaves-updated', handleUpdate);
+    window.addEventListener('hr-notifications-updated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('hr-leaves-updated', handleUpdate);
+      window.removeEventListener('hr-notifications-updated', handleUpdate);
+    };
+  }, [fetchAlerts]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchStats();
+    await Promise.all([fetchStats(), fetchAlerts()]);
     setRefreshing(false);
   };
 
@@ -125,6 +145,75 @@ const HRDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Action Center / Urgent HR Alerts */}
+      {recentAlerts.length > 0 && (
+        <div
+          className="card"
+          style={{
+            marginBottom: '1.5rem',
+            padding: '1rem 1.25rem',
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.06), rgba(245,158,11,0.06))',
+            border: '1px solid rgba(59,130,246,0.2)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(59,130,246,0.15)', color: '#3b82f6' }}>
+                <Bell size={15} />
+              </span>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--dark)' }}>
+                Action Required ({recentAlerts.length})
+              </h3>
+            </div>
+            <button
+              onClick={() => navigate('/solar/hr/admin/leave')}
+              style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+            >
+              Open Leave Management <ArrowRight size={13} />
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
+            {recentAlerts.slice(0, 4).map(alert => (
+              <div
+                key={alert.id}
+                onClick={() => {
+                  api.post(`/notifications/${alert.id}/mark-read`).catch(() => {});
+                  navigate(alert.data?.link || '/solar/hr/admin/leave');
+                }}
+                style={{
+                  background: 'var(--white)',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--surface-2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#3b82f6'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--surface-2)'}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {alert.data?.title || 'Notification'}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {alert.data?.message || ''}
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3b82f6', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                  Review <ArrowRight size={12} />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>

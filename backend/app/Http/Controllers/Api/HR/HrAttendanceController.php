@@ -128,6 +128,27 @@ class HrAttendanceController extends Controller
 
         $msg = 'Clocked in successfully at ' . $location->name;
 
+        if ($record->status === 'late') {
+            try {
+                $adminUsers = \App\Models\User::where(function($q) {
+                    $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                      ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+                })->get();
+
+                \Illuminate\Support\Facades\Notification::send($adminUsers, new \App\Notifications\HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'attendance',
+                    'severity'   => 'warning',
+                    'title'      => 'Late Arrival Alert',
+                    'message'    => "{$employee->full_name} clocked in late at " . $now->copy()->timezone('Asia/Colombo')->format('h:i A') . " ({$location->name}).",
+                    'link'       => '/solar/hr/admin/attendance',
+                    'source_id'  => $record->id,
+                ]));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('HR Notification error on late clock in: ' . $e->getMessage());
+            }
+        }
+
         return response()->json([
             'message' => $msg,
             'data'    => $record->load('clockInLocation'),

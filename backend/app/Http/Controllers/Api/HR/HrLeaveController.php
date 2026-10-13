@@ -186,6 +186,25 @@ class HrLeaveController extends Controller
             'status'      => 'pending',
         ]);
 
+        try {
+            $adminUsers = \App\Models\User::where(function($q) {
+                $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+            })->get();
+
+            \Illuminate\Support\Facades\Notification::send($adminUsers, new \App\Notifications\HrNotification([
+                'division'   => 'hr',
+                'category'   => 'leave',
+                'severity'   => 'warning',
+                'title'      => 'New Leave Request',
+                'message'    => "{$employee->full_name} applied for " . ($typeStr === 'short' ? "{$validated['hours_count']} hour(s) short leave" : "{$validated['days_count']} day(s) {$typeStr} leave") . ".",
+                'link'       => '/solar/hr/admin/leave',
+                'source_id'  => $leave->id,
+            ]));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('HR Notification error on leave store: ' . $e->getMessage());
+        }
+
         return response()->json(['message' => 'Leave request submitted', 'data' => $leave], 201);
     }
 
@@ -202,6 +221,26 @@ class HrLeaveController extends Controller
         }
 
         $leave->update(['status' => 'cancelled']);
+
+        try {
+            $adminUsers = \App\Models\User::where(function($q) {
+                $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+            })->get();
+
+            \Illuminate\Support\Facades\Notification::send($adminUsers, new \App\Notifications\HrNotification([
+                'division'   => 'hr',
+                'category'   => 'leave',
+                'severity'   => 'info',
+                'title'      => 'Leave Request Cancelled',
+                'message'    => "{$employee->full_name} cancelled their {$leave->leave_type} leave request.",
+                'link'       => '/solar/hr/admin/leave',
+                'source_id'  => $leave->id,
+            ]));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('HR Notification error on leave cancel: ' . $e->getMessage());
+        }
+
         return response()->json(['message' => 'Leave request cancelled']);
     }
 
@@ -346,6 +385,57 @@ class HrLeaveController extends Controller
         }
 
         $leave->update($updateData);
+
+        try {
+            $emp = $leave->employee;
+            $statusLabels = [
+                'manager_approved' => ['title' => 'Leave Manager Approved', 'msg' => "Manager approved {$emp?->full_name}'s leave request. Ready for HR final approval.", 'sev' => 'info'],
+                'manager_rejected' => ['title' => 'Leave Manager Rejected', 'msg' => "Manager rejected {$emp?->full_name}'s leave request.", 'sev' => 'danger'],
+                'approved'         => ['title' => 'Leave Approved by HR', 'msg' => "HR approved {$emp?->full_name}'s leave request.", 'sev' => 'success'],
+                'rejected'         => ['title' => 'Leave Rejected by HR', 'msg' => "HR rejected {$emp?->full_name}'s leave request.", 'sev' => 'danger'],
+            ];
+
+            $info = $statusLabels[$validated['status']] ?? ['title' => 'Leave Status Updated', 'msg' => "Leave status updated to {$validated['status']}", 'sev' => 'info'];
+
+            $adminUsers = \App\Models\User::where(function($q) {
+                $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+            })->where('id', '!=', $user->id)->get();
+
+            if ($adminUsers->isNotEmpty()) {
+                \Illuminate\Support\Facades\Notification::send($adminUsers, new \App\Notifications\HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'leave',
+                    'severity'   => $info['sev'],
+                    'title'      => $info['title'],
+                    'message'    => $info['msg'],
+                    'link'       => '/solar/hr/admin/leave',
+                    'source_id'  => $leave->id,
+                ]));
+            }
+
+            if ($emp && $emp->user) {
+                $empMsg = match($validated['status']) {
+                    'manager_approved' => 'Your leave request has been approved by Manager and forwarded to HR.',
+                    'manager_rejected' => 'Your leave request has been rejected by Manager.',
+                    'approved'         => 'Your leave request has been officially approved by HR!',
+                    'rejected'         => 'Your leave request has been rejected by HR.',
+                    default            => "Your leave request status is now {$validated['status']}.",
+                };
+
+                $emp->user->notify(new \App\Notifications\HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'leave',
+                    'severity'   => $info['sev'],
+                    'title'      => $info['title'],
+                    'message'    => $empMsg,
+                    'link'       => '/solar/hr/portal/leaves',
+                    'source_id'  => $leave->id,
+                ]));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('HR Notification error on status update: ' . $e->getMessage());
+        }
 
         return response()->json(['message' => "Leave status updated to {$validated['status']}", 'data' => $leave]);
     }

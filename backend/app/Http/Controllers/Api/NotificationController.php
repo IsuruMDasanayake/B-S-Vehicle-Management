@@ -11,22 +11,33 @@ class NotificationController extends Controller
     {
         $user = $request->user();
         $division = $request->query('division');
+        $category = $request->query('category');
+        $unreadOnly = $request->boolean('unread_only');
         
-        $query = $user->notifications();
+        $baseQuery = $user->notifications();
         
-        if ($division === 'solar') {
-            $query->where('type', 'like', '%SupervisorUpdateNotification%');
+        if ($division === 'hr') {
+            $baseQuery->where('type', 'like', '%HrNotification%');
+        } elseif ($division === 'solar') {
+            $baseQuery->where('type', 'like', '%SupervisorUpdateNotification%');
         } elseif ($division === 'vehicle') {
-            $query->where('type', 'not like', '%SupervisorUpdateNotification%');
+            $baseQuery->where('type', 'not like', '%SupervisorUpdateNotification%')
+                      ->where('type', 'not like', '%HrNotification%');
+        }
+
+        $unreadCount = (clone $baseQuery)->whereNull('read_at')->count();
+
+        if ($unreadOnly) {
+            $baseQuery->whereNull('read_at');
+        }
+
+        if ($category) {
+            $baseQuery->where('data->category', $category);
         }
         
         return response()->json([
-            'unread_count' => $query->whereNull('read_at')->count(),
-            'notifications' => $user->notifications()->when($division === 'solar', function ($q) {
-                return $q->where('type', 'like', '%SupervisorUpdateNotification%');
-            })->when($division === 'vehicle', function ($q) {
-                return $q->where('type', 'not like', '%SupervisorUpdateNotification%');
-            })->take(50)->get(),
+            'unread_count'  => $unreadCount,
+            'notifications' => $baseQuery->latest()->take(50)->get(),
         ]);
     }
 
@@ -41,7 +52,19 @@ class NotificationController extends Controller
 
     public function markAllAsRead(Request $request)
     {
-        $request->user()->unreadNotifications->markAsRead();
+        $division = $request->query('division');
+        $query = $request->user()->unreadNotifications();
+
+        if ($division === 'hr') {
+            $query->where('type', 'like', '%HrNotification%');
+        } elseif ($division === 'solar') {
+            $query->where('type', 'like', '%SupervisorUpdateNotification%');
+        } elseif ($division === 'vehicle') {
+            $query->where('type', 'not like', '%SupervisorUpdateNotification%')
+                  ->where('type', 'not like', '%HrNotification%');
+        }
+
+        $query->update(['read_at' => now()]);
         return response()->json(['message' => 'All marked as read']);
     }
 }
