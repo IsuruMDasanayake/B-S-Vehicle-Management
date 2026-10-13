@@ -54,6 +54,10 @@ const PortalLeave = () => {
       submitData.days_count = 0;
     } else {
       if (!form.end_date) { toast.error('Please select end date'); return; }
+      if (form.start_date > form.end_date) {
+        toast.error('End date cannot be earlier than start date');
+        return;
+      }
       submitData.hours_count = null;
       let d = calcDays(form.start_date, form.end_date);
       if (form.is_half_day && form.start_date === form.end_date) d = 0.5;
@@ -85,8 +89,8 @@ const PortalLeave = () => {
   // Working days between dates
   const calcDays = (start, end) => {
     if (!start || !end) return 0;
-    let d = new Date(start), count = 0;
-    const e = new Date(end);
+    let d = new Date(start + 'T00:00:00'), count = 0;
+    const e = new Date(end + 'T00:00:00');
     while (d <= e) { const day = d.getDay(); if (day !== 0 && day !== 6) count++; d.setDate(d.getDate() + 1); }
     return count;
   };
@@ -190,12 +194,25 @@ const PortalLeave = () => {
               <div style={{ display: 'grid', gridTemplateColumns: form.leave_type === 'short' ? '1fr' : '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">{form.leave_type === 'short' ? 'Date' : 'Start Date'}</label>
-                  <input type="date" className="form-control" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} required min={new Date().toISOString().split('T')[0]} />
+                  <input 
+                    type="date" 
+                    className="form-control" 
+                    value={form.start_date} 
+                    onChange={e => setForm({ ...form, start_date: e.target.value })} 
+                    required 
+                  />
                 </div>
                 {form.leave_type !== 'short' && (
                   <div className="form-group">
                     <label className="form-label">End Date</label>
-                    <input type="date" className="form-control" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} required min={form.start_date || new Date().toISOString().split('T')[0]} />
+                    <input 
+                      type="date" 
+                      className="form-control" 
+                      value={form.end_date} 
+                      onChange={e => setForm({ ...form, end_date: e.target.value })} 
+                      required 
+                      min={form.start_date || undefined} 
+                    />
                   </div>
                 )}
               </div>

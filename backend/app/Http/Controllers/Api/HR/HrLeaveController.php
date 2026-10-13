@@ -22,8 +22,9 @@ class HrLeaveController extends Controller
         return response()->json($balances);
     }
 
-    private function calculateLeaveBalances(HrEmployee $employee, int $targetYear)
+    private function calculateLeaveBalances(HrEmployee $employee, int $targetYear, ?int $targetMonth = null)
     {
+        $targetMonth = $targetMonth ?? Carbon::now()->month;
         $joinDate = Carbon::parse($employee->joined_date);
         $joinYear = $joinDate->year;
         $joinQuarter = $joinDate->quarter;
@@ -74,7 +75,7 @@ class HrLeaveController extends Controller
                     ->where('leave_type', 'short')
                     ->whereIn('status', ['approved', 'pending', 'manager_approved'])
                     ->whereYear('start_date', $targetYear)
-                    ->whereMonth('start_date', Carbon::now()->month)
+                    ->whereMonth('start_date', $targetMonth)
                     ->sum('hours_count');
                     
                 $balances[] = [
@@ -127,15 +128,17 @@ class HrLeaveController extends Controller
 
         $validated = $request->validate([
             'leave_type' => 'required|in:annual,casual,medical,short',
-            'start_date' => 'required|date|after_or_equal:today',
+            'start_date' => 'required|date',
             'end_date'   => 'required_unless:leave_type,short|date|after_or_equal:start_date|nullable',
             'days_count' => 'exclude_if:leave_type,short|required_unless:leave_type,short|numeric|min:0.5',
             'hours_count'=> 'required_if:leave_type,short|integer|min:1|max:2|nullable',
             'reason'     => 'nullable|string|max:500',
         ]);
 
-        $year = Carbon::parse($validated['start_date'])->year;
-        $balances = $this->calculateLeaveBalances($employee, $year);
+        $startDate = Carbon::parse($validated['start_date']);
+        $year = $startDate->year;
+        $month = $startDate->month;
+        $balances = $this->calculateLeaveBalances($employee, $year, $month);
         $typeStr = $validated['leave_type'];
         
         $balanceRecord = collect($balances)->firstWhere('key', $typeStr);
