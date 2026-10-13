@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
-  BellRing, Send, BellOff, X
+  BellRing, BellOff, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
@@ -136,22 +136,16 @@ const PortalHome = () => {
     try {
       await subscribeToPushNotifications();
       await checkPush();
-      toast.success('Lock-screen alerts enabled! You will receive shift reminders.');
+      // Automatically send one-time verification alert so the employee sees it works immediately
+      try {
+        await sendTestPushNotification();
+        toast.success('Lock-screen alerts enabled! A test notification was sent to your phone.', { duration: 4500 });
+      } catch {
+        toast.success('Lock-screen alerts enabled! You will receive shift reminders at 5:30 PM.');
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to enable notifications.');
       await checkPush();
-    } finally {
-      setPushLoading(false);
-    }
-  };
-
-  const handleTestPush = async () => {
-    setPushLoading(true);
-    try {
-      await sendTestPushNotification();
-      toast.success('Test alert sent! Check your phone notification tray / lock screen.');
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Test push notification failed');
     } finally {
       setPushLoading(false);
     }
@@ -416,58 +410,6 @@ const PortalHome = () => {
         </div>
       )}
 
-      {/* When Push Alerts Are Subscribed / Active */}
-      {pushStatus.supported && pushStatus.isSubscribed && (
-        <div
-          style={{
-            marginBottom: '1.25rem',
-            padding: '0.65rem 0.9rem',
-            borderRadius: '10px',
-            background: 'rgba(16,185,129,0.08)',
-            border: '1px solid rgba(16,185,129,0.22)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.5rem',
-          }}
-        >
-          {/* <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.76rem', color: '#065f46' }}>
-            <span style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#10b981',
-              boxShadow: '0 0 0 3px rgba(16,185,129,0.25)',
-              display: 'inline-block',
-              flexShrink: 0,
-            }} />
-            <span style={{ fontWeight: 600 }}>Lock-Screen Alerts Active</span>
-            <span style={{ color: '#047857', opacity: 0.85 }}>· 5:30 PM reminder set</span>
-          </div> */}
-          <button
-            type="button"
-            onClick={handleTestPush}
-            disabled={pushLoading}
-            style={{
-              background: 'rgba(16,185,129,0.15)',
-              border: '1px solid rgba(16,185,129,0.3)',
-              color: '#065f46',
-              padding: '0.25rem 0.6rem',
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
-            title="Send a test notification to your lock screen now"
-          >
-            {pushLoading ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={11} />}
-            <span>Test</span>
-          </button>
-        </div>
-      )}
 
       {/* When Notifications are Blocked in Browser */}
       {pushStatus.supported && pushStatus.permission === 'denied' && (
