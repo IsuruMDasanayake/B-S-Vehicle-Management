@@ -79,10 +79,13 @@ class WebPushController extends Controller
     {
         $user = $request->user();
 
+        $isStaffOrAdmin = in_array($user->role ?? '', ['superadmin', 'admin', 'hr_manager', 'super_admin']);
+        $link = $isStaffOrAdmin ? '/solar/hr/admin/dashboard' : '/solar/hr/portal/home';
+
         $result = $this->webPushService->sendToUsers($user, [
-            'title'     => '🔔 HR Push Notification Test',
-            'body'      => 'Desktop push notifications are enabled and functioning for Circle HR!',
-            'link'      => '/solar/hr/admin/dashboard',
+            'title'     => '🔔 Circle HR Notification Test',
+            'body'      => 'Lock-screen alerts are enabled! You will receive shift & attendance reminders on this device.',
+            'link'      => $link,
             'category'  => 'general',
             'severity'  => 'success',
             'source_id' => 'test-' . time(),
