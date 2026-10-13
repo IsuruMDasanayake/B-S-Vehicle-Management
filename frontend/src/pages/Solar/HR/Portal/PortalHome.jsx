@@ -104,6 +104,7 @@ const PortalHome = () => {
       ]);
       setEmployee(empRes.data);
       setToday(todayRes.data);
+      setLocations(locRes.data || []);
       const todayStr = new Date().toISOString().split('T')[0];
       const pastOnly = (unclosedRes.data || []).filter(r => {
         const rDate = r.date ? r.date.split('T')[0] : '';
@@ -189,22 +190,26 @@ const PortalHome = () => {
   const getGPS = () => new Promise((resolve) => {
     if (!navigator.geolocation) { resolve(null); return; }
     
-    // Attempt 1: High accuracy, 15s timeout, cache for 1 minute
+    // Attempt 1: High accuracy, 10s timeout, cache for 1 minute
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err1) => {
+        if (err1.code === 1) { // PERMISSION_DENIED
+          resolve(null);
+          return;
+        }
         console.warn('High accuracy GPS failed, falling back to low accuracy...', err1);
-        // Attempt 2: Low accuracy (network/cell tower), 25s timeout, cache for 5 mins
+        // Attempt 2: Low accuracy (network/cell tower), 10s timeout, cache for 5 mins
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
           (err2) => {
             console.error('Low accuracy GPS also failed:', err2);
             resolve(null);
           },
-          { enableHighAccuracy: false, timeout: 25000, maximumAge: 300000 }
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
         );
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   });
 
@@ -224,10 +229,14 @@ const PortalHome = () => {
 
   // Background GPS check for the alert banner
   useEffect(() => {
-    if (!loading && needsClocking && locations.length > 0) {
+    if (!loading && needsClocking) {
+      if (!locations || locations.length === 0) {
+        setZoneAlert({ loading: false, msg: 'No active work zones configured.', color: 'var(--text-muted)', bg: 'var(--surface-2)' });
+        return;
+      }
       getGPS().then(gps => {
         if (!gps) {
-          setZoneAlert({ loading: false, msg: 'Location access denied. Please enable GPS to clock in.', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' });
+          setZoneAlert({ loading: false, msg: 'Location access denied or unavailable. Please enable GPS.', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' });
           return;
         }
         let nearest = null;
@@ -242,8 +251,9 @@ const PortalHome = () => {
         });
 
         if (nearest) {
-          if (minDistance <= nearest.radius_meters) {
-            const action = canClockOut ? 'clock out' : 'clock in';
+          const action = canClockOut ? 'clock out' : 'clock in';
+          const radius = Number(nearest.radius_meters) || 100;
+          if (minDistance <= radius) {
             setZoneAlert({ loading: false, msg: `📍 You are inside the approved zone (${nearest.name}). Ready to ${action}!`, color: '#22c55e', bg: 'rgba(34,197,94,0.1)' });
           } else {
             setZoneAlert({ loading: false, msg: `⚠️ You are ${Math.round(minDistance)}m away from the nearest zone (${nearest.name}).`, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' });
@@ -253,7 +263,7 @@ const PortalHome = () => {
         }
       });
     }
-  }, [loading, needsClocking, locations]);
+  }, [loading, needsClocking, locations, canClockOut]);
 
   const handleClockIn = async () => {
     setClocking(true);
