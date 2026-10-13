@@ -1,9 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
+import {
+  MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
+  BellRing, Send, BellOff, X
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
 import toast from 'react-hot-toast';
+import {
+  isPushNotificationSupported,
+  getPushNotificationStatus,
+  subscribeToPushNotifications,
+  sendTestPushNotification,
+} from '../../../../utils/pushNotifications';
 
 const STATUS_COLORS = {
   present:  { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'Present' },
@@ -58,6 +67,26 @@ const PortalHome = () => {
   const [regForm, setRegForm] = useState({ requested_time: '17:30', reason: '' });
   const [regSubmitting, setRegSubmitting] = useState(false);
 
+  // Push notifications state for employee device
+  const [pushStatus, setPushStatus] = useState({
+    supported: false,
+    permission: 'default',
+    isSubscribed: false,
+  });
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushBannerDismissed, setPushBannerDismissed] = useState(
+    () => localStorage.getItem('emp_push_banner_dismissed') === '1'
+  );
+
+  const checkPush = useCallback(async () => {
+    try {
+      const status = await getPushNotificationStatus();
+      setPushStatus(status);
+    } catch (e) {
+      console.warn('Failed to query push status:', e);
+    }
+  }, []);
+
   // Live clock
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -75,8 +104,12 @@ const PortalHome = () => {
       ]);
       setEmployee(empRes.data);
       setToday(todayRes.data);
-      setLocations(locRes.data);
-      setUnclosedPast(unclosedRes.data || []);
+      const todayStr = new Date().toISOString().split('T')[0];
+      const pastOnly = (unclosedRes.data || []).filter(r => {
+        const rDate = r.date ? r.date.split('T')[0] : '';
+        return rDate && rDate < todayStr;
+      });
+      setUnclosedPast(pastOnly);
 
       // Calculate month stats
       const records = histRes.data || [];
@@ -92,10 +125,37 @@ const PortalHome = () => {
       // silent
     } finally {
       setLoading(false);
+      checkPush();
     }
-  }, []);
+  }, [checkPush]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleEnablePush = async () => {
+    setPushLoading(true);
+    try {
+      await subscribeToPushNotifications();
+      await checkPush();
+      toast.success('Lock-screen alerts enabled! You will receive shift reminders.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to enable notifications.');
+      await checkPush();
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleTestPush = async () => {
+    setPushLoading(true);
+    try {
+      await sendTestPushNotification();
+      toast.success('Test alert sent! Check your phone notification tray / lock screen.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Test push notification failed');
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const handleOpenRegModal = (att) => {
     setSelectedReg(att);
@@ -270,6 +330,167 @@ const PortalHome = () => {
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{employee?.designation?.name} · {employee?.employee_id}</p>
       </div>
+
+      {/* Native Web Push / Lock Screen Notifications Banner */}
+      {pushStatus.supported && !pushStatus.isSubscribed && pushStatus.permission !== 'denied' && !pushBannerDismissed && (
+        <div
+          className="card"
+          style={{
+            padding: '1rem 1.15rem',
+            marginBottom: '1.25rem',
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(59,130,246,0.05) 100%)',
+            border: '1px solid rgba(99,102,241,0.22)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            position: 'relative',
+          }}
+        >
+          <button
+            onClick={() => {
+              setPushBannerDismissed(true);
+              localStorage.setItem('portal_push_dismissed', '1');
+            }}
+            style={{
+              position: 'absolute',
+              top: '0.65rem',
+              right: '0.65rem',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title="Dismiss"
+          >
+            <X size={16} />
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', paddingRight: '1.25rem' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: 'rgba(99,102,241,0.15)',
+              color: '#6366f1',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              marginTop: '2px',
+            }}>
+              <BellRing size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--dark)', marginBottom: '0.2rem' }}>
+                Never Forget to Clock Out!
+              </div>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                Enable lock-screen alerts to get a reminder at <strong>5:30 PM</strong> before leaving, even when your phone is locked or browser is closed.
+              </p>
+              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleEnablePush}
+                  disabled={pushLoading}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    background: '#4f46e5',
+                    borderColor: '#4f46e5',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
+                  {pushLoading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <BellRing size={13} />}
+                  <span>Enable Lock-Screen Alerts</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* When Push Alerts Are Subscribed / Active */}
+      {pushStatus.supported && pushStatus.isSubscribed && (
+        <div
+          style={{
+            marginBottom: '1.25rem',
+            padding: '0.65rem 0.9rem',
+            borderRadius: '10px',
+            background: 'rgba(16,185,129,0.08)',
+            border: '1px solid rgba(16,185,129,0.22)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.76rem', color: '#065f46' }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              boxShadow: '0 0 0 3px rgba(16,185,129,0.25)',
+              display: 'inline-block',
+              flexShrink: 0,
+            }} />
+            <span style={{ fontWeight: 600 }}>Lock-Screen Alerts Active</span>
+            <span style={{ color: '#047857', opacity: 0.85 }}>· 5:30 PM reminder set</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleTestPush}
+            disabled={pushLoading}
+            style={{
+              background: 'rgba(16,185,129,0.15)',
+              border: '1px solid rgba(16,185,129,0.3)',
+              color: '#065f46',
+              padding: '0.25rem 0.6rem',
+              borderRadius: '6px',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+            title="Send a test notification to your lock screen now"
+          >
+            {pushLoading ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={11} />}
+            <span>Test</span>
+          </button>
+        </div>
+      )}
+
+      {/* When Notifications are Blocked in Browser */}
+      {pushStatus.supported && pushStatus.permission === 'denied' && (
+        <div
+          style={{
+            marginBottom: '1.25rem',
+            padding: '0.65rem 0.9rem',
+            borderRadius: '10px',
+            background: 'rgba(239,68,68,0.06)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            fontSize: '0.75rem',
+            color: '#b91c1c',
+          }}
+        >
+          <BellOff size={16} style={{ flexShrink: 0 }} />
+          <span>
+            Lock-screen alerts are blocked in browser settings. Tap the lock icon in the address bar to allow notifications for 5:30 PM shift reminders.
+          </span>
+        </div>
+      )}
 
       {/* Live clock */}
       <div className="card" style={{ padding: '1.5rem', textAlign: 'center', marginBottom: '1.25rem', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>

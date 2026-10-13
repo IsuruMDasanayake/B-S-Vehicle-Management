@@ -1,8 +1,14 @@
-import { useState, useEffect } from 'react';
-import { User, Phone, MapPin, Mail, Lock, Loader2, Save } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { User, Phone, MapPin, Mail, Lock, Loader2, Save, BellRing, Send, BellOff } from 'lucide-react';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
 import toast from 'react-hot-toast';
+import {
+  getPushNotificationStatus,
+  subscribeToPushNotifications,
+  unsubscribeFromPushNotifications,
+  sendTestPushNotification,
+} from '../../../../utils/pushNotifications';
 
 const PortalProfile = () => {
   const user = useAuthStore(s => s.user);
@@ -14,6 +20,8 @@ const PortalProfile = () => {
   const [saving, setSaving] = useState(false);
   const [changingPwd, setChangingPwd] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const [pushStatus, setPushStatus] = useState({ supported: false, permission: 'default', isSubscribed: false });
+  const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
     api.get('/hr/employees/me')
@@ -29,6 +37,50 @@ const PortalProfile = () => {
       .catch(() => toast.error('Failed to load profile'))
       .finally(() => setLoading(false));
   }, []);
+
+  const checkPush = useCallback(async () => {
+    try {
+      const status = await getPushNotificationStatus();
+      setPushStatus(status);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    checkPush();
+  }, [checkPush]);
+
+  const handleTogglePush = async () => {
+    setPushLoading(true);
+    try {
+      if (pushStatus.isSubscribed) {
+        await unsubscribeFromPushNotifications();
+        toast.success('Lock-screen alerts disabled for this device.');
+      } else {
+        await subscribeToPushNotifications();
+        toast.success('Lock-screen alerts enabled! You will receive shift reminders at 5:30 PM.');
+      }
+      await checkPush();
+    } catch (err) {
+      toast.error(err.message || 'Push notification configuration failed.');
+      await checkPush();
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleTestPush = async () => {
+    setPushLoading(true);
+    try {
+      await sendTestPushNotification();
+      toast.success('Test alert sent! Check your phone lock screen or notification tray.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to dispatch test notification.');
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -136,6 +188,78 @@ const PortalProfile = () => {
               </button>
             </div>
           </form>
+        )}
+      </div>
+
+      {/* Device Notifications Card */}
+      <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <BellRing size={16} color="var(--primary)" />
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Lock-Screen Push Alerts</span>
+        </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+          Receive native notifications directly on your phone lock screen or notification tray at <strong>5:30 PM</strong> to remind you to clock out before leaving.
+        </p>
+
+        {!pushStatus.supported ? (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--surface-2)', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
+            Push notifications are not supported on this browser. Use Chrome or Edge on Android / Safari on iOS 16.4+ (added to Home Screen).
+          </div>
+        ) : pushStatus.permission === 'denied' ? (
+          <div style={{ fontSize: '0.75rem', color: '#b91c1c', background: 'rgba(239,68,68,0.08)', padding: '0.6rem 0.75rem', borderRadius: '8px', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <BellOff size={16} style={{ flexShrink: 0 }} />
+            <span>Notifications are blocked in your browser settings. Please allow notifications in site settings to receive reminders.</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--surface-2)' }}>
+              <div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Shift Reminders (5:30 PM)</div>
+                <div style={{ fontSize: '0.72rem', color: pushStatus.isSubscribed ? '#10b981' : 'var(--text-muted)' }}>
+                  {pushStatus.isSubscribed ? '● Active on this device' : '○ Not enabled'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleTogglePush}
+                disabled={pushLoading}
+                className={`btn btn-sm ${pushStatus.isSubscribed ? 'btn-ghost' : 'btn-primary'}`}
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.35rem 0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  ...(pushStatus.isSubscribed ? { border: '1px solid var(--surface-2)', color: 'var(--danger)' } : { background: '#3b82f6', borderColor: '#3b82f6' })
+                }}
+              >
+                {pushLoading && <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />}
+                <span>{pushStatus.isSubscribed ? 'Disable' : 'Enable'}</span>
+              </button>
+            </div>
+
+            {pushStatus.isSubscribed && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={handleTestPush}
+                  disabled={pushLoading}
+                  className="btn btn-sm btn-ghost"
+                  style={{
+                    fontSize: '0.73rem',
+                    padding: '0.3rem 0.65rem',
+                    border: '1px solid var(--surface-2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <Send size={12} />
+                  <span>Send Test Alert to Phone</span>
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

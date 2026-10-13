@@ -459,16 +459,13 @@ class HrAttendanceController extends Controller
 
         $this->autoClosePastAttendances($employee->id);
 
+        $today = Carbon::today('Asia/Colombo')->toDateString();
         $cutoff = Carbon::now('Asia/Colombo')->subDays(14)->toDateString();
         $records = HrAttendance::with(['regularization', 'clockInLocation'])
             ->where('employee_id', $employee->id)
+            ->where('date', '<', $today)
             ->where('date', '>=', $cutoff)
-            ->where(function($q) {
-                $q->where('is_auto_clock_out', true)
-                  ->orWhere(function($sub) {
-                      $sub->whereNotNull('clock_in_time')->whereNull('clock_out_time');
-                  });
-            })
+            ->where('is_auto_clock_out', true)
             ->orderByDesc('date')
             ->get();
 
