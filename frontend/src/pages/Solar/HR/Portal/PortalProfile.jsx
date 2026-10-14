@@ -141,8 +141,10 @@ const PortalProfile = () => {
             : <span style={{ fontSize: '2rem', fontWeight: 700, color: '#fff' }}>{emp?.full_name?.[0] || '?'}</span>
           }
         </div>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{emp?.full_name}</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{emp?.designation?.name} · {emp?.employee_id}</p>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>{emp?.full_name}</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: 0 }}>
+          {emp?.designation?.title || emp?.designation?.name || 'Staff'} {emp?.employee_id ? `· ${emp.employee_id}` : ''}
+        </p>
       </div>
 
       {/* Details */}

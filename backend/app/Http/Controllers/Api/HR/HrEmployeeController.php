@@ -157,11 +157,88 @@ class HrEmployeeController extends Controller
     // ── Employee: View own profile ────────────────────────────────────────────
     public function me(Request $request)
     {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
         $employee = HrEmployee::with(['department', 'designation'])
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->first();
 
-        if (!$employee) return response()->json(['message' => 'Employee profile not found'], 404);
+        // 1. If not linked by user_id, search by company_email or personal_email and link
+        if (!$employee && !empty($user->email)) {
+            $employee = HrEmployee::with(['department', 'designation'])
+                ->where(function($q) use ($user) {
+                    $q->where('company_email', $user->email)
+                      ->orWhere('personal_email', $user->email);
+                })
+                ->first();
+
+            if ($employee) {
+                $employee->update(['user_id' => $user->id]);
+            }
+        }
+
+        // 2. Auto-provision profile for leave approval managers (CEO, GM) or staff without an HR record
+        if (!$employee) {
+            $isManager = HrLeaveController::isLeaveApprovalManager($user);
+            $userEmail = strtolower(trim($user->email ?? ''));
+
+            $dept = \App\Models\HrDepartment::where('name', 'like', '%Management%')->first()
+                 ?? \App\Models\HrDepartment::first();
+
+            $title = 'Employee';
+            if ($isManager) {
+                $title = str_contains($userEmail, 'eranda')
+                    ? 'Chief Executive Officer'
+                    : 'General Manager & Project Director';
+            }
+
+            $desig = null;
+            if ($dept) {
+                $desig = \App\Models\HrDesignation::firstOrCreate(
+                    ['title' => $title, 'department_id' => $dept->id],
+                    ['level' => $isManager ? 'C_Level' : 'Mid']
+                );
+            }
+
+            $empCode = $isManager
+                ? 'MGT-' . str_pad($user->id, 3, '0', STR_PAD_LEFT)
+                : 'EMP-' . str_pad($user->id, 3, '0', STR_PAD_LEFT);
+
+            if (HrEmployee::where('employee_id', $empCode)->exists()) {
+                $empCode .= '-' . time();
+            }
+
+            try {
+                $employee = HrEmployee::create([
+                    'user_id'         => $user->id,
+                    'employee_id'     => $empCode,
+                    'full_name'       => $user->name ?: ($isManager ? 'Executive' : 'Employee'),
+                    'company_email'   => $user->email,
+                    'department_id'   => $dept?->id,
+                    'designation_id'  => $desig?->id,
+                    'employment_type' => 'permanent',
+                    'joined_date'     => now()->startOfYear()->toDateString(),
+                    'status'          => 'active',
+                ]);
+                $employee->load(['department', 'designation']);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Auto-provisioning employee profile error: ' . $e->getMessage());
+                return response()->json([
+                    'id'            => null,
+                    'user_id'       => $user->id,
+                    'full_name'     => $user->name,
+                    'company_email' => $user->email,
+                    'employee_id'   => $empCode,
+                    'designation'   => ['title' => $title],
+                    'department'    => ['name' => $dept?->name ?? 'Management'],
+                    'status'        => 'active',
+                ]);
+            }
+        }
+
         return response()->json($employee);
     }
 
