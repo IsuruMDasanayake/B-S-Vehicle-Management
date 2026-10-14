@@ -432,7 +432,7 @@ class HrAttendanceController extends Controller
         foreach ($unclosed as $att) {
             $dateStr = Carbon::parse($att->date)->toDateString();
             $clockIn = Carbon::parse($att->clock_in_time);
-            $clockOut = Carbon::parse($dateStr . ' ' . self::SHIFT_END, 'Asia/Colombo');
+            $clockOut = Carbon::parse($dateStr . ' ' . self::SHIFT_END, 'Asia/Colombo')->utc();
             if ($clockIn->greaterThan($clockOut)) {
                 $clockOut = $clockIn->copy()->addHour();
             }
@@ -490,7 +490,7 @@ class HrAttendanceController extends Controller
             ->where('employee_id', $employee->id)
             ->firstOrFail();
 
-        $requestedTime = Carbon::parse($validated['requested_clock_out_time']);
+        $requestedTime = Carbon::parse($validated['requested_clock_out_time'], 'Asia/Colombo')->utc();
 
         if ($att->clock_in_time && $requestedTime->lessThan(Carbon::parse($att->clock_in_time))) {
             return response()->json(['message' => 'Requested clock-out time must be after clock-in time.'], 422);
