@@ -41,8 +41,9 @@ class AutoClockOut extends Command
             $dateStr = Carbon::parse($att->date)->toDateString();
             $clockIn = Carbon::parse($att->clock_in_time);
             
-            // Default auto clock-out time: 17:30:00 (5:30 PM) on that shift day
-            $clockOut = Carbon::parse($dateStr . ' ' . self::SHIFT_END, 'Asia/Colombo');
+            // Default auto clock-out time: 17:30:00 (5:30 PM) on that shift day in Sri Lanka timezone
+            // Stored as UTC (12:00:00 UTC) so that client browsers in Sri Lanka render 17:30 (5:30 PM)
+            $clockOut = Carbon::parse($dateStr . ' ' . self::SHIFT_END, 'Asia/Colombo')->utc();
 
             // If employee clocked in after 17:30, set clock out to clock in + 1 hour as safety fallback
             if ($clockIn->greaterThan($clockOut)) {
