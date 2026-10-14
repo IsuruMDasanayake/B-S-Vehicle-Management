@@ -51,9 +51,11 @@ const CountUpNumber = ({ end, suffix }) => {
 };
 
 export const StatsCard = () => {
+  const isDuo = stats.length === 2;
+
   return (
     <div className="cgw-container cgw-stats-card-wrap">
-      <div className="cgw-stats-card">
+      <div className={`cgw-stats-card ${isDuo ? 'is-duo' : ''}`}>
         {stats.map((stat, idx) => (
           <div key={idx} className="cgw-stat-item">
             <CountUpNumber end={stat.value} suffix={stat.suffix} />

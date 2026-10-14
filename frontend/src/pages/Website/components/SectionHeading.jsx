@@ -1,6 +1,27 @@
 import React from 'react';
 import { CELogo } from './CELogo';
 
+const renderTitle = (title) => {
+  if (typeof title !== 'string' || !title.includes('Engineering a')) {
+    return title;
+  }
+  const parts = title.split('Engineering a');
+  return (
+    <>
+      {parts.map((part, idx) => (
+        <React.Fragment key={idx}>
+          {idx > 0 && (
+            <>
+              <span className="cgw-headline-eng">Engineering</span> a
+            </>
+          )}
+          {part}
+        </React.Fragment>
+      ))}
+    </>
+  );
+};
+
 export const SectionHeading = ({
   eyebrow,
   title,
@@ -32,7 +53,7 @@ export const SectionHeading = ({
         className="cgw-heading-title"
         style={{ color: dark ? 'var(--cgw-white)' : 'var(--cgw-ink)' }}
       >
-        {title}{' '}
+        {renderTitle(title)}{' '}
         {highlight && (
           <span
             className="cgw-highlight"

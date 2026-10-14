@@ -22,7 +22,7 @@ export const Hero = () => {
           </div>
 
           <h1 className="cgw-hero-title" data-reveal data-delay="100" style={{ color: '#FFFFFF' }}>
-            {hero.titleLine1}{' '}
+            <span className="cgw-headline-eng">Engineering</span> a{' '}
             <span className="cgw-hero-highlight" style={{ color: 'var(--cgw-accent)' }}>
               {hero.highlight}
             </span>{' '}

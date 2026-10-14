@@ -70,8 +70,6 @@ export const hero = {
 export const stats = [
   { value: 50, suffix: ' MW', label: 'Hambantota Flagship Project' },
   { value: 70, suffix: '+ MW', label: 'Total Track Record & Pipeline' },
-  { value: 2.4, suffix: ' MW', label: 'Naula Solar Project (Completed)' },
-  { value: 'WTC', suffix: ' Colombo', label: 'Headquarters (30th Floor East Tower)' },
 ];
 
 export const about = {

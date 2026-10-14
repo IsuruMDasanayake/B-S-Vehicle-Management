@@ -233,6 +233,12 @@ button.cgw-btn-primary:hover {
   position: relative;
 }
 
+/* Optical kerning fix for Clash Display: adds breathing room after 'g' in 'Engineering' before 'a' */
+.cgw-headline-eng {
+  display: inline-block;
+  margin-right: 0.22em;
+}
+
 .cgw-heading-sub {
   font-size: 1.05rem;
   color: var(--cgw-muted);
@@ -460,16 +466,22 @@ button.cgw-btn-primary:hover {
   border-radius: var(--cgw-radius-lg);
   box-shadow: 0 20px 45px rgba(7, 26, 61, 0.12);
   border: 1px solid var(--cgw-border);
-  padding: 2rem 2.5rem;
+  padding: 2.2rem 3rem;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
   align-items: center;
+}
+
+.cgw-stats-card.is-duo {
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 .cgw-stat-item {
   text-align: center;
   position: relative;
+  padding: 0.5rem 1.5rem;
 }
 
 .cgw-stat-item:not(:last-child)::after {
@@ -484,17 +496,19 @@ button.cgw-btn-primary:hover {
 
 .cgw-stat-value {
   font-family: var(--cgw-font-display);
-  font-size: clamp(2rem, 3.2vw, 2.75rem);
+  font-size: clamp(2.4rem, 4.2vw, 3.4rem);
   font-weight: 700;
   color: var(--cgw-primary);
-  line-height: 1.1;
-  margin-bottom: 0.35rem;
+  line-height: 1.08;
+  margin-bottom: 0.45rem;
+  letter-spacing: -0.02em;
 }
 
 .cgw-stat-label {
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--cgw-muted);
+  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+  font-weight: 600;
+  color: var(--cgw-charcoal);
+  letter-spacing: 0.01em;
 }
 
 /* ── About Section ── */
@@ -1631,13 +1645,11 @@ button.cgw-btn-primary:hover {
 }
 
 @media (max-width: 768px) {
-  .cgw-stats-card {
+  .cgw-stats-card,
+  .cgw-stats-card.is-duo {
     grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
     padding: 1.5rem;
-  }
-  .cgw-stat-item:nth-child(2)::after {
-    display: none;
   }
   .cgw-mv-grid {
     grid-template-columns: 1fr;
@@ -1669,6 +1681,22 @@ button.cgw-btn-primary:hover {
   .cgw-footer-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .cgw-stats-card,
+  .cgw-stats-card.is-duo {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.6rem 1.25rem;
+  }
+  .cgw-stat-item:not(:last-child)::after {
+    display: none;
+  }
+  .cgw-stat-item:not(:last-child) {
+    border-bottom: 1px solid var(--cgw-border);
+    padding-bottom: 1.25rem;
   }
 }
 
