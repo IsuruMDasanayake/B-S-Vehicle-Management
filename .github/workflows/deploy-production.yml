@@ -30,8 +30,8 @@ jobs:
             git fetch origin production
             git reset --hard origin/production
             
-            # Set frontend command to build and preview for production
-            export FRONTEND_CMD="sh -c 'npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 5173'"
+            # Multi-stage production Nginx static file serving
+            export FRONTEND_CMD="nginx -g 'daemon off;'"
             
             # Use production Nginx config with SSL
             export NGINX_CONF_FILE="nginx.conf"

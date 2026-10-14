@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /vehicle/
+Disallow: /solar/
+Disallow: /portal
+Disallow: /upload/
+Disallow: /api/
+
+Sitemap: https://circlegroup.lk/sitemap.xml
