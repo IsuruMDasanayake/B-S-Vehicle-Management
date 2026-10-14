@@ -10,6 +10,17 @@ use Illuminate\Support\Carbon;
 
 class HrLeaveController extends Controller
 {
+    public static array $approvalManagerEmails = [
+        'hasintha@circlegroup.lk',
+        'eranda@circlegroup.lk',
+    ];
+
+    public static function isLeaveApprovalManager(?object $user): bool
+    {
+        if (!$user || empty($user->email)) return false;
+        return in_array(strtolower(trim($user->email)), self::$approvalManagerEmails, true);
+    }
+
     // ── Employee: Get my leave balance ─────────────────────────────────────────
     public function myBalance(Request $request)
     {
@@ -189,18 +200,23 @@ class HrLeaveController extends Controller
         try {
             $adminUsers = \App\Models\User::where(function($q) {
                 $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
-                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']))
+                  ->orWhereIn('email', self::$approvalManagerEmails);
             })->get();
 
-            \Illuminate\Support\Facades\Notification::send($adminUsers, new \App\Notifications\HrNotification([
-                'division'   => 'hr',
-                'category'   => 'leave',
-                'severity'   => 'warning',
-                'title'      => 'New Leave Request',
-                'message'    => "{$employee->full_name} applied for " . ($typeStr === 'short' ? "{$validated['hours_count']} hour(s) short leave" : "{$validated['days_count']} day(s) {$typeStr} leave") . ".",
-                'link'       => '/solar/hr/admin/leave',
-                'source_id'  => $leave->id,
-            ]));
+            foreach ($adminUsers as $adminUser) {
+                $isPortalMgr = self::isLeaveApprovalManager($adminUser);
+                $targetLink = $isPortalMgr ? '/solar/hr/portal/leaves?tab=approvals' : '/solar/hr/admin/leave';
+                $adminUser->notify(new \App\Notifications\HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'leave',
+                    'severity'   => 'warning',
+                    'title'      => 'New Leave Request',
+                    'message'    => "{$employee->full_name} applied for " . ($typeStr === 'short' ? "{$validated['hours_count']} hour(s) short leave" : "{$validated['days_count']} day(s) {$typeStr} leave") . ".",
+                    'link'       => $targetLink,
+                    'source_id'  => $leave->id,
+                ]));
+            }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('HR Notification error on leave store: ' . $e->getMessage());
         }
@@ -247,7 +263,8 @@ class HrLeaveController extends Controller
     // ── HR Admin: All leave requests ──────────────────────────────────────────
     public function index(Request $request)
     {
-        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+        $user = $request->user();
+        if (!$user->hasRole('super_admin') && !$user->hasRole('solar_hr_admin') && !self::isLeaveApprovalManager($user)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -271,7 +288,8 @@ class HrLeaveController extends Controller
     // ── HR Admin: Leave statistics summary ───────────────────────────────────
     public function stats(Request $request)
     {
-        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+        $user = $request->user();
+        if (!$user->hasRole('super_admin') && !$user->hasRole('solar_hr_admin') && !self::isLeaveApprovalManager($user)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -296,7 +314,8 @@ class HrLeaveController extends Controller
     // ── HR Admin / Super Admin: Unapproved leave counts for sidebar badge ─────
     public function unapprovedCounts(Request $request)
     {
-        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+        $user = $request->user();
+        if (!$user->hasRole('super_admin') && !$user->hasRole('solar_hr_admin') && !self::isLeaveApprovalManager($user)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -353,7 +372,7 @@ class HrLeaveController extends Controller
     {
         $user = $request->user();
         
-        $isManager = $user->hasRole('super_admin');
+        $isManager = $user->hasRole('super_admin') || self::isLeaveApprovalManager($user);
         $isHR = $user->hasRole('solar_hr_admin');
         
         if (!$isManager && !$isHR) {

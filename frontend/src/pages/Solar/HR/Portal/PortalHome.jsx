@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
-  BellRing, BellOff, X
+  BellRing, BellOff, X, CalendarDays
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
 import toast from 'react-hot-toast';
+import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import {
   isPushNotificationSupported,
   getPushNotificationStatus,
@@ -48,6 +49,7 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 const PortalHome = () => {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
+  const isManager = isLeaveApprovalManager(user);
 
   const [today, setToday] = useState(null);
   const [monthStats, setMonthStats] = useState(null);
@@ -55,6 +57,7 @@ const PortalHome = () => {
   const [loading, setLoading] = useState(true);
   const [clocking, setClocking] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [pendingLeaveApprovals, setPendingLeaveApprovals] = useState(0);
   
   // Location alert state
   const [locations, setLocations] = useState([]);
@@ -96,11 +99,11 @@ const PortalHome = () => {
   const fetchData = useCallback(async () => {
     try {
       const [empRes, todayRes, histRes, locRes, unclosedRes] = await Promise.all([
-        api.get('/hr/employees/me'),
-        api.get('/hr/attendance/today'),
-        api.get('/hr/attendance/my-history'),
-        api.get('/hr/locations'),
-        api.get('/hr/attendance/unclosed-past'),
+        api.get('/hr/employees/me').catch(() => ({ data: null })),
+        api.get('/hr/attendance/today').catch(() => ({ data: null })),
+        api.get('/hr/attendance/my-history').catch(() => ({ data: [] })),
+        api.get('/hr/locations').catch(() => ({ data: [] })),
+        api.get('/hr/attendance/unclosed-past').catch(() => ({ data: [] })),
       ]);
       setEmployee(empRes.data);
       setToday(todayRes.data);
@@ -122,15 +125,40 @@ const PortalHome = () => {
         return a;
       }, { present: 0, absent: 0, late: 0, halfDay: 0 });
       setMonthStats(stats);
+
+      // Check pending leave approvals for executive manager
+      if (isManager) {
+        try {
+          const unapprovedRes = await api.get('/hr/leaves/unapproved-counts');
+          setPendingLeaveApprovals(unapprovedRes.data?.pending || 0);
+        } catch {
+          // silent
+        }
+      }
     } catch {
       // silent
     } finally {
       setLoading(false);
       checkPush();
     }
-  }, [checkPush]);
+  }, [checkPush, isManager]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Listen to leave updates for real-time manager count
+  useEffect(() => {
+    if (!isManager) return;
+    const handleUpdate = async () => {
+      try {
+        const res = await api.get('/hr/leaves/unapproved-counts');
+        setPendingLeaveApprovals(res.data?.pending || 0);
+      } catch {
+        // silent
+      }
+    };
+    window.addEventListener('hr-leaves-updated', handleUpdate);
+    return () => window.removeEventListener('hr-leaves-updated', handleUpdate);
+  }, [isManager]);
 
   const handleEnablePush = async () => {
     setPushLoading(true);
@@ -332,8 +360,67 @@ const PortalHome = () => {
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
           Hello, {employee?.full_name?.split(' ')[0] || user?.name?.split(' ')[0] || 'there'} 👋
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{employee?.designation?.name} · {employee?.employee_id}</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+          {employee?.designation?.title || employee?.designation?.name || (isManager ? 'Management' : 'Employee')}
+          {employee?.employee_id ? ` · ${employee.employee_id}` : ''}
+        </p>
       </div>
+
+      {/* Executive Leave Approval Alert for CEO & GM */}
+      {isManager && pendingLeaveApprovals > 0 && (
+        <div
+          className="card"
+          onClick={() => navigate('/solar/hr/portal/leaves?tab=approvals')}
+          style={{
+            padding: '1rem 1.15rem',
+            marginBottom: '1.25rem',
+            background: 'linear-gradient(135deg, rgba(14,165,233,0.08) 0%, rgba(2,132,199,0.04) 100%)',
+            border: '1px solid rgba(14,165,233,0.25)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'rgba(14,165,233,0.15)',
+              color: '#0284c7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <CalendarDays size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>
+                {pendingLeaveApprovals} Leave Request{pendingLeaveApprovals > 1 ? 's' : ''} Awaiting Approval
+              </div>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                Employee requests waiting for Manager Approval
+              </p>
+            </div>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            color: '#0284c7',
+            flexShrink: 0,
+          }}>
+            <span>Review</span>
+            <ChevronRight size={16} />
+          </div>
+        </div>
+      )}
 
       {/* Native Web Push / Lock Screen Notifications Banner */}
       {pushStatus.supported && !pushStatus.isSubscribed && pushStatus.permission !== 'denied' && !pushBannerDismissed && (
