@@ -1,4 +1,7 @@
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+const CircleGroupWebsite = lazy(() => import('./pages/Website/CircleGroupWebsite'));
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Vehicle/Dashboard/Dashboard';
 import VehiclesList from './pages/Vehicle/Vehicles/VehiclesList';
@@ -86,16 +89,6 @@ import SolarNotifications from './pages/Solar/Admin/SolarNotifications';
 // Solar Public
 import SupervisorUpload from './pages/Solar/Upload/SupervisorUpload';
 
-// Blank placeholder for circlegroup.lk root (future public website)
-const BlankPlaceholder = () => (
-  <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: 'sans-serif', flexDirection: 'column', gap: '1rem' }}>
-    <span style={{ fontSize: '2rem' }}>⭕</span>
-    <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0 }}>circlegroup.lk</p>
-  </div>
-);
-
-import { useEffect } from 'react';
-
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   return isAuthenticated ? children : <Navigate to="/vehicle/login" replace />;
@@ -126,8 +119,21 @@ function App() {
 
   return (
     <Routes>
-      {/* ── CircleGroup Root — blank placeholder (public website comes later) ── */}
-      <Route path="/" element={<BlankPlaceholder />} />
+      {/* ── Circle Engineering Official Public Website ───────────────────────── */}
+      <Route
+        path="/"
+        element={
+          <Suspense
+            fallback={
+              <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#071A3D', color: '#FFFFFF', fontFamily: 'sans-serif' }}>
+                Loading Circle Engineering...
+              </div>
+            }
+          >
+            <CircleGroupWebsite />
+          </Suspense>
+        }
+      />
 
       {/* ── CircleGroup Division Portal ─────────────────────────────────────── */}
       <Route path="/portal" element={<CircleGroupLanding />} />
