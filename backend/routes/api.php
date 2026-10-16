@@ -198,6 +198,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('announcements', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'index']);
         Route::post('announcements', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'store']);
         Route::delete('announcements/{id}', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'destroy']);
+
+        // Monthly Performance Appraisals (MBO Policy)
+        Route::get('appraisals/my', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'myAppraisals']);
+        Route::get('appraisals/current', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'getOrInitialize']);
+        Route::post('appraisals/{id}/objectives', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'saveObjectives']);
+        Route::post('appraisals/{id}/self-submit', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'submitSelfAppraisal']);
+        Route::get('appraisals/team', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'teamAppraisals']);
+        Route::post('appraisals/{id}/evaluate', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'evaluateAppraisal']);
+        Route::get('appraisals/{id}/suggest-attendance', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'suggestAttendanceDeduction']);
+        Route::post('appraisals/{id}/deductions', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'applyDeductions']);
+        Route::post('appraisals/{id}/director-approve', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'directorApproval']);
+        Route::post('appraisals/batch-director-approve', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'batchDirectorApproval']);
+        Route::get('appraisals/stats', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'stats']);
+        Route::get('appraisals', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'index']);
     });
 });
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Clock, CalendarDays, User, Megaphone, LogOut } from 'lucide-react';
+import { Home, Clock, CalendarDays, User, Megaphone, LogOut, Award } from 'lucide-react';
 import useAuthStore from '../../../../store/authStore';
 import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import api from '../../../../services/api';
@@ -9,8 +9,9 @@ const navItems = [
   { to: 'home',         icon: Home,         label: 'Home' },
   { to: 'attendance',   icon: Clock,        label: 'Attendance' },
   { to: 'leaves',       icon: CalendarDays, label: 'Leave' },
+  { to: 'appraisals',   icon: Award,        label: 'MBO' },
   { to: 'profile',      icon: User,         label: 'Profile' },
-  { to: 'announcements',icon: Megaphone,    label: 'Updates' },
+  // { to: 'announcements',icon: Megaphone,    label: 'Updates' },
 ];
 
 const PortalNav = () => {

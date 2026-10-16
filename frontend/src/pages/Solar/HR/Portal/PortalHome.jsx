@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
-  BellRing, BellOff, X, CalendarDays
+  BellRing, BellOff, X, CalendarDays, Award
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
@@ -755,31 +755,44 @@ const PortalHome = () => {
       )}
 
       {/* Quick links */}
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.65rem' }}>
         <button
           onClick={() => navigate('/solar/hr/portal/leaves')}
           className="card"
-          style={{ flex: 1, padding: '1rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+          style={{ padding: '0.85rem 0.65rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
-            <AlertCircle size={18} />
+          <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', flexShrink: 0 }}>
+            <CalendarDays size={16} />
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>Apply Leave</div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Submit request</div>
+            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Leave</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Apply / Track</div>
+          </div>
+        </button>
+        <button
+          onClick={() => navigate('/solar/hr/portal/appraisals')}
+          className="card"
+          style={{ padding: '0.85rem 0.65rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366f1', flexShrink: 0 }}>
+            <Award size={16} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>MBO Goals</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Performance</div>
           </div>
         </button>
         <button
           onClick={() => navigate('/solar/hr/portal/announcements')}
           className="card"
-          style={{ flex: 1, padding: '1rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+          style={{ padding: '0.85rem 0.65rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
-            <AlertCircle size={18} />
+          <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b', flexShrink: 0 }}>
+            <AlertCircle size={16} />
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>Announcements</div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Company updates</div>
+            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Updates</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Announce</div>
           </div>
         </button>
       </div>
