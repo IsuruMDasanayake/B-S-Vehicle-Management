@@ -24,7 +24,7 @@ export const snapshot = {
   industry: 'Renewable Energy',
   coreBusiness: 'Enterprise-level and utility-scale solar project EPC',
   operations: 'Sri Lanka',
-  workforce: 'Approximately 20 employees',
+  workforce: 'Approximately 50+ employees',
   tagline: 'Engineering a Sustainable Energy Future',
 };
 

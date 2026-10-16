@@ -15,13 +15,13 @@ export const CompanySnapshot = () => {
               </div>
               <h2 className="cgw-snapshot-title">{snapshot.companyName}</h2>
               <p className="cgw-snapshot-tagline">
-                Registration No. <strong>{snapshot.regNo}</strong> · {snapshot.tagline}
+                {snapshot.tagline}
               </p>
             </div>
-            <div className="cgw-snapshot-reg-pill">
+            {/* <div className="cgw-snapshot-reg-pill">
               <span className="cgw-snapshot-reg-label">ROC Sri Lanka</span>
               <span className="cgw-snapshot-reg-num">{snapshot.regNo}</span>
-            </div>
+            </div> */}
           </div>
 
           <div className="cgw-snapshot-grid">

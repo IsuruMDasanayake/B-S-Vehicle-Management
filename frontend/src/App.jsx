@@ -77,6 +77,8 @@ import PortalAttendance from './pages/Solar/HR/Portal/PortalAttendance';
 import PortalLeave from './pages/Solar/HR/Portal/PortalLeave';
 import PortalProfile from './pages/Solar/HR/Portal/PortalProfile';
 import PortalAnnouncements from './pages/Solar/HR/Portal/PortalAnnouncements';
+import PortalAppraisal from './pages/Solar/HR/Portal/PortalAppraisal';
+import AppraisalManagement from './pages/Solar/HR/Appraisals/AppraisalManagement';
 import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
 import SolarSites from './pages/Solar/Admin/SolarSites';
 import SolarProjects from './pages/Solar/Admin/SolarProjects';
@@ -230,6 +232,7 @@ function App() {
         <Route path="attendance/report" element={<AttendanceReport />} />
         <Route path="locations" element={<LocationsList />} />
         <Route path="leave" element={<LeaveManagement />} />
+        <Route path="appraisals" element={<AppraisalManagement />} />
       </Route>
 
       {/* ── HR Employee Portal ──────────────────────────────────────────── */}
@@ -239,6 +242,7 @@ function App() {
         <Route path="home" element={<PortalHome />} />
         <Route path="attendance" element={<PortalAttendance />} />
         <Route path="leaves" element={<PortalLeave />} />
+        <Route path="appraisals" element={<PortalAppraisal />} />
         <Route path="profile" element={<PortalProfile />} />
         <Route path="announcements" element={<PortalAnnouncements />} />
       </Route>
