@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit2, Mail, Phone, MapPin, Calendar, Briefcase, User, Clock, FileText, Package, CalendarCheck, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit2, Mail, Phone, MapPin, Calendar, Briefcase, User, Clock, FileText, Package, CalendarCheck, Download, Trash2, Award } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import PrintableScorecardModal from '../Appraisals/PrintableScorecardModal';
+import PerformanceTrendSparkline from '../Appraisals/PerformanceTrendSparkline';
 
 const STATUS_COLORS = {
   active:     { bg: 'rgba(34,197,94,0.12)',  color: '#16a34a' },
@@ -57,6 +59,10 @@ const EmployeeProfile = () => {
   const [assetModal, setAssetModal] = useState(false);
   const [assetForm, setAssetForm] = useState({ id: null, name: '', asset_id: '', assigned_date: new Date().toISOString().split('T')[0], status: 'assigned' });
   const [assetSaving, setAssetSaving] = useState(false);
+
+  // MBO Scorecard Modal State
+  const [scorecardAppraisalId, setScorecardAppraisalId] = useState(null);
+  const [scorecardOpen, setScorecardOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -160,12 +166,13 @@ const EmployeeProfile = () => {
   const initials = (emp.full_name || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   const tabs = [
-    { key: 'personal',   label: 'Personal',   icon: User },
-    { key: 'employment', label: 'Employment', icon: Briefcase },
-    { key: 'attendance', label: 'Attendance', icon: Clock },
-    { key: 'leave',      label: 'Leave',      icon: CalendarCheck },
-    { key: 'documents',  label: 'Documents',  icon: FileText },
-    { key: 'assets',     label: 'Assets',     icon: Package },
+    { key: 'personal',    label: 'Personal',          icon: User },
+    { key: 'employment',  label: 'Employment',        icon: Briefcase },
+    { key: 'performance', label: 'Performance & MBO', icon: Award },
+    { key: 'attendance',  label: 'Attendance',        icon: Clock },
+    { key: 'leave',       label: 'Leave',             icon: CalendarCheck },
+    { key: 'documents',   label: 'Documents',         icon: FileText },
+    { key: 'assets',      label: 'Assets',            icon: Package },
   ];
 
   return (
@@ -186,30 +193,56 @@ const EmployeeProfile = () => {
 
       {/* Hero Card */}
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: emp.photo_url ? 'transparent' : avatarColor, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0, border: '3px solid rgba(59,130,246,0.2)', overflow: 'hidden' }}>
-            {emp.photo_url ? <img src={emp.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontSize: '1.2rem', margin: 0 }}>{emp.full_name}</h2>
-              <span style={{ padding: '0.2rem 0.75rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
-                {(emp.status || '').replace('_', ' ')}
-              </span>
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap', flex: 1, minWidth: '300px' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: emp.photo_url ? 'transparent' : avatarColor, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0, border: '3px solid rgba(59,130,246,0.2)', overflow: 'hidden' }}>
+              {emp.photo_url ? <img src={emp.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
             </div>
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              {[
-                { icon: Briefcase, val: `${emp.designation?.title || '—'} · ${emp.department?.name || '—'}` },
-                { icon: Mail,      val: emp.company_email },
-                { icon: Phone,     val: emp.phone },
-                { icon: MapPin,    val: emp.work_location },
-                { icon: Calendar,  val: emp.joined_date ? `Joined ${new Date(emp.joined_date).toLocaleDateString('en-GB')}` : null },
-              ].filter(x => x.val).map(({ icon: Icon, val }, i) => (
-                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  <Icon size={14} /> {val}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.2rem', margin: 0 }}>{emp.full_name}</h2>
+                <span style={{ padding: '0.2rem 0.75rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
+                  {(emp.status || '').replace('_', ' ')}
                 </span>
-              ))}
+              </div>
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                {[
+                  { icon: Briefcase, val: `${emp.designation?.title || '—'} · ${emp.department?.name || '—'}` },
+                  { icon: Mail,      val: emp.company_email },
+                  { icon: Phone,     val: emp.phone },
+                  { icon: MapPin,    val: emp.work_location },
+                  { icon: Calendar,  val: emp.joined_date ? `Joined ${new Date(emp.joined_date).toLocaleDateString('en-GB')}` : null },
+                ].filter(x => x.val).map(({ icon: Icon, val }, i) => (
+                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <Icon size={14} /> {val}
+                  </span>
+                ))}
+              </div>
             </div>
+          </div>
+
+          {/* 6-Month MBO Sparkline Snapshot */}
+          <div style={{
+            background: 'var(--surface, #f8fafc)',
+            padding: '0.6rem 0.9rem',
+            borderRadius: '10px',
+            border: '1px solid var(--surface-2, #e2e8f0)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '0.25rem',
+          }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              6-Mo MBO Trajectory
+            </span>
+            <PerformanceTrendSparkline
+              employeeId={id}
+              compact={true}
+              onOpenScorecard={(appId) => {
+                setScorecardAppraisalId(appId);
+                setScorecardOpen(true);
+              }}
+            />
           </div>
         </div>
       </div>
@@ -275,6 +308,20 @@ const EmployeeProfile = () => {
               <InfoRow label="Basic Salary"       value={emp.basic_salary ? `LKR ${parseFloat(emp.basic_salary).toLocaleString()}` : null} />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Performance & MBO ── */}
+      {activeTab === 'performance' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <PerformanceTrendSparkline
+            employeeId={id}
+            compact={false}
+            onOpenScorecard={(appId) => {
+              setScorecardAppraisalId(appId);
+              setScorecardOpen(true);
+            }}
+          />
         </div>
       )}
 
@@ -478,6 +525,16 @@ const EmployeeProfile = () => {
           </form>
         </div>
       )}
+
+      {/* Printable Official Scorecard Modal */}
+      <PrintableScorecardModal
+        appraisalId={scorecardAppraisalId}
+        isOpen={scorecardOpen}
+        onClose={() => {
+          setScorecardOpen(false);
+          setScorecardAppraisalId(null);
+        }}
+      />
     </div>
   );
 };

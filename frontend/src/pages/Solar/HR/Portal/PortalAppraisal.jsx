@@ -3,12 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Target, Award, CheckCircle, Clock, AlertTriangle, Loader2,
   Calendar, FileText, Check, ChevronRight, X, TrendingUp,
-  Percent, ShieldAlert, Sparkles, Send, Edit3, UserCheck, AlertCircle
+  Percent, ShieldAlert, Sparkles, Send, Edit3, UserCheck, AlertCircle, Printer
 } from 'lucide-react';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
 import toast from 'react-hot-toast';
 import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
+import PrintableScorecardModal from '../Appraisals/PrintableScorecardModal';
 
 const GRADE_CONFIG = {
   S1: { label: 'S1 · Outstanding', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', border: '#8b5cf6', pay: '116% - 120%' },
@@ -54,6 +55,11 @@ const PortalAppraisal = () => {
   const [directorStats, setDirectorStats] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [directorLoading, setDirectorLoading] = useState(false);
+
+  // Modal: Printable Official Scorecard
+  const [scorecardAppraisalId, setScorecardAppraisalId] = useState(null);
+  const [scorecardAppraisalData, setScorecardAppraisalData] = useState(null);
+  const [scorecardOpen, setScorecardOpen] = useState(false);
 
   // Modals
   const [goalModalOpen, setGoalModalOpen] = useState(false);
@@ -467,6 +473,35 @@ const PortalAppraisal = () => {
                   )}
                 </div>
               )}
+
+              {/* Print Official Scorecard / PDF Button */}
+              <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScorecardAppraisalId(myAppraisal.id);
+                    setScorecardAppraisalData(myAppraisal);
+                    setScorecardOpen(true);
+                  }}
+                  className="btn btn-sm"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    background: '#fff',
+                    border: '1.5px solid #10b981',
+                    color: '#047857',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    padding: '0.45rem 1rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <Printer size={15} /> Print Official Scorecard / PDF Slip
+                </button>
+              </div>
             </div>
           )}
 
@@ -624,6 +659,19 @@ const PortalAppraisal = () => {
                         }}>
                           {item.grade}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScorecardAppraisalId(item.id);
+                            setScorecardAppraisalData(item);
+                            setScorecardOpen(true);
+                          }}
+                          className="btn btn-sm btn-ghost"
+                          title="Print Scorecard / Slip"
+                          style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#2563eb', border: '1px solid var(--surface-2)' }}
+                        >
+                          <Printer size={12} /> Slip
+                        </button>
                       </div>
                     ) : (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>In Progress</span>
@@ -709,14 +757,28 @@ const PortalAppraisal = () => {
                       )}
 
                       {(appraisal.status === 'manager_evaluated' || appraisal.status === 'hr_reviewed' || appraisal.status === 'approved') && (
-                        <button
-                          type="button"
-                          onClick={() => openEvalModal(appraisal)}
-                          className="btn btn-sm btn-ghost"
-                          style={{ border: '1px solid var(--surface-2)', fontSize: '0.75rem' }}
-                        >
-                          View Evaluation Details
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScorecardAppraisalId(appraisal.id);
+                              setScorecardAppraisalData(appraisal);
+                              setScorecardOpen(true);
+                            }}
+                            className="btn btn-sm btn-ghost"
+                            style={{ border: '1px solid var(--surface-2)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#2563eb' }}
+                          >
+                            <Printer size={13} /> Scorecard
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEvalModal(appraisal)}
+                            className="btn btn-sm btn-ghost"
+                            style={{ border: '1px solid var(--surface-2)', fontSize: '0.75rem' }}
+                          >
+                            View Evaluation Details
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -833,7 +895,19 @@ const PortalAppraisal = () => {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid var(--surface-2)' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid var(--surface-2)' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScorecardAppraisalId(appraisal.id);
+                        setScorecardAppraisalData(appraisal);
+                        setScorecardOpen(true);
+                      }}
+                      className="btn btn-sm btn-ghost"
+                      style={{ border: '1px solid var(--surface-2)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#2563eb' }}
+                    >
+                      <Printer size={13} /> Scorecard Slip
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -1322,6 +1396,20 @@ const PortalAppraisal = () => {
           </div>
         </div>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────────
+          MODAL: PRINTABLE OFFICIAL A4 SCORECARD
+      ───────────────────────────────────────────────────────────────── */}
+      <PrintableScorecardModal
+        appraisalId={scorecardAppraisalId}
+        appraisalData={scorecardAppraisalData}
+        isOpen={scorecardOpen}
+        onClose={() => {
+          setScorecardOpen(false);
+          setScorecardAppraisalId(null);
+          setScorecardAppraisalData(null);
+        }}
+      />
     </div>
   );
 };

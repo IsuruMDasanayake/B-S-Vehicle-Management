@@ -26,6 +26,9 @@ class Kernel extends ConsoleKernel
         // HR Attendance Reminders & Auto Clock-Out (Sri Lanka Standard Time)
         $schedule->command('hr:remind-clock-out')->dailyAt('17:30')->timezone('Asia/Colombo');
         $schedule->command('hr:auto-clock-out')->dailyAt('23:59')->timezone('Asia/Colombo');
+
+        // HR Monthly MBO Appraisal Reminders (25th for Employees, 1st for Managers & Directors)
+        $schedule->command('hr:remind-mbo-appraisal')->dailyAt('09:30')->timezone('Asia/Colombo');
     }
 
     /**

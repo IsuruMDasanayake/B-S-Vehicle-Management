@@ -3,10 +3,12 @@ import {
   Award, Target, CheckCircle, Clock, AlertTriangle, Loader2,
   Calendar, FileText, Search, Filter, ShieldAlert, Sparkles,
   ChevronRight, X, TrendingUp, Sliders, CheckSquare, RefreshCw,
-  Percent, ArrowRight
+  Percent, ArrowRight, Printer, BellRing, Send
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import PrintableScorecardModal from './PrintableScorecardModal';
+import PerformanceTrendSparkline from './PerformanceTrendSparkline';
 
 const GRADE_CONFIG = {
   S1: { label: 'S1 · Outstanding', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', border: '#8b5cf6', pay: '116% - 120%' },
@@ -58,6 +60,28 @@ export const AppraisalManagement = () => {
   // Modal: View Full Details
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState(null);
+
+  // Modal: Printable Official Scorecard
+  const [scorecardAppraisalId, setScorecardAppraisalId] = useState(null);
+  const [scorecardAppraisalData, setScorecardAppraisalData] = useState(null);
+  const [scorecardOpen, setScorecardOpen] = useState(false);
+
+  // Modal: Trigger Reminders
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+
+  const handleTriggerReminders = async (type) => {
+    setSendingReminder(true);
+    try {
+      const res = await api.post('/hr/appraisals/send-reminder', { type });
+      toast.success(res.data?.message || 'MBO Reminder notifications dispatched successfully');
+      setReminderModalOpen(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to dispatch reminders');
+    } finally {
+      setSendingReminder(false);
+    }
+  };
 
   // Fetch reference departments
   useEffect(() => {
@@ -181,15 +205,40 @@ export const AppraisalManagement = () => {
           </p>
         </div>
 
-        {/* Month Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#fff', padding: '0.45rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <Calendar size={16} color="#3b82f6" />
-          <input
-            type="month"
-            value={currentMonth}
-            onChange={(e) => setCurrentMonth(e.target.value)}
-            style={{ border: 'none', background: 'transparent', fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}
-          />
+        {/* Actions & Month Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setReminderModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: '#fff',
+              border: '1px solid #cbd5e1',
+              color: '#0f172a',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '10px',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            }}
+          >
+            <BellRing size={15} color="#f59e0b" />
+            <span>Send Reminders</span>
+          </button>
+
+          {/* Month Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#fff', padding: '0.45rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <Calendar size={16} color="#3b82f6" />
+            <input
+              type="month"
+              value={currentMonth}
+              onChange={(e) => setCurrentMonth(e.target.value)}
+              style={{ border: 'none', background: 'transparent', fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}
+            />
+          </div>
         </div>
       </div>
 
@@ -418,7 +467,22 @@ export const AppraisalManagement = () => {
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScorecardAppraisalId(appraisal.id);
+                              setScorecardAppraisalData(appraisal);
+                              setScorecardOpen(true);
+                            }}
+                            className="btn btn-sm btn-ghost"
+                            title="Print Official Scorecard / PDF"
+                            style={{ fontSize: '0.75rem', border: '1px solid #cbd5e1', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          >
+                            <Printer size={13} />
+                            <span>Scorecard</span>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => {
@@ -692,12 +756,155 @@ export const AppraisalManagement = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setDetailModalOpen(false)}>Close</button>
+            {/* 6-Month Performance Trajectory inside Details Modal */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <PerformanceTrendSparkline
+                employeeId={viewDetail.employee_id}
+                compact={false}
+                onOpenScorecard={(appId, item) => {
+                  setScorecardAppraisalId(appId);
+                  setScorecardAppraisalData(item);
+                  setScorecardOpen(true);
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setScorecardAppraisalId(viewDetail.id);
+                  setScorecardAppraisalData(viewDetail);
+                  setScorecardOpen(true);
+                }}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: '#2563eb',
+                  borderColor: '#2563eb',
+                  fontSize: '0.82rem',
+                }}
+              >
+                <Printer size={15} /> Print Official Scorecard
+              </button>
+
+              <button type="button" className="btn btn-ghost" onClick={() => setDetailModalOpen(false)}>
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────────
+          MODAL: SEND MONTHLY MBO REMINDERS
+      ───────────────────────────────────────────────────────────────── */}
+      {reminderModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1250, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '520px', padding: '1.5rem', borderRadius: '16px', background: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <BellRing size={20} color="#f59e0b" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Dispatch MBO Reminders</h3>
+              </div>
+              <button onClick={() => setReminderModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Dispatch in-app notifications and lock-screen WebPush alerts directly to employee and manager devices based on the Circle Engineering MBO policy schedule.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                padding: '1rem',
+                borderRadius: '10px',
+                border: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '1rem',
+              }}>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.85rem', color: '#0f172a' }}>
+                    25th Employee Reminder
+                  </strong>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    "Please finalize and submit your monthly MBO self-evaluations." (All active staff)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTriggerReminders('employee')}
+                  disabled={sendingReminder}
+                  className="btn btn-sm btn-primary"
+                  style={{ background: '#3b82f6', borderColor: '#3b82f6', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  {sendingReminder ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={14} />} Send Now
+                </button>
+              </div>
+
+              <div style={{
+                padding: '1rem',
+                borderRadius: '10px',
+                border: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '1rem',
+              }}>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.85rem', color: '#0f172a' }}>
+                    1st Manager & Director Reminder
+                  </strong>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    "Team evaluations & Director approvals pending for last month." (Managers, Admins & Directors)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTriggerReminders('manager')}
+                  disabled={sendingReminder}
+                  className="btn btn-sm btn-primary"
+                  style={{ background: '#f59e0b', borderColor: '#f59e0b', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  {sendingReminder ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={14} />} Send Now
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setReminderModalOpen(false)}
+                disabled={sendingReminder}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────
+          MODAL: PRINTABLE OFFICIAL A4 SCORECARD
+      ───────────────────────────────────────────────────────────────── */}
+      <PrintableScorecardModal
+        appraisalId={scorecardAppraisalId}
+        appraisalData={scorecardAppraisalData}
+        isOpen={scorecardOpen}
+        onClose={() => {
+          setScorecardOpen(false);
+          setScorecardAppraisalId(null);
+          setScorecardAppraisalData(null);
+        }}
+      />
     </div>
   );
 };

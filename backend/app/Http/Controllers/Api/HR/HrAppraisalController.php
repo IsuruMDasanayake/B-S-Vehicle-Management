@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
 
 class HrAppraisalController extends Controller
 {
@@ -727,5 +728,110 @@ class HrAppraisalController extends Controller
         }
 
         return response()->json($query->paginate(25));
+    }
+
+    // ── Single Appraisal Detail for Printable Scorecard ───────────────────────
+    public function show(Request $request, $id)
+    {
+        $appraisal = HrAppraisal::with([
+            'objectives',
+            'employee.department',
+            'employee.designation',
+            'employee.manager',
+            'evaluator.designation',
+            'evaluator.department',
+            'directorApprovedBy.designation',
+        ])->findOrFail($id);
+
+        $user = $request->user();
+        $currEmp = $this->resolveEmployee($request);
+        $isDirector = self::isProjectDirector($user);
+        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
+        $isManager = $currEmp && ($appraisal->evaluator_id === $currEmp->id || $appraisal->employee?->manager_id === $currEmp->id);
+        $isSelf = $currEmp && $appraisal->employee_id === $currEmp->id;
+
+        if (!$isDirector && !$isHr && !$isManager && !$isSelf) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return response()->json($appraisal);
+    }
+
+    // ── Employee 6-Month Appraisal Trend & History ────────────────────────────
+    public function employeeTrend(Request $request, $employeeId)
+    {
+        $user = $request->user();
+        $currEmp = $this->resolveEmployee($request);
+        $isDirector = self::isProjectDirector($user);
+        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
+
+        $targetEmp = HrEmployee::with(['department', 'designation'])->findOrFail($employeeId);
+        $isManager = $currEmp && $targetEmp->manager_id === $currEmp->id;
+        $isSelf = $currEmp && $currEmp->id === $targetEmp->id;
+
+        if (!$isDirector && !$isHr && !$isManager && !$isSelf) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Fetch up to 6 most recent completed/evaluated appraisals for this employee
+        $appraisals = HrAppraisal::with(['objectives', 'evaluator.designation'])
+            ->where('employee_id', $employeeId)
+            ->whereIn('status', ['evaluated', 'approved'])
+            ->orderBy('period_month', 'desc')
+            ->limit(6)
+            ->get()
+            ->reverse()
+            ->values();
+
+        $scores = $appraisals->pluck('final_score')->map(fn($s) => (float)$s)->all();
+        $avgScore = count($scores) > 0 ? round(array_sum($scores) / count($scores), 1) : null;
+
+        $trajectory = 'neutral';
+        $delta = 0;
+        if (count($scores) >= 2) {
+            $first = $scores[0];
+            $last = end($scores);
+            $delta = round($last - $first, 1);
+            if ($delta >= 2.0) {
+                $trajectory = 'improving';
+            } elseif ($delta <= -2.0) {
+                $trajectory = 'declining';
+            } else {
+                $trajectory = 'stable';
+            }
+        }
+
+        return response()->json([
+            'employee'   => [
+                'id'          => $targetEmp->id,
+                'name'        => $targetEmp->full_name,
+                'employee_id' => $targetEmp->employee_id,
+                'department'  => $targetEmp->department?->name,
+                'designation' => $targetEmp->designation?->title,
+            ],
+            'trend'      => $appraisals,
+            'scores'     => $scores,
+            'average'    => $avgScore,
+            'delta'      => $delta,
+            'trajectory' => $trajectory,
+        ]);
+    }
+
+    // ── On-Demand Reminder Dispatcher ─────────────────────────────────────────
+    public function triggerReminders(Request $request)
+    {
+        $user = $request->user();
+        if ($user->role !== 'solar_hr_admin' && !self::isProjectDirector($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $type = $request->input('type', 'employee'); // 'employee' or 'manager'
+        Artisan::call('hr:remind-mbo-appraisal', ['--type' => $type]);
+        $output = Artisan::output();
+
+        return response()->json([
+            'message' => 'MBO Reminder notifications dispatched successfully.',
+            'output'  => trim($output),
+        ]);
     }
 }
