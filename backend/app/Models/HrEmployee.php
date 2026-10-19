@@ -79,11 +79,34 @@ class HrEmployee extends Model
 
     /**
      * Auto-generate next employee ID: CE-001, CE-002 …
+     * Scans all existing records (including soft-deleted) to find the true maximum CE- number.
      */
     public static function generateEmployeeId(): string
     {
-        $last = static::withTrashed()->orderByDesc('id')->first();
-        $next = $last ? ((int) ltrim(substr($last->employee_id, 3), '0') + 1) : 1;
-        return 'CE-' . str_pad($next, 3, '0', STR_PAD_LEFT);
+        $existingCodes = static::withTrashed()
+            ->whereNotNull('employee_id')
+            ->pluck('employee_id')
+            ->toArray();
+
+        $maxNum = 0;
+        foreach ($existingCodes as $code) {
+            if (preg_match('/^CE-(\d+)$/i', trim($code), $matches)) {
+                $num = (int) $matches[1];
+                if ($num > $maxNum) {
+                    $maxNum = $num;
+                }
+            }
+        }
+
+        $nextNum = $maxNum + 1;
+        $candidate = 'CE-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+
+        // Keep incrementing if candidate somehow already exists
+        while (in_array($candidate, $existingCodes, true)) {
+            $nextNum++;
+            $candidate = 'CE-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+        }
+
+        return $candidate;
     }
 }

@@ -39,6 +39,7 @@ class HrEmployeeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'employee_id'               => 'nullable|string|max:50|unique:hr_employees,employee_id',
             'full_name'                 => 'required|string|max:255',
             'department_id'             => 'required|exists:hr_departments,id',
             'designation_id'            => 'required|exists:hr_designations,id',
@@ -71,11 +72,13 @@ class HrEmployeeController extends Controller
             $photoPath = $request->file('photo')->store('hr/photos', 'public');
         }
 
-        // Auto employee ID
-        $employeeId = HrEmployee::generateEmployeeId();
+        // Auto or manual employee ID
+        $employeeId = !empty($validated['employee_id'])
+            ? trim($validated['employee_id'])
+            : HrEmployee::generateEmployeeId();
 
         $employee = HrEmployee::create(array_merge(
-            collect($validated)->except(['create_user_account', 'user_password', 'photo'])->toArray(),
+            collect($validated)->except(['create_user_account', 'user_password', 'photo', 'employee_id'])->toArray(),
             ['employee_id' => $employeeId, 'photo' => $photoPath]
         ));
 
@@ -110,6 +113,7 @@ class HrEmployeeController extends Controller
     public function update(Request $request, HrEmployee $hrEmployee)
     {
         $validated = $request->validate([
+            'employee_id'               => 'sometimes|nullable|string|max:50|unique:hr_employees,employee_id,' . $hrEmployee->id,
             'full_name'                 => 'sometimes|required|string|max:255',
             'department_id'             => 'sometimes|required|exists:hr_departments,id',
             'designation_id'            => 'sometimes|required|exists:hr_designations,id',
