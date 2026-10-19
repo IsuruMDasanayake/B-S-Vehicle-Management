@@ -211,6 +211,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('appraisals/{id}/director-approve', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'directorApproval']);
         Route::post('appraisals/batch-director-approve', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'batchDirectorApproval']);
         Route::get('appraisals/stats', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'stats']);
+        Route::get('appraisals/employee/{employeeId}/trend', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'employeeTrend']);
+        Route::post('appraisals/send-reminder', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'triggerReminders']);
+        Route::get('appraisals/{id}', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'show']);
         Route::get('appraisals', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'index']);
     });
 });
