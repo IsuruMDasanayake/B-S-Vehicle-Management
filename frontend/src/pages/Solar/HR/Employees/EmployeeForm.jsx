@@ -19,6 +19,7 @@ const EmployeeForm = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
 
   const [form, setForm] = useState({
+    employee_id: '',
     full_name: '', nic: '', dob: '', gender: '', phone: '',
     personal_email: '', company_email: '', address: '',
     emergency_contact_name: '', emergency_contact_phone: '',
@@ -42,6 +43,7 @@ const EmployeeForm = () => {
         if (isEdit) {
           const { data } = await api.get(`/hr/employees/${id}`);
           setForm({
+            employee_id: data.employee_id || '',
             full_name: data.full_name || '',
             nic: data.nic || '',
             dob: data.dob ? data.dob.split('T')[0] : '',
@@ -215,6 +217,19 @@ const EmployeeForm = () => {
             {/* Employment */}
             {activeTab === 'employment' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Employee ID</label>
+                  <input
+                    className="form-control"
+                    style={inputStyle}
+                    value={form.employee_id}
+                    onChange={e => set('employee_id', e.target.value)}
+                    placeholder={isEdit ? "e.g. CE-005" : "Auto-generated (leave blank)"}
+                  />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.2rem' }}>
+                    {isEdit ? "Company ID code" : "Leave blank to auto-generate unique next ID (e.g. CE-007)"}
+                  </span>
+                </div>
                 <div className="form-group"><label className="form-label">Company Email</label><input type="email" className="form-control" style={inputStyle} value={form.company_email} onChange={e => set('company_email', e.target.value)} placeholder="name@circlegroup.lk" /></div>
                 <div className="form-group"><label className="form-label">Department *</label>
                   <select className="form-control" style={inputStyle} value={form.department_id} onChange={e => { set('department_id', e.target.value); set('designation_id', ''); }} required>
