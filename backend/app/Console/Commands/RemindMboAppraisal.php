@@ -16,14 +16,14 @@ class RemindMboAppraisal extends Command
      *
      * @var string
      */
-    protected $signature = 'hr:remind-mbo-appraisal {--type=auto : auto, employee (25th), or manager (1st)}';
+    protected $signature = 'hr:remind-mbo-appraisal {--type=auto : auto, employee (25th), manager (1st), appraiser, or objectives} {--month= : target month YYYY-MM}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Send monthly MBO performance appraisal reminders to employees (on 25th) and managers/directors (on 1st)';
+    protected $description = 'Send monthly MBO performance appraisal reminders to employees (on 25th), managers/directors (on 1st), or to Hasintha (Appraiser)';
 
     /**
      * Executive email list for directors.
@@ -38,17 +38,28 @@ class RemindMboAppraisal extends Command
         $now = Carbon::now('Asia/Colombo');
         $day = $now->day;
         $type = $this->option('type') ?: 'auto';
+        $targetMonth = $this->option('month');
 
-        $this->info("Executing MBO Reminders for {$now->toDateString()} (Day: {$day}, Type: {$type})");
+        $this->info("Executing MBO Reminders for {$now->toDateString()} (Day: {$day}, Type: {$type}, Month: " . ($targetMonth ?: 'current') . ")");
 
         // 1. Employee Reminder: Sent on 25th of current month (or if explicitly requested)
         if ($type === 'employee' || ($type === 'auto' && $day === 25)) {
-            $this->sendEmployeeReminders($now);
+            $this->sendEmployeeReminders($now, $targetMonth);
         }
 
         // 2. Manager & Director Reminder: Sent on 1st of following month (or if explicitly requested)
         if ($type === 'manager' || ($type === 'auto' && $day === 1)) {
-            $this->sendManagerAndDirectorReminders($now);
+            $this->sendManagerAndDirectorReminders($now, $targetMonth);
+        }
+
+        // 3. HR Reminder to Hasintha (Project Director / Appraiser) for pending evaluations & marks
+        if ($type === 'appraiser') {
+            $this->sendAppraiserEvaluationReminders($now, $targetMonth);
+        }
+
+        // 4. HR Reminder to Hasintha to assign monthly objectives & weights
+        if ($type === 'objectives') {
+            $this->sendAppraiserObjectivesReminders($now, $targetMonth);
         }
 
         if ($type === 'auto' && $day !== 25 && $day !== 1) {
@@ -61,9 +72,10 @@ class RemindMboAppraisal extends Command
     /**
      * Send reminders to all active employees to submit their monthly self-evaluations.
      */
-    protected function sendEmployeeReminders(Carbon $now): void
+    protected function sendEmployeeReminders(Carbon $now, ?string $targetMonth = null): void
     {
-        $currentMonthName = $now->format('F Y');
+        $monthCarbon = $targetMonth ? Carbon::parse($targetMonth . '-01') : $now;
+        $currentMonthName = $monthCarbon->format('F Y');
         $this->info("Sending employee self-appraisal reminders for {$currentMonthName}...");
 
         $activeEmployees = HrEmployee::with('user')
@@ -89,7 +101,7 @@ class RemindMboAppraisal extends Command
                 'title'     => '🎯 Monthly MBO Self-Evaluation Due',
                 'message'   => "Please finalize and submit your monthly MBO self-evaluations for {$currentMonthName}. Record your achievements and review your KPIs.",
                 'link'      => '/solar/hr/portal/appraisals',
-                'source_id' => 'mbo-self-' . $now->format('Y-m'),
+                'source_id' => 'mbo-self-' . $monthCarbon->format('Y-m'),
             ];
 
             try {
@@ -106,10 +118,9 @@ class RemindMboAppraisal extends Command
     /**
      * Send reminders to Line Managers, HR Admins, and Project Directors/CEO to finalize reviews.
      */
-    protected function sendManagerAndDirectorReminders(Carbon $now): void
+    protected function sendManagerAndDirectorReminders(Carbon $now, ?string $targetMonth = null): void
     {
-        // 1st of month refers to the preceding month's performance period
-        $prevMonth = $now->copy()->subMonth();
+        $prevMonth = $targetMonth ? Carbon::parse($targetMonth . '-01') : $now->copy()->subMonth();
         $prevMonthName = $prevMonth->format('F Y');
         $this->info("Sending manager & director evaluation reminders for {$prevMonthName}...");
 
@@ -140,14 +151,19 @@ class RemindMboAppraisal extends Command
         $sentCount = 0;
         foreach ($allRecipients as $user) {
             $isDirector = in_array(strtolower(trim($user->email)), self::$directorEmails, true);
+            $isAdmin = in_array($user->role, ['solar_hr_admin', 'super_admin'], true);
 
             $title = $isDirector
-                ? '📋 Monthly MBO Director Sign-Offs Pending'
-                : '⏳ Team MBO Evaluations Pending';
+                ? '📋 Monthly MBO Appraisals Pending Finalization'
+                : ($isAdmin ? '⏳ MBO Attendance & Misconduct Deductions Pending' : '⏳ Monthly MBO Evaluations');
 
             $message = $isDirector
-                ? "Team evaluations for {$prevMonthName} are ready for your review and official Director sign-off."
-                : "Team evaluations & Director approvals pending for {$prevMonthName}. Please finalize ratings and feedback.";
+                ? "Team appraisals for {$prevMonthName} are pending your final marks and sign-off."
+                : ($isAdmin
+                    ? "Employee appraisals for {$prevMonthName} need HR attendance & misconduct review."
+                    : "Appraisals pending for {$prevMonthName}.");
+
+            $targetLink = $isAdmin ? '/solar/hr/admin/appraisals' : '/solar/hr/portal/appraisals?tab=team';
 
             $payload = [
                 'division'  => 'hr',
@@ -155,7 +171,7 @@ class RemindMboAppraisal extends Command
                 'severity'  => 'warning',
                 'title'     => $title,
                 'message'   => $message,
-                'link'      => $isDirector ? '/solar/hr/portal/appraisals?tab=director' : '/solar/hr/portal/appraisals?tab=team',
+                'link'      => $targetLink,
                 'source_id' => 'mbo-eval-' . $prevMonth->format('Y-m'),
             ];
 
@@ -168,5 +184,71 @@ class RemindMboAppraisal extends Command
         }
 
         $this->info("Dispatched review reminders to {$sentCount} managers, admins, and directors.");
+    }
+
+    /**
+     * Send specific reminder from HR to Hasintha & Project Directors that employee submissions are pending marks.
+     */
+    protected function sendAppraiserEvaluationReminders(Carbon $now, ?string $targetMonth = null): void
+    {
+        $monthCarbon = $targetMonth ? Carbon::parse($targetMonth . '-01') : $now->copy()->subMonth();
+        $monthName = $monthCarbon->format('F Y');
+        $this->info("Sending Appraiser evaluation reminders to Hasintha & Directors for {$monthName}...");
+
+        $directors = User::whereIn('email', self::$directorEmails)->get();
+        $sentCount = 0;
+        foreach ($directors as $user) {
+            $payload = [
+                'division'  => 'hr',
+                'category'  => 'compliance',
+                'severity'  => 'warning',
+                'title'     => '🎯 HR Reminder: Team MBO Appraisals Pending Final Marks',
+                'message'   => "HR Reminder: Staff MBO self-evaluations for {$monthName} have been submitted. Please review achievements, enter actual marks, and sign off.",
+                'link'      => '/solar/hr/portal/appraisals?tab=team',
+                'source_id' => 'mbo-hr-appraiser-' . $monthCarbon->format('Y-m') . '-' . time(),
+            ];
+
+            try {
+                $user->notify(new HrNotification($payload));
+                $sentCount++;
+            } catch (\Throwable $e) {
+                Log::error("Failed to send MBO reminder to director {$user->email}: " . $e->getMessage());
+            }
+        }
+
+        $this->info("Dispatched HR reminders to {$sentCount} appraiser(s) for {$monthName}.");
+    }
+
+    /**
+     * Send specific reminder from HR to Hasintha to assign monthly objectives and weights.
+     */
+    protected function sendAppraiserObjectivesReminders(Carbon $now, ?string $targetMonth = null): void
+    {
+        $monthCarbon = $targetMonth ? Carbon::parse($targetMonth . '-01') : $now;
+        $monthName = $monthCarbon->format('F Y');
+        $this->info("Sending Appraiser objectives assignment reminders to Hasintha for {$monthName}...");
+
+        $directors = User::whereIn('email', self::$directorEmails)->get();
+        $sentCount = 0;
+        foreach ($directors as $user) {
+            $payload = [
+                'division'  => 'hr',
+                'category'  => 'compliance',
+                'severity'  => 'warning',
+                'title'     => '📋 HR Reminder: Monthly Objectives Assignment Pending',
+                'message'   => "HR Reminder: Please assign monthly MBO performance objectives, weights, and deadlines for staff for {$monthName}.",
+                'link'      => '/solar/hr/portal/appraisals?tab=team',
+                'source_id' => 'mbo-hr-objectives-' . $monthCarbon->format('Y-m') . '-' . time(),
+            ];
+
+            try {
+                $user->notify(new HrNotification($payload));
+                $sentCount++;
+            } catch (\Throwable $e) {
+                Log::error("Failed to send MBO objectives reminder to director {$user->email}: " . $e->getMessage());
+            }
+        }
+
+        $this->info("Dispatched HR objectives reminders to {$sentCount} appraiser(s) for {$monthName}.");
     }
 }

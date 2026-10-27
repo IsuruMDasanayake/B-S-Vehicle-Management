@@ -53,16 +53,18 @@ const PortalNav = () => {
   };
 
   return (
-    <nav style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-      background: "#fff",
-      borderTop: '1px solid var(--surface-2)',
-      display: 'flex',
-      justifyContent: 'space-around',
-      alignItems: 'center',
-      padding: '0.5rem 0 env(safe-area-inset-bottom, 0.5rem)',
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-    }}>
+    <nav
+      className="portal-mobile-bottom-nav"
+      style={{
+        zIndex: 500,
+        background: "#fff",
+        borderTop: '1px solid var(--surface-2)',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        padding: '0.5rem 0 env(safe-area-inset-bottom, 0.5rem)',
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+      }}
+    >
       {navItems.map(({ to, icon: Icon, label }) => (
         <NavLink
           key={to}

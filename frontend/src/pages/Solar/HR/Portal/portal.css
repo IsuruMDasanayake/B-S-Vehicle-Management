@@ -1,0 +1,167 @@
+/* ── Responsive Styling for Circle Engineering Employee Portal ── */
+
+.portal-root {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Desktop Top Navigation Header (hidden on mobile < 768px) ── */
+.portal-desktop-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 768px) {
+  .portal-desktop-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 64px;
+  }
+}
+
+.portal-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.portal-nav-link:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.portal-nav-link.active {
+  color: #0284c7;
+  background: #e0f2fe;
+}
+
+/* ── Mobile Top Header (only visible on mobile < 768px) ── */
+.portal-mobile-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 400;
+}
+
+@media (min-width: 768px) {
+  .portal-mobile-top-bar {
+    display: none !important;
+  }
+}
+
+/* ── Mobile Bottom Navigation Bar (only visible on mobile < 768px) ── */
+.portal-mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.5rem 0 env(safe-area-inset-bottom, 0.5rem);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 768px) {
+  .portal-mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
+/* ── Content Container ── */
+.portal-content-wrap {
+  flex: 1;
+  width: 100%;
+  padding: 1rem;
+  padding-bottom: calc(75px + env(safe-area-inset-bottom, 15px));
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .portal-content-wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 1.75rem 2rem;
+    padding-bottom: 3rem;
+  }
+}
+
+/* ── Responsive Dashboard Grids ── */
+.portal-dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (min-width: 992px) {
+  .portal-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+}
+
+/* ── Responsive Table Wrapper ── */
+.portal-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+}
+
+.portal-table-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.portal-table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.portal-table-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.portal-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.portal-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 900px) {
+  .portal-scroll-hint {
+    display: none;
+  }
+}

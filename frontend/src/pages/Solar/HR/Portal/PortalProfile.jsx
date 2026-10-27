@@ -127,7 +127,7 @@ const PortalProfile = () => {
   );
 
   return (
-    <div style={{ padding: '1.25rem', paddingTop: '2rem' }}>
+    <div style={{ width: '100%' }}>
       {/* Avatar + name */}
       <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
         <div style={{
@@ -147,154 +147,156 @@ const PortalProfile = () => {
         </p>
       </div>
 
-      {/* Details */}
-      <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Personal Details</span>
-          {/* {!editMode && (
-            <button onClick={() => setEditMode(true)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>Edit</button>
-          )} */}
-        </div>
-        {!editMode ? (
-          <>
-            <InfoRow icon={User}   label="Full Name"     value={emp?.full_name} />
-            <InfoRow icon={Mail}   label="Email"         value={emp?.company_email || user?.email} />
-            <InfoRow icon={Phone}  label="Phone"         value={emp?.phone} />
-            <InfoRow icon={MapPin} label="Department"    value={emp?.department?.name} />
-            <InfoRow icon={MapPin} label="Address"       value={emp?.address} />
-            <InfoRow label="Emergency Contact" value={emp?.emergency_contact_name} />
-            <InfoRow label="Emergency Phone"   value={emp?.emergency_contact_phone} />
-          </>
-        ) : (
-          <form onSubmit={handleSave}>
-            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-              <label className="form-label">Phone</label>
-              <input className="form-control" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+94 77 000 0000" />
-            </div>
-            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-              <label className="form-label">Address</label>
-              <textarea className="form-control" rows={2} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-            </div>
-            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-              <label className="form-label">Emergency Contact Name</label>
-              <input className="form-control" value={form.emergency_contact_name} onChange={e => setForm({ ...form, emergency_contact_name: e.target.value })} />
-            </div>
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label">Emergency Contact Phone</label>
-              <input className="form-control" value={form.emergency_contact_phone} onChange={e => setForm({ ...form, emergency_contact_phone: e.target.value })} />
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button type="button" onClick={() => setEditMode(false)} className="btn btn-ghost" style={{ flex: 1, border: '1px solid var(--surface-2)' }}>Cancel</button>
-              <button type="submit" className="btn btn-primary" style={{ flex: 1, background: '#3b82f6', borderColor: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }} disabled={saving}>
-                <Save size={14} /> {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-
-      {/* Device Notifications Card */}
-      <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <BellRing size={16} color="var(--primary)" />
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Lock-Screen Push Alerts</span>
-        </div>
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-          Receive native notifications directly on your phone lock screen or notification tray at <strong>5:30 PM</strong> to remind you to clock out before leaving.
-        </p>
-
-        {!pushStatus.supported ? (
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--surface-2)', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
-            Push notifications are not supported on this browser. Use Chrome or Edge on Android / Safari on iOS 16.4+ (added to Home Screen).
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
+        {/* Left Column: Personal Details */}
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>Personal Details</span>
           </div>
-        ) : pushStatus.permission === 'denied' ? (
-          <div style={{ fontSize: '0.75rem', color: '#b91c1c', background: 'rgba(239,68,68,0.08)', padding: '0.6rem 0.75rem', borderRadius: '8px', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <BellOff size={16} style={{ flexShrink: 0 }} />
-            <span>Notifications are blocked in your browser settings. Please allow notifications in site settings to receive reminders.</span>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--surface-2)' }}>
-              <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Shift Reminders (5:30 PM)</div>
-                <div style={{ fontSize: '0.72rem', color: pushStatus.isSubscribed ? '#10b981' : 'var(--text-muted)' }}>
-                  {pushStatus.isSubscribed ? '● Active on this device' : '○ Not enabled'}
-                </div>
+          {!editMode ? (
+            <>
+              <InfoRow icon={User}   label="Full Name"     value={emp?.full_name} />
+              <InfoRow icon={Mail}   label="Email"         value={emp?.company_email || user?.email} />
+              <InfoRow icon={Phone}  label="Phone"         value={emp?.phone} />
+              <InfoRow icon={MapPin} label="Department"    value={emp?.department?.name} />
+              <InfoRow icon={MapPin} label="Address"       value={emp?.address} />
+              <InfoRow label="Emergency Contact" value={emp?.emergency_contact_name} />
+              <InfoRow label="Emergency Phone"   value={emp?.emergency_contact_phone} />
+            </>
+          ) : (
+            <form onSubmit={handleSave}>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label className="form-label">Phone</label>
+                <input className="form-control" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+94 77 000 0000" />
               </div>
-              <button
-                type="button"
-                onClick={handleTogglePush}
-                disabled={pushLoading}
-                className={`btn btn-sm ${pushStatus.isSubscribed ? 'btn-ghost' : 'btn-primary'}`}
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '0.35rem 0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  ...(pushStatus.isSubscribed ? { border: '1px solid var(--surface-2)', color: 'var(--danger)' } : { background: '#3b82f6', borderColor: '#3b82f6' })
-                }}
-              >
-                {pushLoading && <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />}
-                <span>{pushStatus.isSubscribed ? 'Disable' : 'Enable'}</span>
-              </button>
-            </div>
-
-            {pushStatus.isSubscribed && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
-                <button
-                  type="button"
-                  onClick={handleTestPush}
-                  disabled={pushLoading}
-                  className="btn btn-sm btn-ghost"
-                  style={{
-                    fontSize: '0.73rem',
-                    padding: '0.3rem 0.65rem',
-                    border: '1px solid var(--surface-2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                  }}
-                >
-                  <Send size={12} />
-                  <span>Send Test Alert to Phone</span>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label className="form-label">Address</label>
+                <textarea className="form-control" rows={2} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+              </div>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label className="form-label">Emergency Contact Name</label>
+                <input className="form-control" value={form.emergency_contact_name} onChange={e => setForm({ ...form, emergency_contact_name: e.target.value })} />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Emergency Contact Phone</label>
+                <input className="form-control" value={form.emergency_contact_phone} onChange={e => setForm({ ...form, emergency_contact_phone: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button type="button" onClick={() => setEditMode(false)} className="btn btn-ghost" style={{ flex: 1, border: '1px solid var(--surface-2)' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, background: '#3b82f6', borderColor: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }} disabled={saving}>
+                  <Save size={14} /> {saving ? 'Saving...' : 'Save'}
                 </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        {/* Right Column: Push Alerts & Change Password */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Device Notifications Card */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <BellRing size={16} color="var(--primary)" />
+              <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>Lock-Screen Push Alerts</span>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+              Receive native notifications directly on your phone lock screen or notification tray at <strong>5:30 PM</strong> to remind you to clock out before leaving.
+            </p>
+
+            {!pushStatus.supported ? (
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--surface-2)', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
+                Push notifications are not supported on this browser. Use Chrome or Edge on Android / Safari on iOS 16.4+ (added to Home Screen).
+              </div>
+            ) : pushStatus.permission === 'denied' ? (
+              <div style={{ fontSize: '0.75rem', color: '#b91c1c', background: 'rgba(239,68,68,0.08)', padding: '0.6rem 0.75rem', borderRadius: '8px', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <BellOff size={16} style={{ flexShrink: 0 }} />
+                <span>Notifications are blocked in your browser settings. Please allow notifications in site settings to receive reminders.</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--surface-2)' }}>
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Shift Reminders (5:30 PM)</div>
+                    <div style={{ fontSize: '0.72rem', color: pushStatus.isSubscribed ? '#10b981' : 'var(--text-muted)' }}>
+                      {pushStatus.isSubscribed ? '● Active on this device' : '○ Not enabled'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTogglePush}
+                    disabled={pushLoading}
+                    className={`btn btn-sm ${pushStatus.isSubscribed ? 'btn-ghost' : 'btn-primary'}`}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.35rem 0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      ...(pushStatus.isSubscribed ? { border: '1px solid var(--surface-2)', color: 'var(--danger)' } : { background: '#3b82f6', borderColor: '#3b82f6' })
+                    }}
+                  >
+                    {pushLoading && <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />}
+                    <span>{pushStatus.isSubscribed ? 'Disable' : 'Enable'}</span>
+                  </button>
+                </div>
+
+                {pushStatus.isSubscribed && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
+                    <button
+                      type="button"
+                      onClick={handleTestPush}
+                      disabled={pushLoading}
+                      className="btn btn-sm btn-ghost"
+                      style={{
+                        fontSize: '0.73rem',
+                        padding: '0.3rem 0.65rem',
+                        border: '1px solid var(--surface-2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      <Send size={12} />
+                      <span>Send Test Alert to Phone</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Change Password */}
-      <div className="card" style={{ padding: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showPwd ? '1rem' : 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Lock size={16} color="var(--text-muted)" />
-            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Change Password</span>
+          {/* Change Password */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showPwd ? '1rem' : 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Lock size={16} color="var(--text-muted)" />
+                <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>Change Password</span>
+              </div>
+              <button onClick={() => setShowPwd(!showPwd)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
+                {showPwd ? 'Hide' : 'Change'}
+              </button>
+            </div>
+            {showPwd && (
+              <form onSubmit={handlePwdChange}>
+                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                  <label className="form-label">Current Password</label>
+                  <input type="password" className="form-control" value={pwdForm.current_password} onChange={e => setPwdForm({ ...pwdForm, current_password: e.target.value })} required />
+                </div>
+                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                  <label className="form-label">New Password</label>
+                  <input type="password" className="form-control" value={pwdForm.new_password} onChange={e => setPwdForm({ ...pwdForm, new_password: e.target.value })} required minLength={8} />
+                </div>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Confirm New Password</label>
+                  <input type="password" className="form-control" value={pwdForm.new_password_confirmation} onChange={e => setPwdForm({ ...pwdForm, new_password_confirmation: e.target.value })} required />
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', background: '#3b82f6', borderColor: '#3b82f6' }} disabled={changingPwd}>
+                  {changingPwd ? 'Changing...' : 'Update Password'}
+                </button>
+              </form>
+            )}
           </div>
-          <button onClick={() => setShowPwd(!showPwd)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
-            {showPwd ? 'Hide' : 'Change'}
-          </button>
         </div>
-        {showPwd && (
-          <form onSubmit={handlePwdChange}>
-            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-              <label className="form-label">Current Password</label>
-              <input type="password" className="form-control" value={pwdForm.current_password} onChange={e => setPwdForm({ ...pwdForm, current_password: e.target.value })} required />
-            </div>
-            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-              <label className="form-label">New Password</label>
-              <input type="password" className="form-control" value={pwdForm.new_password} onChange={e => setPwdForm({ ...pwdForm, new_password: e.target.value })} required minLength={8} />
-            </div>
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label">Confirm New Password</label>
-              <input type="password" className="form-control" value={pwdForm.new_password_confirmation} onChange={e => setPwdForm({ ...pwdForm, new_password_confirmation: e.target.value })} required />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', background: '#3b82f6', borderColor: '#3b82f6' }} disabled={changingPwd}>
-              {changingPwd ? 'Changing...' : 'Update Password'}
-            </button>
-          </form>
-        )}
       </div>
     </div>
   );

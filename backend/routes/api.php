@@ -199,22 +199,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('announcements', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'store']);
         Route::delete('announcements/{id}', [\App\Http\Controllers\Api\HR\HrAnnouncementController::class, 'destroy']);
 
-        // Monthly Performance Appraisals (MBO Policy)
+        // Monthly Performance Appraisals (Simplified MBO Single-Sheet)
+        Route::get('appraisals/sheet', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'sheet']);
         Route::get('appraisals/my', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'myAppraisals']);
-        Route::get('appraisals/current', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'getOrInitialize']);
-        Route::post('appraisals/{id}/objectives', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'saveObjectives']);
-        Route::post('appraisals/{id}/self-submit', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'submitSelfAppraisal']);
-        Route::get('appraisals/team', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'teamAppraisals']);
-        Route::post('appraisals/{id}/evaluate', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'evaluateAppraisal']);
+        Route::get('appraisals/board', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'board']);
+        Route::match(['post', 'put'], 'appraisals/objectives', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'saveObjectives']);
+        Route::match(['post', 'put'], 'appraisals/{id}/achievements', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'saveAchievements']);
+        Route::match(['post', 'put'], 'appraisals/{id}/marks', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'saveMarks']);
+        Route::match(['post', 'put'], 'appraisals/{id}/deductions', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'saveDeductions']);
         Route::get('appraisals/{id}/suggest-attendance', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'suggestAttendanceDeduction']);
-        Route::post('appraisals/{id}/deductions', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'applyDeductions']);
-        Route::post('appraisals/{id}/director-approve', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'directorApproval']);
-        Route::post('appraisals/batch-director-approve', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'batchDirectorApproval']);
-        Route::get('appraisals/stats', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'stats']);
+        Route::post('appraisals/{id}/finalize', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'finalize']);
+        Route::post('appraisals/{id}/return', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'returnToEmployee']);
+        Route::post('appraisals/{id}/reopen', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'reopen']);
+        Route::get('appraisals/{id}/revisions', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'revisions']);
         Route::get('appraisals/employee/{employeeId}/trend', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'employeeTrend']);
         Route::post('appraisals/send-reminder', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'triggerReminders']);
+        Route::post('appraisals/{id}/remind-appraiser', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'remindAppraiserForSheet']);
         Route::get('appraisals/{id}', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'show']);
-        Route::get('appraisals', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'index']);
     });
 });
 
