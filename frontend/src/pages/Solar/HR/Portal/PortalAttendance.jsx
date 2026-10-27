@@ -63,7 +63,7 @@ const PortalAttendance = () => {
   }, {});
 
   return (
-    <div style={{ padding: '1.25rem', paddingTop: '2rem' }}>
+    <div style={{ width: '100%' }}>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.25rem' }}>My Attendance</h1>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '1.25rem' }}>Monthly overview</p>
 

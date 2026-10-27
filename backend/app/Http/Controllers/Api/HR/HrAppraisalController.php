@@ -5,32 +5,73 @@ namespace App\Http\Controllers\Api\HR;
 use App\Http\Controllers\Controller;
 use App\Models\HrAppraisal;
 use App\Models\HrAppraisalObjective;
-use App\Models\HrEmployee;
+use App\Models\HrAppraisalObjectiveRevision;
 use App\Models\HrAttendance;
+use App\Models\HrEmployee;
 use App\Models\HrLeave;
 use App\Models\User;
+use App\Notifications\HrNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Artisan;
 
+/**
+ * Monthly Performance Appraisal — Simplified "Single Appraisal Sheet".
+ *
+ * One sheet per employee per month. Role-based cells:
+ *  ┌──────────────────────────────┬───────────┬──────────┬─────┐
+ *  │ Cell                         │ Appraiser │ Employee │ HR  │
+ *  ├──────────────────────────────┼───────────┼──────────┼─────┤
+ *  │ Objective / Weight / Deadline│ edit      │ view     │ view│
+ *  │ Achievement / Status         │ view      │ edit     │ view│
+ *  │ Actual Marks / Comments      │ edit      │ view     │ view│
+ *  │ Attendance / Misconduct      │ view      │ view     │ edit│
+ *  │ Finalize / Return / Reopen   │ yes       │ -        │ -   │
+ *  └──────────────────────────────┴───────────┴──────────┴─────┘
+ *
+ * Workflow: open -> submitted -> finalized
+ * Objectives may be changed by the Appraiser any time before Finalize.
+ * After first assignment, each change requires a reason and is logged.
+ */
 class HrAppraisalController extends Controller
 {
+    /** Appraisers (Hasintha = GM / Project Director, Eranda = CEO as backup). */
     public static array $directorEmails = [
         'hasintha@circlegroup.lk',
         'eranda@circlegroup.lk',
     ];
 
+    private const OBJ_STATUSES = ['not_started', 'in_progress', 'completed'];
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Role helpers
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private static function isSuperAdmin(?object $user): bool
+    {
+        if (!$user) return false;
+        return $user->role === 'super_admin'
+            || (method_exists($user, 'hasRole') && $user->hasRole('super_admin'));
+    }
+
+    /** Appraiser = Hasintha / Eranda / super_admin */
     public static function isProjectDirector(?object $user): bool
     {
         if (!$user || empty($user->email)) return false;
         return in_array(strtolower(trim($user->email)), self::$directorEmails, true)
-            || ($user->role === 'super_admin')
-            || (method_exists($user, 'hasRole') && $user->hasRole('super_admin'));
+            || self::isSuperAdmin($user);
     }
 
-    // ── Helper: Resolve current employee from user ─────────────────────────────
+    private static function isHr(?object $user): bool
+    {
+        if (!$user) return false;
+        return $user->role === 'solar_hr_admin'
+            || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'))
+            || self::isSuperAdmin($user);
+    }
+
     private function resolveEmployee(Request $request): ?HrEmployee
     {
         $user = $request->user();
@@ -45,760 +86,755 @@ class HrAppraisalController extends Controller
         return $employee;
     }
 
-    // ── Employee: View my appraisals (current & history) ──────────────────────
+    /** Can the current user view this employee's appraisal? */
+    private function canView(Request $request, int $employeeId): bool
+    {
+        $user = $request->user();
+        if (self::isProjectDirector($user) || self::isHr($user)) return true;
+        $me = $this->resolveEmployee($request);
+        return $me && $me->id === $employeeId;
+    }
+
+    private function sheetRelations(): array
+    {
+        return [
+            'objectives',
+            'evaluator.designation',
+            'employee.department',
+            'employee.designation',
+            'finalizedBy:id,name',
+        ];
+    }
+
+    /** Default appraiser profile (Hasintha) for display when none recorded yet. */
+    private function defaultAppraiser(): ?HrEmployee
+    {
+        return HrEmployee::with('designation')
+            ->where('company_email', self::$directorEmails[0])
+            ->first();
+    }
+
+    /** Role permissions for a given sheet (null = not yet created). */
+    private function permissionsFor(Request $request, ?HrAppraisal $sheet, int $employeeId): array
+    {
+        $user = $request->user();
+        $me = $this->resolveEmployee($request);
+
+        $isAppraiser = self::isProjectDirector($user);
+        $isHr = self::isHr($user);
+        $isSelf = $me && $me->id === $employeeId;
+
+        $status = $sheet?->status;
+        $notFinal = $status !== HrAppraisal::STATUS_FINALIZED;
+        $hasObjectives = $sheet && $sheet->objectives->isNotEmpty();
+        $allMarked = $hasObjectives && $sheet->objectives->every(fn($o) => $o->actual_marks !== null);
+
+        return [
+            'is_appraiser'          => $isAppraiser,
+            'is_hr'                 => $isHr,
+            'is_self'               => $isSelf,
+            'can_edit_objectives'   => $isAppraiser && $notFinal,
+            'can_edit_achievements' => $isSelf && $hasObjectives && $status === HrAppraisal::STATUS_OPEN,
+            'can_edit_marks'        => $isAppraiser && $hasObjectives && $notFinal,
+            // HR cannot set deductions on their own sheet (unless super admin)
+            'can_edit_deductions'   => $isHr && $sheet && $notFinal && (!$isSelf || self::isSuperAdmin($user)),
+            'can_finalize'          => $isAppraiser && $allMarked && $notFinal,
+            'can_return'            => $isAppraiser && $status === HrAppraisal::STATUS_SUBMITTED,
+            'can_reopen'            => $isAppraiser && $status === HrAppraisal::STATUS_FINALIZED,
+            'can_print'             => $isHr,
+        ];
+    }
+
+    private function sheetResponse(Request $request, HrEmployee $employee, ?HrAppraisal $sheet, ?string $message = null)
+    {
+        if ($sheet) {
+            $sheet->load($this->sheetRelations());
+            $sheet->loadCount('revisions');
+        }
+
+        $appraiser = $sheet?->evaluator ?? $this->defaultAppraiser();
+
+        $payload = [
+            'employee' => [
+                'id'          => $employee->id,
+                'full_name'   => $employee->full_name,
+                'employee_id' => $employee->employee_id,
+                'department'  => $employee->department?->name,
+                'designation' => $employee->designation?->title,
+                'photo_url'   => $employee->photo_url,
+            ],
+            'appraiser' => $appraiser ? [
+                'id'          => $appraiser->id,
+                'full_name'   => $appraiser->full_name,
+                'designation' => $appraiser->designation?->title,
+            ] : null,
+            'sheet'       => $sheet,
+            'permissions' => $this->permissionsFor($request, $sheet, $employee->id),
+        ];
+
+        if ($message) $payload['message'] = $message;
+
+        return response()->json($payload);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Notifications
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private function userForEmployee(?HrEmployee $emp): ?User
+    {
+        if (!$emp) return null;
+        if ($emp->user) return $emp->user;
+        return !empty($emp->company_email) ? User::where('email', $emp->company_email)->first() : null;
+    }
+
+    private function notify(?User $user, string $title, string $message, string $link, $sourceId, string $severity = 'info'): void
+    {
+        if (!$user) return;
+        try {
+            $user->notify(new HrNotification([
+                'division'  => 'hr',
+                'category'  => 'appraisal',
+                'severity'  => $severity,
+                'title'     => $title,
+                'message'   => $message,
+                'link'      => $link,
+                'source_id' => $sourceId,
+            ]));
+        } catch (\Throwable $e) {
+            Log::error('Appraisal notification error: ' . $e->getMessage());
+        }
+    }
+
+    private function notifyAppraisers(string $title, string $message, $sourceId): void
+    {
+        $users = User::whereIn('email', self::$directorEmails)->get();
+        foreach ($users as $u) {
+            $this->notify($u, $title, $message, '/solar/hr/portal/appraisals?tab=team', $sourceId);
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Read endpoints
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** GET appraisals/sheet?employee_id=&month= (employee_id omitted = my own sheet) */
+    public function sheet(Request $request)
+    {
+        $month = $request->get('month', Carbon::now()->format('Y-m'));
+        if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return response()->json(['message' => 'Invalid month'], 422);
+        }
+
+        if ($request->filled('employee_id')) {
+            $employee = HrEmployee::with(['department', 'designation'])->findOrFail($request->employee_id);
+            if (!$this->canView($request, $employee->id)) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        } else {
+            $employee = $this->resolveEmployee($request);
+            if (!$employee) {
+                return response()->json(['message' => 'Employee profile not found'], 404);
+            }
+            $employee->load(['department', 'designation']);
+        }
+
+        $sheet = HrAppraisal::where('employee_id', $employee->id)
+            ->where('period_month', $month)
+            ->first();
+
+        return $this->sheetResponse($request, $employee, $sheet);
+    }
+
+    /** GET appraisals/my — my appraisal history (for month quick-switch) */
     public function myAppraisals(Request $request)
     {
         $employee = $this->resolveEmployee($request);
         if (!$employee) return response()->json([]);
 
-        $appraisals = HrAppraisal::with(['objectives', 'evaluator.designation', 'directorApprovedBy'])
-            ->where('employee_id', $employee->id)
-            ->orderByDesc('period_month')
-            ->get();
-
-        return response()->json($appraisals);
+        return response()->json(
+            HrAppraisal::where('employee_id', $employee->id)
+                ->orderByDesc('period_month')
+                ->get(['id', 'period_month', 'status', 'final_score', 'grade', 'performance_level'])
+        );
     }
 
-    // ── Employee/Manager: Get or initialize appraisal for a given month ────────
-    public function getOrInitialize(Request $request)
+    /** GET appraisals/board?month=&search=&department_id= — Appraiser / HR overview of all employees */
+    public function board(Request $request)
     {
+        $user = $request->user();
+        if (!self::isProjectDirector($user) && !self::isHr($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $month = $request->get('month', Carbon::now()->format('Y-m'));
-        $targetEmployeeId = $request->get('employee_id');
 
-        $currentEmployee = $this->resolveEmployee($request);
+        $empQuery = HrEmployee::with(['department', 'designation'])
+            ->where('status', 'active')
+            // Appraisers themselves are not appraised on this sheet
+            ->where(function ($q) {
+                $q->whereNull('company_email')->orWhereNotIn('company_email', self::$directorEmails);
+            })
+            ->orderBy('full_name');
 
-        // If target employee specified, check permissions (Manager / HR / Director)
-        if ($targetEmployeeId) {
-            $user = $request->user();
-            $isDirector = self::isProjectDirector($user);
-            $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
-            
-            $targetEmp = HrEmployee::findOrFail($targetEmployeeId);
-            $isManager = $currentEmployee && $targetEmp->manager_id === $currentEmployee->id;
-
-            if (!$isDirector && !$isHr && !$isManager && ($currentEmployee?->id !== $targetEmp->id)) {
-                return response()->json(['message' => 'Unauthorized'], 403);
-            }
-            $employee = $targetEmp;
-        } else {
-            $employee = $currentEmployee;
+        if ($request->filled('department_id')) {
+            $empQuery->where('department_id', $request->department_id);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $empQuery->where(fn($q) => $q->where('full_name', 'like', "%{$s}%")->orWhere('employee_id', 'like', "%{$s}%"));
         }
 
-        if (!$employee) {
-            return response()->json(['message' => 'Employee profile not found'], 404);
-        }
+        $employees = $empQuery->get();
 
-        $appraisal = HrAppraisal::with(['objectives', 'evaluator.designation', 'employee.department', 'employee.designation'])
-            ->where('employee_id', $employee->id)
+        $sheets = HrAppraisal::with('objectives:id,appraisal_id,weight,actual_marks,status')
             ->where('period_month', $month)
-            ->first();
+            ->whereIn('employee_id', $employees->pluck('id'))
+            ->get()
+            ->keyBy('employee_id');
 
-        if (!$appraisal) {
-            // Find evaluator (line manager or department head)
-            $evaluatorId = $employee->manager_id;
-            if (!$evaluatorId && $employee->department_id) {
-                $deptHead = HrEmployee::where('department_id', $employee->department_id)
-                    ->where('id', '!=', $employee->id)
-                    ->whereHas('designation', fn($q) => $q->whereIn('level', ['Senior', 'Lead', 'C_Level']))
-                    ->first();
-                $evaluatorId = $deptHead?->id;
+        $summary = ['total' => $employees->count(), 'not_assigned' => 0, 'open' => 0, 'submitted' => 0, 'finalized' => 0, 'hr_pending' => 0];
+
+        $rows = $employees->map(function ($emp) use ($sheets, &$summary) {
+            $sheet = $sheets->get($emp->id);
+            $objCount = $sheet ? $sheet->objectives->count() : 0;
+
+            if (!$sheet || $objCount === 0) {
+                $summary['not_assigned']++;
+            } else {
+                $summary[$sheet->status] = ($summary[$sheet->status] ?? 0) + 1;
+                if (!$sheet->hr_reviewed_at && $sheet->status !== HrAppraisal::STATUS_FINALIZED) {
+                    $summary['hr_pending']++;
+                }
             }
 
-            $appraisal = HrAppraisal::create([
-                'employee_id'  => $employee->id,
-                'evaluator_id' => $evaluatorId,
-                'period_month' => $month,
-                'status'       => 'draft',
-            ]);
-            $appraisal->load(['objectives', 'evaluator.designation', 'employee.department', 'employee.designation']);
-        }
+            return [
+                'employee' => [
+                    'id'          => $emp->id,
+                    'full_name'   => $emp->full_name,
+                    'employee_id' => $emp->employee_id,
+                    'department'  => $emp->department?->name,
+                    'designation' => $emp->designation?->title,
+                    'photo_url'   => $emp->photo_url,
+                ],
+                'sheet' => $sheet ? [
+                    'id'               => $sheet->id,
+                    'status'           => $objCount === 0 ? 'not_assigned' : $sheet->status,
+                    'objectives_count' => $objCount,
+                    'completed_count'  => $sheet->objectives->where('status', 'completed')->count(),
+                    'marks_entered'    => $sheet->objectives->whereNotNull('actual_marks')->count(),
+                    'objective_score'  => (float) $sheet->objective_score,
+                    'attendance_deduction' => (float) $sheet->attendance_deduction,
+                    'misconduct_deduction' => (float) $sheet->misconduct_deduction,
+                    'final_score'      => (float) $sheet->final_score,
+                    'grade'            => $sheet->grade,
+                    'hr_reviewed'      => (bool) $sheet->hr_reviewed_at,
+                    'submitted_at'     => $sheet->submitted_at,
+                    'finalized_at'     => $sheet->finalized_at,
+                ] : null,
+            ];
+        })->values();
 
+        return response()->json(['month' => $month, 'summary' => $summary, 'rows' => $rows]);
+    }
+
+    /** GET appraisals/{id} — full sheet (printable scorecard) */
+    public function show(Request $request, $id)
+    {
+        $appraisal = HrAppraisal::with($this->sheetRelations())->findOrFail($id);
+        if (!$this->canView($request, $appraisal->employee_id)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        if (!$appraisal->evaluator) {
+            $appraisal->setRelation('evaluator', $this->defaultAppraiser());
+        }
         return response()->json($appraisal);
     }
 
-    // ── Manager / Employee: Save objectives (max 5, must sum to 100% on confirm)
-    public function saveObjectives(Request $request, $id)
+    /** GET appraisals/{id}/revisions — objective change history */
+    public function revisions(Request $request, $id)
     {
-        $appraisal = HrAppraisal::with('objectives')->findOrFail($id);
-        $user = $request->user();
-        $currEmp = $this->resolveEmployee($request);
-        
-        $isDirector = self::isProjectDirector($user);
-        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
-        $isManager = $currEmp && ($appraisal->evaluator_id === $currEmp->id || $appraisal->employee->manager_id === $currEmp->id);
-        $isSelf = $currEmp && $appraisal->employee_id === $currEmp->id;
-
-        if (!$isDirector && !$isHr && !$isManager && !$isSelf) {
-            return response()->json(['message' => 'Unauthorized to modify objectives'], 403);
+        $appraisal = HrAppraisal::findOrFail($id);
+        if (!$this->canView($request, $appraisal->employee_id)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Only allowed in draft, objectives_confirmed, or revision_requested
-        if (!in_array($appraisal->status, ['draft', 'objectives_confirmed', 'revision_requested'])) {
-            return response()->json(['message' => 'Objectives cannot be modified after self-appraisal submission'], 422);
+        return response()->json(
+            HrAppraisalObjectiveRevision::with('changedBy:id,name')
+                ->where('appraisal_id', $appraisal->id)
+                ->latest()
+                ->get()
+        );
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Appraiser: Objectives (Objective / Weight / Deadline)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** PUT appraisals/objectives — body: employee_id, month, objectives[], reason */
+    public function saveObjectives(Request $request)
+    {
+        $user = $request->user();
+        if (!self::isProjectDirector($user)) {
+            return response()->json(['message' => 'Only the Appraiser can set objectives.'], 403);
         }
 
         $validated = $request->validate([
+            'employee_id'            => 'required|exists:hr_employees,id',
+            'month'                  => ['required', 'regex:/^\d{4}-\d{2}$/'],
             'objectives'             => 'required|array|min:1|max:5',
+            'objectives.*.id'        => 'nullable|integer',
             'objectives.*.title'     => 'required|string|max:255',
-            'objectives.*.description'=> 'nullable|string',
             'objectives.*.weight'    => 'required|numeric|min:1|max:100',
-            'objectives.*.deadline'  => 'required|date',
-            'objectives.*.target_kpi'=> 'nullable|string',
-            'objectives.*.status'    => 'nullable|string|in:not_started,in_progress,completed',
-            'confirm'                => 'nullable|boolean', // Lock objectives for the month
+            'objectives.*.deadline'  => 'nullable|date',
+            'reason'                 => 'nullable|string|max:1000',
+        ], [
+            'objectives.*.title.required'  => 'Every objective needs a title.',
+            'objectives.*.weight.required' => 'Every objective needs a weight.',
+            'objectives.max'               => 'Maximum 5 objectives allowed.',
         ]);
 
-        $totalWeight = array_sum(array_column($validated['objectives'], 'weight'));
+        $totalWeight = round(array_sum(array_map(fn($o) => (float) $o['weight'], $validated['objectives'])), 2);
+        if (abs($totalWeight - 100.0) > 0.01) {
+            return response()->json(['message' => "Total weight must equal 100%. Current total: {$totalWeight}%"], 422);
+        }
 
-        // If confirming/locking targets, total weight MUST be exactly 100% (Policy Section 2.4)
-        if (!empty($validated['confirm'])) {
-            if (abs($totalWeight - 100.0) > 0.01) {
+        $employee = HrEmployee::findOrFail($validated['employee_id']);
+        $appraiserEmp = $this->resolveEmployee($request);
+
+        $sheet = HrAppraisal::firstOrCreate(
+            ['employee_id' => $employee->id, 'period_month' => $validated['month']],
+            ['status' => HrAppraisal::STATUS_OPEN, 'evaluator_id' => $appraiserEmp?->id]
+        );
+
+        if ($sheet->status === HrAppraisal::STATUS_FINALIZED) {
+            return response()->json(['message' => 'This appraisal is finalized. Reopen it to change objectives.'], 422);
+        }
+
+        $existing = $sheet->objectives()->get()->keyBy('id');
+        $wasAssigned = $existing->isNotEmpty();
+
+        // ── Build change set ──
+        $snapshot = fn($o) => [
+            'title'    => $o['title'],
+            'weight'   => round((float) $o['weight'], 2),
+            'deadline' => !empty($o['deadline']) ? Carbon::parse($o['deadline'])->format('Y-m-d') : null,
+        ];
+
+        $changes = [];
+        $keptIds = [];
+        foreach ($validated['objectives'] as $idx => $incoming) {
+            $new = $snapshot($incoming);
+            $id = $incoming['id'] ?? null;
+
+            if ($id && $existing->has($id)) {
+                $keptIds[] = $id;
+                $cur = $existing->get($id);
+                $old = [
+                    'title'    => $cur->title,
+                    'weight'   => round((float) $cur->weight, 2),
+                    'deadline' => $cur->deadline?->format('Y-m-d'),
+                ];
+                if ($old !== $new) {
+                    $changes[] = ['action' => 'updated', 'id' => $id, 'old' => $old, 'new' => $new, 'order' => $idx + 1];
+                } else {
+                    $changes[] = ['action' => 'unchanged', 'id' => $id, 'order' => $idx + 1];
+                }
+            } else {
+                $changes[] = ['action' => 'added', 'id' => null, 'old' => null, 'new' => $new, 'order' => $idx + 1];
+            }
+        }
+        foreach ($existing as $id => $cur) {
+            if (!in_array($id, $keptIds, true)) {
+                $changes[] = [
+                    'action' => 'removed', 'id' => $id, 'order' => null, 'new' => null,
+                    'old' => ['title' => $cur->title, 'weight' => round((float) $cur->weight, 2), 'deadline' => $cur->deadline?->format('Y-m-d')],
+                ];
+            }
+        }
+
+        $realChanges = array_values(array_filter($changes, fn($c) => $c['action'] !== 'unchanged'));
+        $reason = trim($validated['reason'] ?? '');
+
+        if ($wasAssigned && empty($realChanges)) {
+            return $this->sheetResponse($request, $employee, $sheet, 'No changes to save.');
+        }
+        if ($wasAssigned && $reason === '') {
+            return response()->json(['message' => 'Please enter a reason for changing the objectives.'], 422);
+        }
+
+        DB::transaction(function () use ($sheet, $changes, $wasAssigned, $reason, $user) {
+            foreach ($changes as $c) {
+                if ($c['action'] === 'unchanged') {
+                    HrAppraisalObjective::where('id', $c['id'])->update(['order_num' => $c['order']]);
+                    continue;
+                }
+
+                if ($c['action'] === 'added') {
+                    $obj = $sheet->objectives()->create([
+                        'order_num' => $c['order'],
+                        'title'     => $c['new']['title'],
+                        'weight'    => $c['new']['weight'],
+                        'deadline'  => $c['new']['deadline'],
+                        'status'    => 'not_started',
+                    ]);
+                    $objectiveId = $obj->id;
+                } elseif ($c['action'] === 'updated') {
+                    $obj = HrAppraisalObjective::find($c['id']);
+                    $obj->fill([
+                        'order_num' => $c['order'],
+                        'title'     => $c['new']['title'],
+                        'weight'    => $c['new']['weight'],
+                        'deadline'  => $c['new']['deadline'],
+                    ]);
+                    // Marks above the new weight are no longer valid
+                    if ($obj->actual_marks !== null && (float) $obj->actual_marks > (float) $c['new']['weight']) {
+                        $obj->actual_marks = null;
+                    }
+                    $obj->save();
+                    $objectiveId = $obj->id;
+                } else { // removed
+                    HrAppraisalObjective::where('id', $c['id'])->delete();
+                    $objectiveId = $c['id'];
+                }
+
+                if ($wasAssigned) {
+                    HrAppraisalObjectiveRevision::create([
+                        'appraisal_id' => $sheet->id,
+                        'objective_id' => $objectiveId,
+                        'action'       => $c['action'],
+                        'old_values'   => $c['old'],
+                        'new_values'   => $c['new'],
+                        'reason'       => $reason,
+                        'changed_by'   => $user->id,
+                    ]);
+                }
+            }
+
+            // Objectives changed after the employee submitted -> back to Open for review
+            if ($wasAssigned && $sheet->status === HrAppraisal::STATUS_SUBMITTED) {
+                $sheet->status = HrAppraisal::STATUS_OPEN;
+                $sheet->submitted_at = null;
+            }
+
+            $sheet->recalculateScores();
+        });
+
+        $monthLabel = Carbon::parse($sheet->period_month . '-01')->format('F Y');
+        $empUser = $this->userForEmployee($employee);
+        if ($wasAssigned) {
+            $this->notify($empUser, 'Objectives Updated',
+                "Your objectives for {$monthLabel} were updated. Reason: {$reason}",
+                '/solar/hr/portal/appraisals', $sheet->id, 'warning');
+        } else {
+            $this->notify($empUser, 'Monthly Objectives Assigned',
+                "Your objectives for {$monthLabel} have been assigned. Please review them.",
+                '/solar/hr/portal/appraisals', $sheet->id);
+        }
+
+        return $this->sheetResponse($request, $employee, $sheet->fresh(),
+            $wasAssigned ? 'Objectives updated and change recorded.' : 'Objectives assigned successfully.');
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Employee: Achievement & Status
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** PUT appraisals/{id}/achievements — body: objectives[{id, achievement, status}], employee_comments, submit */
+    public function saveAchievements(Request $request, $id)
+    {
+        $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        $me = $this->resolveEmployee($request);
+
+        if (!$me || $sheet->employee_id !== $me->id) {
+            return response()->json(['message' => 'Only the employee can fill achievements.'], 403);
+        }
+        if ($sheet->status !== HrAppraisal::STATUS_OPEN) {
+            return response()->json(['message' => 'This appraisal has already been submitted.'], 422);
+        }
+
+        $validated = $request->validate([
+            'objectives'               => 'required|array',
+            'objectives.*.id'          => 'required|integer',
+            'objectives.*.achievement' => 'nullable|string|max:5000',
+            'objectives.*.status'      => 'required|in:' . implode(',', self::OBJ_STATUSES),
+            'employee_comments'        => 'nullable|string|max:5000',
+            'submit'                   => 'nullable|boolean',
+        ]);
+
+        $submit = !empty($validated['submit']);
+        $objectives = $sheet->objectives->keyBy('id');
+
+        if ($submit) {
+            foreach ($validated['objectives'] as $o) {
+                $obj = $objectives->get($o['id']);
+                if ($obj && $o['status'] !== 'not_started' && trim($o['achievement'] ?? '') === '') {
+                    return response()->json(['message' => "Please describe your achievement for \"{$obj->title}\"."], 422);
+                }
+            }
+        }
+
+        DB::transaction(function () use ($sheet, $validated, $objectives, $submit) {
+            foreach ($validated['objectives'] as $o) {
+                if (!$objectives->has($o['id'])) continue;
+                HrAppraisalObjective::where('id', $o['id'])->update([
+                    'achievement' => $o['achievement'] ?? null,
+                    'status'      => $o['status'],
+                ]);
+            }
+
+            $sheet->employee_comments = $validated['employee_comments'] ?? $sheet->employee_comments;
+            if ($submit) {
+                $sheet->status = HrAppraisal::STATUS_SUBMITTED;
+                $sheet->submitted_at = Carbon::now();
+            }
+            $sheet->save();
+        });
+
+        if ($submit) {
+            $monthLabel = Carbon::parse($sheet->period_month . '-01')->format('F Y');
+            $this->notifyAppraisers('Appraisal Submitted',
+                "{$sheet->employee->full_name} submitted achievements for {$monthLabel}. Ready for marks.",
+                $sheet->id);
+        }
+
+        return $this->sheetResponse($request, $sheet->employee, $sheet->fresh(),
+            $submit ? 'Submitted to your Appraiser.' : 'Progress saved.');
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Appraiser: Actual Marks & Comments
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** PUT appraisals/{id}/marks — body: objectives[{id, actual_marks}], appraiser_comments */
+    public function saveMarks(Request $request, $id)
+    {
+        $user = $request->user();
+        if (!self::isProjectDirector($user)) {
+            return response()->json(['message' => 'Only the Appraiser can enter marks.'], 403);
+        }
+
+        $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        if ($sheet->status === HrAppraisal::STATUS_FINALIZED) {
+            return response()->json(['message' => 'This appraisal is finalized. Reopen it to change marks.'], 422);
+        }
+
+        $validated = $request->validate([
+            'objectives'                => 'required|array',
+            'objectives.*.id'           => 'required|integer',
+            'objectives.*.actual_marks' => 'nullable|numeric|min:0',
+            'appraiser_comments'        => 'nullable|string|max:5000',
+        ]);
+
+        $objectives = $sheet->objectives->keyBy('id');
+        foreach ($validated['objectives'] as $o) {
+            $obj = $objectives->get($o['id']);
+            if (!$obj) continue;
+            if ($o['actual_marks'] !== null && (float) $o['actual_marks'] > (float) $obj->weight) {
                 return response()->json([
-                    'message' => "Total weight of all objectives must equal 100%. Current sum: {$totalWeight}%"
+                    'message' => "Marks for \"{$obj->title}\" cannot exceed its weight (" . (float) $obj->weight . ").",
                 ], 422);
             }
         }
 
-        DB::transaction(function () use ($appraisal, $validated) {
-            // Delete existing objectives and insert new set
-            $appraisal->objectives()->delete();
+        $appraiserEmp = $this->resolveEmployee($request);
 
-            $order = 1;
-            foreach ($validated['objectives'] as $obj) {
-                $appraisal->objectives()->create([
-                    'order_num'   => $order++,
-                    'title'       => $obj['title'],
-                    'description' => $obj['description'] ?? null,
-                    'weight'      => $obj['weight'],
-                    'deadline'    => $obj['deadline'],
-                    'target_kpi'  => $obj['target_kpi'] ?? null,
-                    'status'      => $obj['status'] ?? 'in_progress',
+        DB::transaction(function () use ($sheet, $validated, $objectives, $appraiserEmp) {
+            foreach ($validated['objectives'] as $o) {
+                if (!$objectives->has($o['id'])) continue;
+                HrAppraisalObjective::where('id', $o['id'])->update([
+                    'actual_marks' => $o['actual_marks'] !== null ? round((float) $o['actual_marks'], 2) : null,
                 ]);
             }
-
-            if (!empty($validated['confirm'])) {
-                $appraisal->update(['status' => 'objectives_confirmed']);
+            $sheet->manager_comments = $validated['appraiser_comments'] ?? null;
+            $sheet->manager_evaluated_at = Carbon::now();
+            if (!$sheet->evaluator_id && $appraiserEmp) {
+                $sheet->evaluator_id = $appraiserEmp->id;
             }
+            $sheet->recalculateScores();
         });
 
-        $appraisal->load(['objectives', 'evaluator.designation', 'employee.department', 'employee.designation']);
-        return response()->json([
-            'message' => !empty($validated['confirm']) ? 'Objectives confirmed and locked for the month!' : 'Draft objectives saved',
-            'data'    => $appraisal
-        ]);
+        return $this->sheetResponse($request, $sheet->employee, $sheet->fresh(), 'Marks saved.');
     }
 
-    // ── Employee: Submit end-of-month actual achievements ─────────────────────
-    public function submitSelfAppraisal(Request $request, $id)
-    {
-        $appraisal = HrAppraisal::with('objectives')->findOrFail($id);
-        $currEmp = $this->resolveEmployee($request);
+    // ═════════════════════════════════════════════════════════════════════════
+    //  HR: Attendance & Misconduct
+    // ═════════════════════════════════════════════════════════════════════════
 
-        if (!$currEmp || $appraisal->employee_id !== $currEmp->id) {
+    /** PUT appraisals/{id}/deductions */
+    public function saveDeductions(Request $request, $id)
+    {
+        $user = $request->user();
+        $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+
+        if (!$perms['is_hr']) {
+            return response()->json(['message' => 'Only HR can enter attendance & misconduct.'], 403);
+        }
+        if (!$perms['can_edit_deductions']) {
+            return response()->json(['message' => 'Deductions cannot be changed on this appraisal.'], 422);
+        }
+
+        $validated = $request->validate([
+            'attendance_deduction'       => 'required|numeric|min:0|max:10',
+            'attendance_deduction_notes' => 'nullable|string|max:2000',
+            'misconduct_deduction'       => 'required|numeric|min:0|max:30',
+            'misconduct_deduction_notes' => 'nullable|string|max:2000',
+        ]);
+
+        $sheet->fill($validated);
+        $sheet->misconduct_severity = match (true) {
+            (float) $validated['misconduct_deduction'] <= 0  => 'none',
+            (float) $validated['misconduct_deduction'] <= 10 => 'minor',
+            (float) $validated['misconduct_deduction'] < 20  => 'moderate',
+            default                                         => 'serious',
+        };
+        $sheet->hr_reviewed_by = $user->id;
+        $sheet->hr_reviewed_at = Carbon::now();
+        $sheet->recalculateScores();
+
+        return $this->sheetResponse($request, $sheet->employee, $sheet->fresh(), 'Attendance & misconduct saved.');
+    }
+
+    /** GET appraisals/{id}/suggest-attendance — HR helper based on clock records */
+    public function suggestAttendanceDeduction(Request $request, $id)
+    {
+        $user = $request->user();
+        if (!self::isHr($user)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if (!in_array($appraisal->status, ['objectives_confirmed', 'revision_requested', 'draft'])) {
-            return response()->json(['message' => 'Appraisal is not in a submittable state'], 422);
-        }
-
-        $validated = $request->validate([
-            'objectives'                 => 'required|array',
-            'objectives.*.id'            => 'required|exists:hr_appraisal_objectives,id',
-            'objectives.*.achievement'   => 'required|string',
-            'objectives.*.status'        => 'required|in:completed,in_progress,not_completed',
-            'objectives.*.evidence_notes'=> 'nullable|string',
-            'employee_comments'          => 'nullable|string',
-        ]);
-
-        DB::transaction(function () use ($appraisal, $validated) {
-            foreach ($validated['objectives'] as $objData) {
-                HrAppraisalObjective::where('id', $objData['id'])
-                    ->where('appraisal_id', $appraisal->id)
-                    ->update([
-                        'achievement'    => $objData['achievement'],
-                        'status'         => $objData['status'],
-                        'evidence_notes' => $objData['evidence_notes'] ?? null,
-                    ]);
-            }
-
-            $appraisal->update([
-                'employee_comments' => $validated['employee_comments'] ?? null,
-                'status'            => 'self_submitted',
-            ]);
-        });
-
-        // Notify line manager if assigned
-        try {
-            $mgr = $appraisal->evaluator;
-            if ($mgr && $mgr->user) {
-                $mgr->user->notify(new \App\Notifications\HrNotification([
-                    'division'  => 'hr',
-                    'category'  => 'appraisal',
-                    'severity'  => 'info',
-                    'title'     => 'Monthly Appraisal Submitted',
-                    'message'   => "{$currEmp->full_name} submitted achievements for {$appraisal->period_month}.",
-                    'link'      => '/solar/hr/portal/appraisals?tab=team',
-                    'source_id' => $appraisal->id,
-                ]));
-            }
-        } catch (\Throwable $e) {
-            Log::error('Appraisal notification error: ' . $e->getMessage());
-        }
-
-        $appraisal->load(['objectives', 'evaluator.designation', 'employee']);
-        return response()->json([
-            'message' => 'Performance achievements submitted to your Line Manager!',
-            'data'    => $appraisal
-        ]);
-    }
-
-    // ── Manager: List team members to evaluate ────────────────────────────────
-    public function teamAppraisals(Request $request)
-    {
-        $user = $request->user();
-        $currEmp = $this->resolveEmployee($request);
-        $month = $request->get('month', Carbon::now()->format('Y-m'));
-
-        $isDirector = self::isProjectDirector($user);
-        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
-
-        $query = HrAppraisal::with(['employee.department', 'employee.designation', 'objectives', 'evaluator'])
-            ->where('period_month', $month);
-
-        if (!$isDirector && !$isHr) {
-            if (!$currEmp) return response()->json([]);
-            // Show subordinates where manager_id == current employee OR evaluator_id == current employee
-            $query->where(function ($q) use ($currEmp) {
-                $q->where('evaluator_id', $currEmp->id)
-                  ->orWhereHas('employee', fn($eq) => $eq->where('manager_id', $currEmp->id));
-            });
-        }
-
-        if ($request->filled('department_id')) {
-            $query->whereHas('employee', fn($q) => $q->where('department_id', $request->department_id));
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        return response()->json($query->get());
-    }
-
-    // ── Manager: Evaluate & score each objective (0 to 100) ────────────────────
-    public function evaluateAppraisal(Request $request, $id)
-    {
-        $appraisal = HrAppraisal::with('objectives')->findOrFail($id);
-        $user = $request->user();
-        $currEmp = $this->resolveEmployee($request);
-
-        $isDirector = self::isProjectDirector($user);
-        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
-        $isManager = $currEmp && ($appraisal->evaluator_id === $currEmp->id || $appraisal->employee->manager_id === $currEmp->id);
-
-        if (!$isDirector && !$isHr && !$isManager) {
-            return response()->json(['message' => 'Unauthorized to evaluate this employee'], 403);
-        }
-
-        $validated = $request->validate([
-            'objectives'                   => 'required|array',
-            'objectives.*.id'              => 'required|exists:hr_appraisal_objectives,id',
-            'objectives.*.marks'           => 'required|numeric|min:0|max:100',
-            'objectives.*.manager_comments'=> 'nullable|string',
-            'manager_comments'             => 'required|string',
-            'manager_recommended_grade'    => 'nullable|string|in:S1,S2,A1,A2,C',
-        ]);
-
-        DB::transaction(function () use ($appraisal, $validated, $currEmp) {
-            foreach ($validated['objectives'] as $objData) {
-                $obj = HrAppraisalObjective::where('id', $objData['id'])
-                    ->where('appraisal_id', $appraisal->id)
-                    ->first();
-                if ($obj) {
-                    $obj->marks = $objData['marks'];
-                    $obj->weighted_marks = round(($objData['marks'] * $obj->weight) / 100, 2);
-                    $obj->manager_comments = $objData['manager_comments'] ?? null;
-                    $obj->save();
-                }
-            }
-
-            $appraisal->manager_comments = $validated['manager_comments'];
-            $appraisal->manager_recommended_grade = $validated['manager_recommended_grade'] ?? null;
-            $appraisal->manager_evaluated_at = Carbon::now();
-            $ifEvaluatorNull = $appraisal->evaluator_id ?? $currEmp?->id;
-            $appraisal->evaluator_id = $ifEvaluatorNull;
-            $appraisal->status = 'manager_evaluated';
-
-            // Calculate objective score
-            $appraisal->recalculateScores();
-        });
-
-        // Notify HR Admins
-        try {
-            $hrUsers = User::where(function($q) {
-                $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
-                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
-            })->get();
-
-            foreach ($hrUsers as $hrUser) {
-                $hrUser->notify(new \App\Notifications\HrNotification([
-                    'division'  => 'hr',
-                    'category'  => 'appraisal',
-                    'severity'  => 'info',
-                    'title'     => 'Appraisal Evaluated by Manager',
-                    'message'   => "Manager scored {$appraisal->employee->full_name}'s appraisal for {$appraisal->period_month}.",
-                    'link'      => '/solar/hr/admin/appraisals',
-                    'source_id' => $appraisal->id,
-                ]));
-            }
-        } catch (\Throwable $e) {
-            Log::error('HR Notification error on evaluation: ' . $e->getMessage());
-        }
-
-        $appraisal->load(['objectives', 'evaluator.designation', 'employee.department', 'employee.designation']);
-        return response()->json([
-            'message' => 'Manager evaluation recorded successfully! Forwarded to HR review.',
-            'data'    => $appraisal
-        ]);
-    }
-
-    // ── HR: Auto-suggest attendance deductions based on clock records ─────────
-    public function suggestAttendanceDeduction(Request $request, $id)
-    {
-        $appraisal = HrAppraisal::with('employee')->findOrFail($id);
-        $month = $appraisal->period_month; // YYYY-MM
+        $appraisal = HrAppraisal::findOrFail($id);
+        $month = $appraisal->period_month;
         $empId = $appraisal->employee_id;
 
-        // 1. Query attendance records for that specific month
         $attendances = HrAttendance::where('employee_id', $empId)
             ->where('date', 'like', "{$month}%")
             ->get();
 
         $lateCount = $attendances->where('status', 'late')->count();
         $absentCount = $attendances->where('status', 'absent')->count();
-        $halfDayCount = $attendances->where('status', 'half_day')->count();
         $unclosedCount = $attendances->where('is_auto_clock_out', true)->count();
 
-        // 2. Short leaves from hr_leaves
         $shortLeaveHours = HrLeave::where('employee_id', $empId)
             ->where('status', 'approved')
             ->where('leave_type', 'short')
             ->where('start_date', 'like', "{$month}%")
             ->sum('hours_count');
 
-        // 3. Deduction Calculation Formula (Policy Section 2.4: 0 to 10 marks)
-        // Late arrivals: 0.5 marks per late occurrence
-        // Unauthorized absences: 2.0 marks per absent day
-        // Auto / missed punch-outs: 0.5 marks per occurrence
-        // Excessive short leaves (>4 hrs monthly limit): 0.5 per extra hour
-        $calcDeduction = ($lateCount * 0.5) 
-                       + ($absentCount * 2.0) 
-                       + ($unclosedCount * 0.5)
-                       + (max(0, $shortLeaveHours - 4) * 0.5);
+        // 0.5 per late, 2.0 per absence, 0.5 per auto clock-out, 0.5 per short-leave hour above 4h. Cap 10.
+        $calc = ($lateCount * 0.5) + ($absentCount * 2.0) + ($unclosedCount * 0.5) + (max(0, $shortLeaveHours - 4) * 0.5);
+        $suggested = round(min(10.0, max(0.0, $calc)), 1);
 
-        // Cap strictly at 10.00 marks as per Policy
-        $suggestedDeduction = round(min(10.0, max(0.0, $calcDeduction)), 1);
-
-        $notesBreakdown = [];
-        if ($lateCount > 0) $notesBreakdown[] = "{$lateCount} late arrival(s)";
-        if ($absentCount > 0) $notesBreakdown[] = "{$absentCount} absent day(s)";
-        if ($unclosedCount > 0) $notesBreakdown[] = "{$unclosedCount} auto clock-out(s)";
-        if ($shortLeaveHours > 4) $notesBreakdown[] = "Excess short leave (" . ($shortLeaveHours - 4) . "h over limit)";
-
-        $generatedNote = empty($notesBreakdown) 
-            ? "Clean attendance record for {$month}. No deductions suggested."
-            : "Suggested based on: " . implode(', ', $notesBreakdown);
+        $parts = [];
+        if ($lateCount > 0) $parts[] = "{$lateCount} late arrival(s)";
+        if ($absentCount > 0) $parts[] = "{$absentCount} absent day(s)";
+        if ($unclosedCount > 0) $parts[] = "{$unclosedCount} missed clock-out(s)";
+        if ($shortLeaveHours > 4) $parts[] = 'Excess short leave (' . ($shortLeaveHours - 4) . 'h over limit)';
 
         return response()->json([
-            'suggested_deduction' => $suggestedDeduction,
-            'suggested_notes'     => $generatedNote,
-            'details' => [
-                'total_records'       => $attendances->count(),
-                'late_count'          => $lateCount,
-                'absent_count'        => $absentCount,
-                'half_day_count'      => $halfDayCount,
-                'auto_clockout_count' => $unclosedCount,
-                'short_leave_hours'   => $shortLeaveHours,
-            ]
+            'suggested_deduction' => $suggested,
+            'suggested_notes'     => empty($parts) ? "Clean attendance record for {$month}." : implode(', ', $parts),
         ]);
     }
 
-    // ── HR: Apply Attendance & Misconduct Deductions ───────────────────────────
-    public function applyDeductions(Request $request, $id)
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Appraiser: Finalize / Return / Reopen
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public function finalize(Request $request, $id)
     {
         $user = $request->user();
-        if ($user->role !== 'solar_hr_admin' && !self::isProjectDirector($user)) {
-            return response()->json(['message' => 'Unauthorized. Only HR Admin or Project Director can apply deductions.'], 403);
+        $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+
+        if (!$perms['is_appraiser']) {
+            return response()->json(['message' => 'Only the Appraiser can finalize.'], 403);
+        }
+        if (!$perms['can_finalize']) {
+            return response()->json(['message' => 'Enter Actual Marks for every objective before finalizing.'], 422);
         }
 
-        $appraisal = HrAppraisal::with('objectives')->findOrFail($id);
+        $sheet->status = HrAppraisal::STATUS_FINALIZED;
+        $sheet->finalized_by = $user->id;
+        $sheet->finalized_at = Carbon::now();
+        $sheet->recalculateScores();
 
-        $validated = $request->validate([
-            'attendance_deduction'       => 'required|numeric|min:0|max:10', // Max 10 (Section 2.4)
-            'attendance_deduction_notes' => 'nullable|string',
-            'misconduct_deduction'       => 'required|numeric|min:0|max:30', // Max 30 (Section 2.4)
-            'misconduct_severity'        => 'required|in:none,minor,moderate,serious',
-            'misconduct_deduction_notes' => 'nullable|string',
-            'hr_comments'                => 'nullable|string',
-        ]);
+        $monthLabel = Carbon::parse($sheet->period_month . '-01')->format('F Y');
+        $this->notify($this->userForEmployee($sheet->employee),
+            "Monthly Performance Grade: {$sheet->grade}",
+            "Your appraisal for {$monthLabel} is finalized. Total: " . (float) $sheet->final_score . " ({$sheet->performance_level}).",
+            '/solar/hr/portal/appraisals', $sheet->id,
+            in_array($sheet->grade, ['S1', 'S2']) ? 'success' : 'info');
 
-        // Policy Section 2.4 verification:
-        // Minor: 0-10, Moderate: 11-19, Serious: 20-30
-        $misMarks = floatval($validated['misconduct_deduction']);
-        if ($validated['misconduct_severity'] === 'minor' && $misMarks > 10) {
-            return response()->json(['message' => 'Minor misconduct deduction cannot exceed 10 marks.'], 422);
-        }
-        if ($validated['misconduct_severity'] === 'moderate' && ($misMarks < 11 || $misMarks > 19)) {
-            return response()->json(['message' => 'Moderate misconduct deduction must be between 11 and 19 marks.'], 422);
-        }
-        if ($validated['misconduct_severity'] === 'serious' && ($misMarks < 20 || $misMarks > 30)) {
-            return response()->json(['message' => 'Serious misconduct deduction must be between 20 and 30 marks.'], 422);
-        }
-
-        DB::transaction(function () use ($appraisal, $validated, $user) {
-            $appraisal->attendance_deduction = $validated['attendance_deduction'];
-            $appraisal->attendance_deduction_notes = $validated['attendance_deduction_notes'] ?? null;
-            $appraisal->misconduct_deduction = $validated['misconduct_deduction'];
-            $appraisal->misconduct_severity = $validated['misconduct_severity'];
-            $appraisal->misconduct_deduction_notes = $validated['misconduct_deduction_notes'] ?? null;
-            $appraisal->hr_comments = $validated['hr_comments'] ?? null;
-            $appraisal->hr_reviewed_by = $user->id;
-            $appraisal->hr_reviewed_at = Carbon::now();
-            $appraisal->status = 'hr_reviewed';
-
-            // Recalculate final score, grade and variable pay %
-            $appraisal->recalculateScores();
-        });
-
-        // Notify Project Director for final approval
-        try {
-            $directors = User::where(function($q) {
-                $q->whereIn('email', self::$directorEmails)
-                  ->orWhere('role', 'super_admin');
-            })->get();
-
-            foreach ($directors as $dirUser) {
-                $dirUser->notify(new \App\Notifications\HrNotification([
-                    'division'  => 'hr',
-                    'category'  => 'appraisal',
-                    'severity'  => 'warning',
-                    'title'     => 'Appraisal Ready for Final Approval',
-                    'message'   => "HR reviewed {$appraisal->employee->full_name}'s appraisal. Pending Project Director sign-off.",
-                    'link'      => '/solar/hr/portal/appraisals?tab=director',
-                    'source_id' => $appraisal->id,
-                ]));
-            }
-        } catch (\Throwable $e) {
-            Log::error('Notification error on HR review: ' . $e->getMessage());
-        }
-
-        $appraisal->load(['objectives', 'evaluator.designation', 'employee.department', 'employee.designation']);
-        return response()->json([
-            'message' => 'Deductions applied and submitted to Project Director for final evaluation!',
-            'data'    => $appraisal
-        ]);
+        return $this->sheetResponse($request, $sheet->employee, $sheet->fresh(), "Appraisal finalized — Grade {$sheet->grade}.");
     }
 
-    // ── Project Director: Final Evaluation, Grade Moderation & Approval ───────
-    public function directorApproval(Request $request, $id)
+    public function returnToEmployee(Request $request, $id)
     {
-        $user = $request->user();
-        if (!self::isProjectDirector($user)) {
-            return response()->json(['message' => 'Unauthorized. Only Project Director can finalize grades.'], 403);
+        $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+        if (!$perms['can_return']) {
+            return response()->json(['message' => 'This appraisal cannot be returned.'], 422);
         }
 
-        $appraisal = HrAppraisal::with('employee.user')->findOrFail($id);
+        $note = trim((string) $request->input('note', ''));
+        $sheet->update(['status' => HrAppraisal::STATUS_OPEN, 'submitted_at' => null]);
 
-        $validated = $request->validate([
-            'action'            => 'required|in:approve,override_grade,revision_requested',
-            'grade'             => 'required_if:action,override_grade|nullable|in:S1,S2,A1,A2,C',
-            'director_comments' => 'nullable|string',
-        ]);
+        $monthLabel = Carbon::parse($sheet->period_month . '-01')->format('F Y');
+        $this->notify($this->userForEmployee($sheet->employee), 'Appraisal Returned',
+            "Your {$monthLabel} appraisal was returned for updates." . ($note ? " Note: {$note}" : ''),
+            '/solar/hr/portal/appraisals', $sheet->id, 'warning');
 
-        if ($validated['action'] === 'revision_requested') {
-            $appraisal->update([
-                'status'            => 'revision_requested',
-                'director_comments' => $validated['director_comments'] ?? 'Revision requested by Project Director',
-            ]);
-            return response()->json(['message' => 'Appraisal returned for revision', 'data' => $appraisal]);
-        }
-
-        // Grade override or approval
-        if ($validated['action'] === 'override_grade' && !empty($validated['grade'])) {
-            $appraisal->grade = $validated['grade'];
-            $levels = [
-                'S1' => ['level' => 'Outstanding', 'pay' => '116% - 120%'],
-                'S2' => ['level' => 'Excellent', 'pay' => '110% - 115%'],
-                'A1' => ['level' => 'Meets Expectations', 'pay' => '95% - 109%'],
-                'A2' => ['level' => 'Needs Improvement', 'pay' => '80% - 94%'],
-                'C'  => ['level' => 'Unacceptable', 'pay' => '0%'],
-            ];
-            $appraisal->performance_level = $levels[$validated['grade']]['level'] ?? 'Meets Expectations';
-            $appraisal->variable_pay_adjustment = $levels[$validated['grade']]['pay'] ?? '100%';
-        }
-
-        $appraisal->director_comments = $validated['director_comments'] ?? null;
-        $appraisal->director_approved_by = $user->id;
-        $appraisal->director_approved_at = Carbon::now();
-        $appraisal->status = 'approved';
-        $appraisal->save();
-
-        // Notify the employee of official monthly grade publication
-        try {
-            $empUser = $appraisal->employee?->user;
-            if ($empUser) {
-                $empUser->notify(new \App\Notifications\HrNotification([
-                    'division'  => 'hr',
-                    'category'  => 'appraisal',
-                    'severity'  => in_array($appraisal->grade, ['S1', 'S2']) ? 'success' : 'info',
-                    'title'     => "Monthly Performance Grade: {$appraisal->grade}",
-                    'message'   => "Your official appraisal for {$appraisal->period_month} has been approved ({$appraisal->performance_level} · {$appraisal->variable_pay_adjustment} Variable Pay).",
-                    'link'      => '/solar/hr/portal/appraisals',
-                    'source_id' => $appraisal->id,
-                ]));
-            }
-        } catch (\Throwable $e) {
-            Log::error('Employee notification error: ' . $e->getMessage());
-        }
-
-        $appraisal->load(['objectives', 'evaluator.designation', 'employee.department', 'employee.designation']);
-        return response()->json([
-            'message' => "Appraisal officially approved! Grade {$appraisal->grade} published.",
-            'data'    => $appraisal
-        ]);
+        return $this->sheetResponse($request, $sheet->employee, $sheet->fresh(), 'Returned to employee.');
     }
 
-    // ── Project Director: 1-Click Batch Approval ─────────────────────────────
-    public function batchDirectorApproval(Request $request)
+    public function reopen(Request $request, $id)
     {
-        $user = $request->user();
-        if (!self::isProjectDirector($user)) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+        if (!$perms['can_reopen']) {
+            return response()->json(['message' => 'Only a finalized appraisal can be reopened.'], 422);
         }
 
-        $validated = $request->validate([
-            'appraisal_ids'     => 'required|array|min:1',
-            'appraisal_ids.*'   => 'exists:hr_appraisals,id',
-            'director_comments' => 'nullable|string',
+        $sheet->update([
+            'status'       => HrAppraisal::STATUS_SUBMITTED,
+            'finalized_by' => null,
+            'finalized_at' => null,
         ]);
 
-        $appraisals = HrAppraisal::whereIn('id', $validated['appraisal_ids'])
-            ->whereIn('status', ['hr_reviewed', 'manager_evaluated'])
-            ->get();
-
-        $count = 0;
-        foreach ($appraisals as $appraisal) {
-            $appraisal->update([
-                'director_comments'    => $validated['director_comments'] ?? 'Approved by Project Director',
-                'director_approved_by' => $user->id,
-                'director_approved_at' => Carbon::now(),
-                'status'               => 'approved',
-            ]);
-            $count++;
-        }
-
-        return response()->json([
-            'message' => "Successfully approved {$count} employee appraisal(s)!",
-            'approved_count' => $count
-        ]);
+        return $this->sheetResponse($request, $sheet->employee, $sheet->fresh(), 'Appraisal reopened for changes.');
     }
 
-    // ── HR Admin / Project Director: Organization Stats, Bell Curve & Underperformance Alerts
-    public function stats(Request $request)
-    {
-        $user = $request->user();
-        $isDirector = self::isProjectDirector($user);
-        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Trend & Reminders
+    // ═════════════════════════════════════════════════════════════════════════
 
-        if (!$isDirector && !$isHr) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $month = $request->get('month', Carbon::now()->format('Y-m'));
-
-        $base = HrAppraisal::where('period_month', $month);
-        $totalAppraised = (clone $base)->count();
-        $approved = (clone $base)->where('status', 'approved')->get();
-        $approvedCount = $approved->count();
-
-        // Grade Distribution (Policy Section 2.7: S1 <= 5%, S2 5-10%)
-        $gradeCounts = [
-            'S1' => $approved->where('grade', 'S1')->count(),
-            'S2' => $approved->where('grade', 'S2')->count(),
-            'A1' => $approved->where('grade', 'A1')->count(),
-            'A2' => $approved->where('grade', 'A2')->count(),
-            'C'  => $approved->where('grade', 'C')->count(),
-        ];
-
-        $s1Pct = $approvedCount > 0 ? round(($gradeCounts['S1'] / $approvedCount) * 100, 1) : 0;
-        $s2Pct = $approvedCount > 0 ? round(($gradeCounts['S2'] / $approvedCount) * 100, 1) : 0;
-
-        // Policy Section 2.8: Underperformance & PIP Monitoring
-        // Check employees with 3 consecutive A2s or 2 consecutive Cs
-        $allActiveEmployees = HrEmployee::where('status', 'active')->get();
-        $underperformanceAlerts = [];
-
-        foreach ($allActiveEmployees as $emp) {
-            $recent = HrAppraisal::where('employee_id', $emp->id)
-                ->where('status', 'approved')
-                ->orderByDesc('period_month')
-                ->take(3)
-                ->pluck('grade')
-                ->toArray();
-
-            // 1. Two consecutive C grades
-            if (count($recent) >= 2 && $recent[0] === 'C' && $recent[1] === 'C') {
-                $underperformanceAlerts[] = [
-                    'employee_id' => $emp->id,
-                    'full_name'   => $emp->full_name,
-                    'department'  => $emp->department?->name,
-                    'severity'    => 'critical',
-                    'consecutive' => '2 Months Unacceptable (C)',
-                    'action'      => 'Immediate Disciplinary / Termination Review (Section 2.8)',
-                    'grades'      => array_slice($recent, 0, 2),
-                ];
-            }
-            // 2. Three consecutive A2 grades
-            elseif (count($recent) >= 3 && $recent[0] === 'A2' && $recent[1] === 'A2' && $recent[2] === 'A2') {
-                $underperformanceAlerts[] = [
-                    'employee_id' => $emp->id,
-                    'full_name'   => $emp->full_name,
-                    'department'  => $emp->department?->name,
-                    'severity'    => 'warning',
-                    'consecutive' => '3 Months Needs Improvement (A2)',
-                    'action'      => 'Formal Performance Management / PIP Review (Section 2.8)',
-                    'grades'      => $recent,
-                ];
-            }
-        }
-
-        return response()->json([
-            'period_month'         => $month,
-            'total_appraisals'     => $totalAppraised,
-            'approved_count'       => $approvedCount,
-            'pending_director'     => (clone $base)->where('status', 'hr_reviewed')->count(),
-            'pending_hr'           => (clone $base)->where('status', 'manager_evaluated')->count(),
-            'pending_manager'      => (clone $base)->where('status', 'self_submitted')->count(),
-            'draft_or_goals'       => (clone $base)->whereIn('status', ['draft', 'objectives_confirmed'])->count(),
-            'grade_counts'         => $gradeCounts,
-            'bell_curve' => [
-                's1_percentage'        => $s1Pct,
-                's1_quota_warning'     => $s1Pct > 5.0, // Alert if exceeds 5%
-                's2_percentage'        => $s2Pct,
-                's2_quota_warning'     => $s2Pct > 10.0, // Alert if exceeds 10%
-            ],
-            'underperformance_alerts' => $underperformanceAlerts,
-        ]);
-    }
-
-    // ── HR Admin: Full Index with search & filters ────────────────────────────
-    public function index(Request $request)
-    {
-        $user = $request->user();
-        $isDirector = self::isProjectDirector($user);
-        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
-
-        if (!$isDirector && !$isHr) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $query = HrAppraisal::with(['employee.department', 'employee.designation', 'evaluator', 'objectives', 'directorApprovedBy'])
-            ->orderByDesc('period_month')
-            ->orderBy('employee_id');
-
-        if ($request->filled('month')) {
-            $query->where('period_month', $request->month);
-        }
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('grade')) {
-            $query->where('grade', $request->grade);
-        }
-        if ($request->filled('department_id')) {
-            $query->whereHas('employee', fn($q) => $q->where('department_id', $request->department_id));
-        }
-        if ($request->filled('search')) {
-            $s = $request->search;
-            $query->whereHas('employee', fn($q) => 
-                $q->where('full_name', 'like', "%{$s}%")
-                  ->orWhere('employee_id', 'like', "%{$s}%")
-            );
-        }
-
-        return response()->json($query->paginate(25));
-    }
-
-    // ── Single Appraisal Detail for Printable Scorecard ───────────────────────
-    public function show(Request $request, $id)
-    {
-        $appraisal = HrAppraisal::with([
-            'objectives',
-            'employee.department',
-            'employee.designation',
-            'employee.manager',
-            'evaluator.designation',
-            'evaluator.department',
-            'directorApprovedBy.designation',
-        ])->findOrFail($id);
-
-        $user = $request->user();
-        $currEmp = $this->resolveEmployee($request);
-        $isDirector = self::isProjectDirector($user);
-        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
-        $isManager = $currEmp && ($appraisal->evaluator_id === $currEmp->id || $appraisal->employee?->manager_id === $currEmp->id);
-        $isSelf = $currEmp && $appraisal->employee_id === $currEmp->id;
-
-        if (!$isDirector && !$isHr && !$isManager && !$isSelf) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        return response()->json($appraisal);
-    }
-
-    // ── Employee 6-Month Appraisal Trend & History ────────────────────────────
+    /** GET appraisals/employee/{employeeId}/trend — last 6 finalized months */
     public function employeeTrend(Request $request, $employeeId)
     {
-        $user = $request->user();
-        $currEmp = $this->resolveEmployee($request);
-        $isDirector = self::isProjectDirector($user);
-        $isHr = $user->role === 'solar_hr_admin' || (method_exists($user, 'hasRole') && $user->hasRole('solar_hr_admin'));
-
         $targetEmp = HrEmployee::with(['department', 'designation'])->findOrFail($employeeId);
-        $isManager = $currEmp && $targetEmp->manager_id === $currEmp->id;
-        $isSelf = $currEmp && $currEmp->id === $targetEmp->id;
-
-        if (!$isDirector && !$isHr && !$isManager && !$isSelf) {
+        if (!$this->canView($request, $targetEmp->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Fetch up to 6 most recent completed/evaluated appraisals for this employee
         $appraisals = HrAppraisal::with(['objectives', 'evaluator.designation'])
             ->where('employee_id', $employeeId)
-            ->whereIn('status', ['evaluated', 'approved'])
+            ->where('status', HrAppraisal::STATUS_FINALIZED)
             ->orderBy('period_month', 'desc')
             ->limit(6)
             ->get()
             ->reverse()
             ->values();
 
-        $scores = $appraisals->pluck('final_score')->map(fn($s) => (float)$s)->all();
+        $scores = $appraisals->pluck('final_score')->map(fn($s) => (float) $s)->all();
         $avgScore = count($scores) > 0 ? round(array_sum($scores) / count($scores), 1) : null;
 
         $trajectory = 'neutral';
         $delta = 0;
         if (count($scores) >= 2) {
-            $first = $scores[0];
-            $last = end($scores);
-            $delta = round($last - $first, 1);
-            if ($delta >= 2.0) {
-                $trajectory = 'improving';
-            } elseif ($delta <= -2.0) {
-                $trajectory = 'declining';
-            } else {
-                $trajectory = 'stable';
-            }
+            $delta = round(end($scores) - $scores[0], 1);
+            $trajectory = $delta >= 2.0 ? 'improving' : ($delta <= -2.0 ? 'declining' : 'stable');
         }
 
         return response()->json([
@@ -817,21 +853,57 @@ class HrAppraisalController extends Controller
         ]);
     }
 
-    // ── On-Demand Reminder Dispatcher ─────────────────────────────────────────
+    /** POST appraisals/send-reminder — type: employee | manager | appraiser | objectives */
     public function triggerReminders(Request $request)
     {
         $user = $request->user();
-        if ($user->role !== 'solar_hr_admin' && !self::isProjectDirector($user)) {
+        if (!self::isHr($user) && !self::isProjectDirector($user)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $type = $request->input('type', 'employee'); // 'employee' or 'manager'
-        Artisan::call('hr:remind-mbo-appraisal', ['--type' => $type]);
-        $output = Artisan::output();
+        $type = $request->input('type', 'employee');
+        $month = $request->input('month');
+
+        $params = ['--type' => $type];
+        if ($month) {
+            $params['--month'] = $month;
+        }
+
+        Artisan::call('hr:remind-mbo-appraisal', $params);
 
         return response()->json([
-            'message' => 'MBO Reminder notifications dispatched successfully.',
-            'output'  => trim($output),
+            'message' => 'Reminder notifications dispatched successfully.',
+            'output'  => trim(Artisan::output()),
+        ]);
+    }
+
+    /** POST appraisals/{id}/remind-appraiser — HR sends targeted reminder to Hasintha / Project Director */
+    public function remindAppraiserForSheet(Request $request, int $id)
+    {
+        $user = $request->user();
+        if (!self::isHr($user)) {
+            return response()->json(['message' => 'Only HR administrators can send this reminder.'], 403);
+        }
+
+        $sheet = HrAppraisal::with(['employee', 'evaluator'])->findOrFail($id);
+        $empName = $sheet->employee?->full_name ?? 'Employee';
+        $month = $sheet->period_month;
+        $monthName = Carbon::parse($month . '-01')->format('F Y');
+
+        $directors = User::whereIn('email', self::$directorEmails)->get();
+        foreach ($directors as $dirUser) {
+            $this->notify(
+                $dirUser,
+                "🎯 HR Reminder: Evaluation Pending for {$empName}",
+                "HR Reminder: {$empName} has submitted their MBO sheet for {$monthName}. Please review achievements and assign marks.",
+                "/solar/hr/portal/appraisals?tab=team&employee_id={$sheet->employee_id}",
+                "mbo-nudge-{$sheet->id}-" . time(),
+                'warning'
+            );
+        }
+
+        return response()->json([
+            'message' => "Reminder notification sent to Hasintha (Project Director) for {$empName}.",
         ]);
     }
 }

@@ -259,7 +259,7 @@ const PortalLeave = () => {
   );
 
   return (
-    <div style={{ padding: '1.25rem', paddingTop: '2rem' }}>
+    <div style={{ width: '100%' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
         <div>

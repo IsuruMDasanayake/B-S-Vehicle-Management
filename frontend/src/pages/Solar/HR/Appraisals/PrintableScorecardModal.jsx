@@ -1,25 +1,27 @@
 import { useState, useEffect } from 'react';
-import {
-  Printer, X, Award, CheckCircle2, AlertCircle, Building2, User,
-  Calendar, Clock, ShieldCheck, Download, Loader2
-} from 'lucide-react';
+import { Printer, X, Award, AlertCircle, Loader2 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import useAuthStore from '../../../../store/authStore';
+import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 
 const GRADE_INFO = {
-  S1: { label: 'Outstanding',         color: '#10b981', bg: 'rgba(16,185,129,0.12)', pay: '116% – 120%', desc: 'Significantly exceeds all targets, outstanding technical & operational impact.' },
-  S2: { label: 'Excellent',           color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', pay: '110% – 115%', desc: 'Consistently surpasses expected benchmarks with high quality delivery.' },
-  A1: { label: 'Meets Expectations',  color: '#6366f1', bg: 'rgba(99,102,241,0.12)', pay: '95% – 109%',  desc: 'Achieves required KPI benchmarks and fulfills core responsibilities.' },
-  A2: { label: 'Needs Improvement',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', pay: '80% – 94%',   desc: 'Falls below expected targets in key areas. Requires targeted coaching.' },
-  C:  { label: 'Unacceptable',        color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  pay: '0%',          desc: 'Significant underperformance against established monthly benchmarks.' },
+  S1: { label: 'Outstanding',         color: '#10b981', bg: 'rgba(16,185,129,0.12)', pay: '116% – 120%' },
+  S2: { label: 'Excellent',           color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', pay: '110% – 115%' },
+  A1: { label: 'Meets Expectations',  color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', pay: '95% – 109%' },
+  A2: { label: 'Needs Improvement',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', pay: '80% – 94%' },
+  C:  { label: 'Unacceptable',        color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  pay: '0%' },
 };
 
 export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, onClose }) => {
+  const user = useAuthStore(s => s.user);
+  const isAuthorized = user?.role === 'solar_hr_admin' || user?.role === 'super_admin';
+
   const [data, setData] = useState(appraisalData || null);
   const [loading, setLoading] = useState(!appraisalData);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isAuthorized) return;
 
     if (appraisalData) {
       setData(appraisalData);
@@ -48,7 +50,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
     }
   }, [isOpen, appraisalId, appraisalData, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAuthorized) return null;
 
   const handlePrint = () => {
     window.print();
@@ -63,9 +65,12 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
     ? new Date(data.period_month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
     : '—';
 
+  const objectives = data?.objectives || [];
+  const totalWeight = objectives.reduce((acc, o) => acc + (parseFloat(o.weight) || 0), 0);
+  const totalMarks = objectives.reduce((acc, o) => acc + (parseFloat(o.actual_marks) || 0), 0);
+
   return (
     <>
-      {/* ── Scoped Print Stylesheet ────────────────────────────────────────── */}
       <style>{`
         @media print {
           body * {
@@ -104,7 +109,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
         }
       `}</style>
 
-      {/* Modal Backdrop */}
+      {/* Backdrop */}
       <div
         className="no-print"
         style={{
@@ -134,7 +139,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
             overflow: 'hidden',
           }}
         >
-          {/* Modal Top Control Bar */}
+          {/* Top Control Bar */}
           <div
             style={{
               padding: '1rem 1.5rem',
@@ -150,22 +155,23 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
               <Award size={20} color="#38bdf8" />
               <div>
                 <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#fff' }}>
-                  Performance Appraisal Scorecard
+                  Monthly Performance Appraisal Scorecard
                 </h3>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Official Monthly MBO Assessment · Circle Engineering (Pvt) Ltd
+                  Circle Engineering (Pvt) Ltd · Single Form
                 </span>
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <button
+                type="button"
                 onClick={handlePrint}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  background: 'linear-gradient(135deg, #0284c7, #0369a1)',
                   color: '#fff',
                   border: 'none',
                   padding: '0.45rem 1rem',
@@ -173,12 +179,12 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
                   fontWeight: 600,
                   fontSize: '0.85rem',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
                 }}
               >
                 <Printer size={16} /> Print / Save PDF
               </button>
               <button
+                type="button"
                 onClick={onClose}
                 style={{
                   background: 'rgba(255,255,255,0.1)',
@@ -195,20 +201,20 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
             </div>
           </div>
 
-          {/* Modal Body / Scrollable Printable Container */}
+          {/* Body */}
           <div
             id="printable-scorecard-root"
             style={{
               flex: 1,
               overflowY: 'auto',
-              padding: '1.5rem',
+              padding: '2rem',
               background: '#fff',
             }}
           >
             {loading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '0.6rem', color: '#64748b' }}>
-                <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
-                <span>Loading official appraisal scorecard...</span>
+                <Loader2 size={24} className="animate-spin" />
+                <span>Loading appraisal scorecard...</span>
               </div>
             ) : !data ? (
               <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
@@ -225,401 +231,188 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
                   lineHeight: 1.45,
                 }}
               >
-                {/* ── Document Header ────────────────────────────────────────── */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2.5px solid #0f172a', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '10px',
-                      background: 'linear-gradient(135deg, #071A3D, #00A651)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      fontWeight: 800,
-                      fontSize: '1.25rem',
-                      letterSpacing: '-1px',
-                    }}>
-                      CE
-                    </div>
-                    <div>
-                      <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#071A3D', letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
-                        Circle Engineering (Private) Limited
-                      </h1>
-                      <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
-                        Monthly Performance Appraisal Scorecard · Management by Objectives (MBO)
-                      </div>
+                {/* ── Document Header ── */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2.5px solid #0f172a', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+                  <div>
+                    <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase' }}>
+                      Circle Engineering (Private) Limited
+                    </h1>
+                    <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                      Monthly Performance Appraisal Policy · Management by Objectives (MBO)
                     </div>
                   </div>
-
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-block', padding: '0.2rem 0.65rem', borderRadius: '6px', background: data.status === 'approved' ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)', color: data.status === 'approved' ? '#047857' : '#1d4ed8', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.2rem' }}>
-                      {data.status === 'approved' ? '✓ Officially Approved' : `Status: ${data.status}`}
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0284c7' }}>
+                      Period: {formattedMonth}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      Ref: <strong>#MBO-{String(data.id).padStart(5, '0')}</strong> · Period: <strong>{formattedMonth}</strong>
+                      Status: <strong style={{ textTransform: 'capitalize' }}>{data.status}</strong>
                     </div>
                   </div>
                 </div>
 
-                {/* ── Employee & Evaluator Summary Block ─────────────────────── */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1.1fr 0.9fr',
-                  gap: '1rem',
-                  padding: '0.85rem 1rem',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  marginBottom: '1.25rem',
-                  fontSize: '0.82rem',
-                }}>
+                {/* ── Employee Information Header ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '0.65rem 0.85rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.8rem' }}>
                   <div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.5px' }}>
-                      Employee Information
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', rowGap: '0.25rem' }}>
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Name:</span>
-                      <strong style={{ color: '#0f172a' }}>{emp?.full_name || '—'}</strong>
-
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Employee ID:</span>
-                      <strong style={{ color: '#0f172a' }}>{emp?.employee_id || '—'}</strong>
-
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Department:</span>
-                      <span>{emp?.department?.name || '—'}</span>
-
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Designation:</span>
-                      <span>{emp?.designation?.title || '—'}</span>
-                    </div>
+                    <div><strong>Employee Name:</strong> {emp?.full_name || '—'}</div>
+                    <div><strong>Employee ID:</strong> {emp?.employee_id || '—'}</div>
+                    <div><strong>Department:</strong> {emp?.department?.name || '—'}</div>
+                    <div><strong>Designation:</strong> {emp?.designation?.title || '—'}</div>
                   </div>
-
                   <div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.5px' }}>
-                      Appraisal & Review Details
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', rowGap: '0.25rem' }}>
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Evaluated By:</span>
-                      <strong style={{ color: '#0f172a' }}>{evaluator?.full_name || 'Line Manager'}</strong>
-
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Evaluator Role:</span>
-                      <span>{evaluator?.designation?.title || 'Team Lead'}</span>
-
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Assessment Month:</span>
-                      <strong style={{ color: '#0f172a' }}>{formattedMonth}</strong>
-
-                      <span style={{ color: '#64748b', fontWeight: 500 }}>Director Sign-Off:</span>
-                      <span>{data.directorApprovedBy?.name || (data.status === 'approved' ? 'Executive Director' : 'Pending')}</span>
-                    </div>
+                    <div><strong>Appraiser:</strong> {evaluator?.full_name || 'Hasintha Rathnayake - GM'}</div>
+                    <div><strong>Appraiser Role:</strong> {evaluator?.designation?.title || 'GM / Project Director'}</div>
+                    <div><strong>Cycle Month:</strong> {formattedMonth}</div>
                   </div>
                 </div>
 
-                {/* ── Section 1: Objectives & KPI Table ───────────────────────── */}
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                      Section 1: Key Performance Objectives & KPI Evaluation
-                    </h3>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      Weights sum to strictly 100% · Evaluated on 0–100 scale
-                    </span>
-                  </div>
-
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                {/* ── The Exact Paper Table ── */}
+                <div style={{ border: '1.5px solid #0f172a', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.75rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                     <thead>
-                      <tr style={{ background: '#0f172a', color: '#fff', textAlign: 'left' }}>
-                        <th style={{ padding: '0.5rem 0.6rem', width: '28px', textAlign: 'center' }}>#</th>
-                        <th style={{ padding: '0.5rem 0.6rem' }}>Objective & Measurable KPI Target</th>
-                        <th style={{ padding: '0.5rem 0.6rem', width: '80px', textAlign: 'center' }}>Weight (%)</th>
-                        <th style={{ padding: '0.5rem 0.6rem', width: '80px', textAlign: 'center' }}>Self Score</th>
-                        <th style={{ padding: '0.5rem 0.6rem', width: '90px', textAlign: 'center' }}>Manager Mark</th>
-                        <th style={{ padding: '0.5rem 0.6rem', width: '100px', textAlign: 'right' }}>Weighted Mark</th>
+                      <tr style={{ background: '#f1f5f9', borderBottom: '1.5px solid #0f172a' }}>
+                        <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left', fontWeight: 800, width: '30%', borderRight: '1px solid #cbd5e1' }}>
+                          Objective
+                        </th>
+                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '10%', borderRight: '1px solid #cbd5e1' }}>
+                          Weight
+                        </th>
+                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '13%', borderRight: '1px solid #cbd5e1' }}>
+                          Dead Line
+                        </th>
+                        <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left', fontWeight: 800, width: '27%', borderRight: '1px solid #cbd5e1' }}>
+                          Achievement
+                        </th>
+                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '10%', borderRight: '1px solid #cbd5e1' }}>
+                          Status of objectives
+                        </th>
+                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '10%' }}>
+                          Actual Marks
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(data.objectives || []).map((obj, i) => {
-                        const weighted = ((parseFloat(obj.manager_marks || 0) * parseFloat(obj.weight || 0)) / 100).toFixed(2);
-                        return (
-                          <tr key={obj.id || i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                            <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
-                              {i + 1}
-                            </td>
-                            <td style={{ padding: '0.55rem 0.6rem' }}>
-                              <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.82rem' }}>{obj.title}</strong>
-                              {obj.description && (
-                                <span style={{ color: '#64748b', fontSize: '0.74rem', display: 'block', marginTop: '0.15rem' }}>
-                                  {obj.description}
-                                </span>
-                              )}
-                              {obj.target_kpi && (
-                                <span style={{ color: '#0284c7', fontSize: '0.72rem', fontWeight: 600, display: 'inline-block', marginTop: '0.2rem' }}>
-                                  KPI Target: {obj.target_kpi}
-                                </span>
-                              )}
-                              {obj.self_achievement && (
-                                <div style={{ fontSize: '0.7rem', color: '#475569', fontStyle: 'italic', background: 'rgba(59,130,246,0.06)', padding: '0.25rem 0.5rem', borderRadius: '4px', marginTop: '0.25rem' }}>
-                                  Employee Achievement: {obj.self_achievement}
-                                </div>
-                              )}
-                            </td>
-                            <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', fontWeight: 600 }}>
-                              {parseFloat(obj.weight)}%
-                            </td>
-                            <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', color: '#64748b' }}>
-                              {obj.employee_self_marks !== null ? `${parseFloat(obj.employee_self_marks)}/100` : '—'}
-                            </td>
-                            <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                              {obj.manager_marks !== null ? `${parseFloat(obj.manager_marks)}/100` : '—'}
-                            </td>
-                            <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right', fontWeight: 700, color: '#2563eb' }}>
-                              {weighted}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr style={{ background: '#f1f5f9', fontWeight: 700, borderTop: '2px solid #cbd5e1' }}>
-                        <td colSpan={2} style={{ padding: '0.55rem 0.6rem', textAlign: 'right', color: '#0f172a' }}>
-                          Total Weight & Raw Objective Score:
+                      {objectives.map((obj, idx) => (
+                        <tr key={obj.id || idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
+                          <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
+                            {obj.title}
+                          </td>
+                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 800 }}>
+                            {obj.weight ? `${obj.weight}%` : '—'}
+                          </td>
+                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                            {obj.deadline ? new Date(obj.deadline).toLocaleDateString('en-GB') : '—'}
+                          </td>
+                          <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
+                            {obj.achievement || '—'}
+                          </td>
+                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', textTransform: 'capitalize', fontSize: '0.78rem' }}>
+                            {obj.status?.replace('_', ' ') || 'In progress'}
+                          </td>
+                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 900, fontSize: '0.9rem' }}>
+                            {obj.actual_marks !== null && obj.actual_marks !== undefined ? obj.actual_marks : '—'}
+                          </td>
+                        </tr>
+                      ))}
+
+                      {/* Comments & Deductions */}
+                      {/* Row 1: Appraiser Comments + Attendance Notes + Attendance Label + Marks */}
+                      <tr style={{ borderTop: '1.5px solid #0f172a', borderBottom: '1px solid #cbd5e1' }}>
+                        <td rowSpan={2} colSpan={3} style={{ padding: '0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'top', width: '53%' }}>
+                          <strong style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.2rem' }}>Appraiser's Comments</strong>
+                          <div style={{ fontSize: '0.78rem', color: '#334155' }}>
+                            {data.manager_comments || 'No remarks recorded.'}
+                          </div>
                         </td>
-                        <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', color: '#0f172a' }}>
-                          {(data.objectives || []).reduce((acc, o) => acc + parseFloat(o.weight || 0), 0)}%
+                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', fontSize: '0.78rem', width: '27%', color: data.attendance_deduction_notes ? '#0f172a' : '#94a3b8', fontStyle: data.attendance_deduction_notes ? 'normal' : 'italic' }}>
+                          {data.attendance_deduction_notes || '—'}
                         </td>
-                        <td colSpan={2} style={{ padding: '0.55rem 0.6rem' }}></td>
-                        <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right', color: '#2563eb', fontSize: '0.9rem' }}>
-                          {parseFloat(data.objective_score || 0).toFixed(2)}
+                        <td style={{ padding: '0.5rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, textAlign: 'right', verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', width: '10%' }}>
+                          Attendance
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', width: '10%' }}>
+                          {data.attendance_deduction > 0 ? `-${data.attendance_deduction}` : '0'}
                         </td>
                       </tr>
-                    </tfoot>
+
+                      {/* Row 2: Misconduct Notes + Misconduct Label + Marks */}
+                      <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', fontSize: '0.78rem', width: '27%', color: data.misconduct_deduction_notes ? '#0f172a' : '#94a3b8', fontStyle: data.misconduct_deduction_notes ? 'normal' : 'italic' }}>
+                          {data.misconduct_deduction_notes || '—'}
+                        </td>
+                        <td style={{ padding: '0.5rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, textAlign: 'right', verticalAlign: 'middle', width: '10%' }}>
+                          Misconduct
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', width: '10%' }}>
+                          {data.misconduct_deduction > 0 ? `-${data.misconduct_deduction}` : '0'}
+                        </td>
+                      </tr>
+
+                      {/* Summary Row */}
+                      <tr style={{ background: '#f8fafc', borderTop: '1.5px solid #0f172a', fontWeight: 800 }}>
+                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', textAlign: 'right' }}>
+                          Total Weight:
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                          100%
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
+                          Appraiser
+                        </td>
+                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1' }}>
+                          {evaluator?.full_name || 'Hasintha Rathnayake - GM'}
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
+                          Total
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'center', fontSize: '1.1rem', fontWeight: 900, color: '#0284c7' }}>
+                          {data.final_score}
+                        </td>
+                      </tr>
+
+                      {/* Grade Row */}
+                      <tr style={{ background: '#f1f5f9', fontWeight: 800 }}>
+                        <td colSpan={4} style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
+                          Variable Performance Pay: <strong>{data.variable_pay_adjustment || '100%'}</strong> ({data.performance_level || gradeMeta.label})
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900, fontSize: '0.8rem' }}>
+                          Monthly Performance Grade
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'center', fontSize: '1.2rem', fontWeight: 900, color: gradeMeta.color }}>
+                          {data.grade || 'A1'}
+                        </td>
+                      </tr>
+                    </tbody>
                   </table>
                 </div>
 
-                {/* ── Section 2: Deductions & Final Score Calculation ───────── */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1.2fr 0.8fr',
-                  gap: '1rem',
-                  marginBottom: '1.25rem',
-                }}>
-                  {/* Deductions Breakdown */}
-                  <div style={{
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '0.85rem 1rem',
-                    background: '#f8fafc',
-                  }}>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a' }}>
-                      Section 2: Policy Deductions
-                    </h4>
+                {/* Policy Footer Statement */}
+                <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 2rem 0', lineHeight: 1.4, fontStyle: 'italic' }}>
+                  Employee performance is not limited to completion of operational objectives. Attendance, discipline, professional conduct and compliance with Company policies are also considered part of overall performance.
+                </p>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.78rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <strong style={{ color: '#0f172a' }}>Attendance Deduction (0 to 10 marks max):</strong>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                            {data.attendance_deduction_notes || 'Clean attendance record. No deductions.'}
-                          </div>
-                        </div>
-                        <span style={{ fontWeight: 700, color: data.attendance_deduction > 0 ? '#ef4444' : '#10b981', minWidth: '60px', textAlign: 'right' }}>
-                          -{parseFloat(data.attendance_deduction || 0).toFixed(1)}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #cbd5e1', paddingTop: '0.4rem' }}>
-                        <div>
-                          <strong style={{ color: '#0f172a' }}>Misconduct Deduction (0 to 30 marks):</strong>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                            {data.misconduct_deduction_notes || 'No disciplinary infractions recorded.'}
-                          </div>
-                        </div>
-                        <span style={{ fontWeight: 700, color: data.misconduct_deduction > 0 ? '#ef4444' : '#10b981', minWidth: '60px', textAlign: 'right' }}>
-                          -{parseFloat(data.misconduct_deduction || 0).toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Final Grading Box */}
-                  <div style={{
-                    border: `2px solid ${gradeMeta.color}`,
-                    borderRadius: '10px',
-                    padding: '0.85rem 1rem',
-                    background: gradeMeta.bg,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                  }}>
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#475569' }}>
-                          Final Monthly Score
-                        </span>
-                        <span style={{ fontSize: '1.4rem', fontWeight: 800, color: gradeMeta.color }}>
-                          {parseFloat(data.final_score || 0).toFixed(1)} <span style={{ fontSize: '0.8rem', color: '#64748b' }}>/ 100</span>
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        <span style={{
-                          padding: '0.25rem 0.65rem',
-                          borderRadius: '6px',
-                          background: gradeMeta.color,
-                          color: '#fff',
-                          fontWeight: 800,
-                          fontSize: '0.88rem',
-                          letterSpacing: '0.5px',
-                        }}>
-                          GRADE {data.grade || '—'}
-                        </span>
-                        <strong style={{ color: '#0f172a', fontSize: '0.85rem' }}>{gradeMeta.label}</strong>
-                      </div>
-                    </div>
-
-                    <div style={{ borderTop: '1px dashed rgba(0,0,0,0.12)', paddingTop: '0.4rem', marginTop: '0.4rem', fontSize: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#475569' }}>Variable Pay Adjustment:</span>
-                        <strong style={{ color: '#0f172a' }}>{data.variable_pay_adjustment_pct || gradeMeta.pay}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Section 3: Qualitative Feedback & Remarks ──────────────── */}
-                <div style={{
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  padding: '0.85rem 1rem',
-                  marginBottom: '1.5rem',
-                  fontSize: '0.78rem',
-                  background: '#fff',
-                }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a' }}>
-                    Section 3: Qualitative Feedback & Development Remarks
-                  </h4>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div>
-                      <strong style={{ color: '#475569', display: 'block', marginBottom: '0.2rem' }}>
-                        Employee Feedback & Self-Reflection:
-                      </strong>
-                      <div style={{ minHeight: '44px', padding: '0.4rem 0.6rem', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', color: '#1e293b' }}>
-                        {data.employee_comments || 'No self-reflection notes submitted.'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <strong style={{ color: '#475569', display: 'block', marginBottom: '0.2rem' }}>
-                        Line Manager / Evaluator Comments & Action Plan:
-                      </strong>
-                      <div style={{ minHeight: '44px', padding: '0.4rem 0.6rem', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', color: '#1e293b' }}>
-                        {data.manager_comments || 'No manager evaluation comments recorded.'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Section 4: Sign-Off & Official Audit Stamp ─────────────── */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '2rem',
-                  paddingTop: '0.5rem',
-                  borderTop: '1px solid #cbd5e1',
-                  fontSize: '0.78rem',
-                }}>
-                  {/* Evaluator Sign-off */}
+                {/* ── Signatures ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', paddingTop: '2.5rem', borderTop: '1px solid #cbd5e1', textAlign: 'center', fontSize: '0.75rem' }}>
                   <div>
-                    <div style={{ color: '#64748b', marginBottom: '1.75rem' }}>
-                      Evaluated and Submitted by Line Manager:
-                    </div>
-                    <div style={{ borderTop: '1px solid #475569', paddingTop: '0.35rem' }}>
-                      <strong style={{ color: '#0f172a', display: 'block' }}>{evaluator?.full_name || 'Line Manager'}</strong>
-                      <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                        {evaluator?.designation?.title || 'Evaluator'} · Date: {data.evaluated_at ? new Date(data.evaluated_at).toLocaleDateString('en-GB') : '—'}
-                      </span>
-                    </div>
+                    <div style={{ borderBottom: '1px solid #0f172a', marginBottom: '0.4rem', height: '24px' }}></div>
+                    <strong>{emp?.full_name || 'Employee'}</strong>
+                    <div style={{ color: '#64748b' }}>Employee Signature & Date</div>
                   </div>
 
-                  {/* Director Official Stamp */}
                   <div>
-                    <div style={{ color: '#64748b', marginBottom: '1.75rem' }}>
-                      Project Director / CEO Approval & Sign-Off:
-                    </div>
-                    <div style={{ borderTop: '1px solid #475569', paddingTop: '0.35rem' }}>
-                      {data.status === 'approved' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#047857' }}>
-                          <CheckCircle2 size={16} />
-                          <div>
-                            <strong style={{ display: 'block', color: '#0f172a' }}>
-                              {data.directorApprovedBy?.name || 'Director Sign-off'}
-                            </strong>
-                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                              Digitally Approved on {data.director_approved_at ? new Date(data.director_approved_at).toLocaleString('en-GB') : '—'}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Pending Executive Sign-off</span>
-                      )}
-                    </div>
+                    <div style={{ borderBottom: '1px solid #0f172a', marginBottom: '0.4rem', height: '24px' }}></div>
+                    <strong>{evaluator?.full_name || 'Hasintha Rathnayake'}</strong>
+                    <div style={{ color: '#64748b' }}>Appraiser / PM Signature</div>
                   </div>
-                </div>
 
-                {/* Footer disclaimer */}
-                <div style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.65rem', color: '#94a3b8' }}>
-                  Circle Engineering (Pvt) Ltd · Confidential Human Resources Performance Record · Generated from HR Management System
+                  <div>
+                    <div style={{ borderBottom: '1px solid #0f172a', marginBottom: '0.4rem', height: '24px' }}></div>
+                    <strong>HR Admin / Management</strong>
+                    <div style={{ color: '#64748b' }}>Official HR Sign-off</div>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Modal Footer (No Print) */}
-          <div
-            className="no-print"
-            style={{
-              padding: '0.85rem 1.5rem',
-              background: '#f1f5f9',
-              borderTop: '1px solid #e2e8f0',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-            }}
-          >
-            <button
-              onClick={onClose}
-              style={{
-                background: '#fff',
-                border: '1px solid #cbd5e1',
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                color: '#475569',
-              }}
-            >
-              Close
-            </button>
-            <button
-              onClick={handlePrint}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: '#2563eb',
-                color: '#fff',
-                border: 'none',
-                padding: '0.45rem 1.25rem',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(37,99,235,0.3)',
-              }}
-            >
-              <Printer size={16} /> Print Official Scorecard
-            </button>
           </div>
         </div>
       </div>

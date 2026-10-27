@@ -17,6 +17,7 @@ class HrAppraisalObjective extends Model
         'status',
         'achievement',
         'evidence_notes',
+        'actual_marks',
         'marks',
         'weighted_marks',
         'manager_comments',
@@ -25,6 +26,7 @@ class HrAppraisalObjective extends Model
     protected $casts = [
         'weight'         => 'decimal:2',
         'deadline'       => 'date',
+        'actual_marks'   => 'decimal:2',
         'marks'          => 'decimal:2',
         'weighted_marks' => 'decimal:2',
         'order_num'      => 'integer',
@@ -33,16 +35,5 @@ class HrAppraisalObjective extends Model
     public function appraisal()
     {
         return $this->belongsTo(HrAppraisal::class, 'appraisal_id');
-    }
-
-    /**
-     * Recompute weighted marks based on marks and weight
-     */
-    public function updateWeightedMarks(): void
-    {
-        if ($this->marks !== null) {
-            $this->weighted_marks = round(($this->marks * $this->weight) / 100, 2);
-            $this->save();
-        }
     }
 }

@@ -353,7 +353,7 @@ const PortalHome = () => {
   );
 
   return (
-    <div style={{ padding: '1.25rem', paddingTop: '2rem' }}>
+    <div style={{ width: '100%' }}>
       {/* Greeting */}
       <div style={{ marginBottom: '1.5rem' }}>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.2rem' }}>{dateStr}</p>
@@ -531,270 +531,293 @@ const PortalHome = () => {
         </div>
       )}
 
-      {/* Live clock */}
-      <div className="card" style={{ padding: '1.5rem', textAlign: 'center', marginBottom: '1.25rem', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
-        <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>Current Time</div>
-        <div style={{ color: '#fff', fontSize: '3rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>
-          {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-        </div>
-        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem' }}>
-          Shift: 9:00 AM – 5:30 PM · Grace until 9:10 AM
-        </div>
-      </div>
-
-      {/* Missed Clock-Out Notices */}
-      {unclosedPast.length > 0 && (
-        <div
-          className="card"
-          style={{
-            padding: '1.25rem',
-            marginBottom: '1.25rem',
-            background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(217,119,6,0.04) 100%)',
-            border: '1px solid rgba(245,158,11,0.25)',
-            borderRadius: 'var(--radius-lg, 12px)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: 'rgba(245,158,11,0.15)', color: '#d97706',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <AlertCircle size={18} />
+      {/* ── Responsive Dashboard Content Grid ── */}
+      <div className="portal-dashboard-grid">
+        {/* Left Column: Live Clock, Today Status & Actions, Missed Notices */}
+        <div>
+          {/* Live clock */}
+          <div className="card" style={{ padding: '1.5rem', textAlign: 'center', marginBottom: '1.25rem', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>Current Time</div>
+            <div style={{ color: '#fff', fontSize: '3rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>
+              {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
-            <div>
-              <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--dark)' }}>
-                Missed Clock-Out Notice ({unclosedPast.length})
-              </h4>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                You forgot to clock out on shift(s) below. The system recorded departure at 5:30 PM.
-              </p>
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem' }}>
+              Shift: 9:00 AM – 5:30 PM · Grace until 9:10 AM
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {unclosedPast.map(att => {
-              const reg = att.regularization;
-              const dateStr = new Date(att.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-              return (
-                <div
-                  key={att.id}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    background: 'var(--white)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(245,158,11,0.2)',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '0.6rem',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dark)' }}>{dateStr}</span>
-                      <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(245,158,11,0.15)', color: '#d97706', fontWeight: 600 }}>
-                        Auto Clocked-Out (5:30 PM)
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      Clock-in: {formatTime(att.clock_in_time)} · Recorded Hours: {formatHours(att.working_hours) || '8h 30m'}
-                    </div>
-                    {reg && (
-                      <div style={{ fontSize: '0.72rem', marginTop: '0.3rem', fontWeight: 500, color: reg.status === 'pending' ? '#d97706' : reg.status === 'approved' ? '#16a34a' : '#dc2626' }}>
-                        {reg.status === 'pending' && `⏳ Adjustment to ${formatTime(reg.requested_clock_out_time)} pending HR approval`}
-                        {reg.status === 'approved' && `✅ Adjustment approved (${formatTime(reg.requested_clock_out_time)})`}
-                        {reg.status === 'rejected' && `❌ Adjustment rejected by HR`}
-                      </div>
-                    )}
-                  </div>
+          {/* Today status & Clock In/Out */}
+          <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Today's Attendance</span>
+              {today?.status && (
+                <span style={{
+                  padding: '0.2rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
+                  background: STATUS_COLORS[today.status]?.bg, color: STATUS_COLORS[today.status]?.color,
+                }}>
+                  {STATUS_COLORS[today.status]?.label}
+                </span>
+              )}
+            </div>
 
-                  {(!reg || reg.status === 'rejected') && (
-                    <button
-                      onClick={() => handleOpenRegModal(att)}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <div style={{ textAlign: 'center', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>CLOCK IN</div>
+                <div style={{ fontWeight: 700, fontSize: '1.25rem', color: hasClockIn ? '#22c55e' : 'var(--text-muted)' }}>
+                  {hasClockIn ? formatTime(today.clock_in_time) : '—'}
+                </div>
+                {today?.clock_in_address && (
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
+                    <MapPin size={10} />{today.clock_in_address.split(',').slice(0, 2).join(', ')}
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: 'center', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>CLOCK OUT</div>
+                <div style={{ fontWeight: 700, fontSize: '1.25rem', color: hasClockOut ? '#f59e0b' : 'var(--text-muted)' }}>
+                  {hasClockOut ? formatTime(today.clock_out_time) : '—'}
+                </div>
+                {hasClockOut && today?.working_hours && (
+                  <div style={{ fontSize: '0.7rem', color: '#22c55e', marginTop: '0.25rem', fontWeight: 600 }}>
+                    {formatHours(today.working_hours)} worked
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* GPS Status Alert */}
+            {needsClocking && (
+              <div style={{ marginBottom: '1.25rem', padding: '0.85rem', borderRadius: 'var(--radius-md)', background: zoneAlert.bg, color: zoneAlert.color, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {zoneAlert.loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <AlertCircle size={18} />}
+                {zoneAlert.msg}
+              </div>
+            )}
+
+            {/* Clock In/Out Button */}
+            {canClockIn && (
+              <button
+                onClick={handleClockIn}
+                disabled={clocking}
+                style={{
+                  width: '100%', padding: '1rem', borderRadius: 'var(--radius-lg)',
+                  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                  border: 'none', cursor: clocking ? 'not-allowed' : 'pointer',
+                  color: '#fff', fontWeight: 700, fontSize: '1.1rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  boxShadow: '0 4px 15px rgba(34,197,94,0.4)',
+                  transition: 'opacity 0.2s', opacity: clocking ? 0.7 : 1,
+                }}
+              >
+                {clocking ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Clock size={20} />}
+                {clocking ? 'Locating...' : 'Clock In'}
+              </button>
+            )}
+            {canClockOut && (
+              <button
+                onClick={handleClockOut}
+                disabled={clocking}
+                style={{
+                  width: '100%', padding: '1rem', borderRadius: 'var(--radius-lg)',
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  border: 'none', cursor: clocking ? 'not-allowed' : 'pointer',
+                  color: '#fff', fontWeight: 700, fontSize: '1.1rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  boxShadow: '0 4px 15px rgba(245,158,11,0.4)',
+                  transition: 'opacity 0.2s', opacity: clocking ? 0.7 : 1,
+                }}
+              >
+                {clocking ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={20} />}
+                {clocking ? 'Locating...' : 'Clock Out'}
+              </button>
+            )}
+            {hasClockIn && hasClockOut && (
+              <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(34,197,94,0.08)', borderRadius: 'var(--radius-md)', color: '#16a34a', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                <CheckCircle2 size={16} /> Attendance complete for today
+              </div>
+            )}
+          </div>
+
+          {/* Missed Clock-Out Notices */}
+          {unclosedPast.length > 0 && (
+            <div
+              className="card"
+              style={{
+                padding: '1.25rem',
+                marginBottom: '1.25rem',
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(217,119,6,0.04) 100%)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: 'var(--radius-lg, 12px)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: 'rgba(245,158,11,0.15)', color: '#d97706',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <AlertCircle size={18} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--dark)' }}>
+                    Missed Clock-Out Notice ({unclosedPast.length})
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    You forgot to clock out on shift(s) below. The system recorded departure at 5:30 PM.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {unclosedPast.map(att => {
+                  const reg = att.regularization;
+                  const dateStr = new Date(att.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                  return (
+                    <div
+                      key={att.id}
                       style={{
-                        background: '#f59e0b',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '0.35rem 0.75rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        boxShadow: '0 1px 3px rgba(245,158,11,0.3)',
+                        padding: '0.75rem 1rem',
+                        background: 'var(--white)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(245,158,11,0.2)',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.6rem',
                       }}
                     >
-                      Request Time Adjustment
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dark)' }}>{dateStr}</span>
+                          <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(245,158,11,0.15)', color: '#d97706', fontWeight: 600 }}>
+                            Auto Clocked-Out (5:30 PM)
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                          Clock-in: {formatTime(att.clock_in_time)} · Recorded Hours: {formatHours(att.working_hours) || '8h 30m'}
+                        </div>
+                        {reg && (
+                          <div style={{ fontSize: '0.72rem', marginTop: '0.3rem', fontWeight: 500, color: reg.status === 'pending' ? '#d97706' : reg.status === 'approved' ? '#16a34a' : '#dc2626' }}>
+                            {reg.status === 'pending' && `⏳ Adjustment to ${formatTime(reg.requested_clock_out_time)} pending HR approval`}
+                            {reg.status === 'approved' && `✅ Adjustment approved (${formatTime(reg.requested_clock_out_time)})`}
+                            {reg.status === 'rejected' && `❌ Adjustment rejected by HR`}
+                          </div>
+                        )}
+                      </div>
 
-      {/* Today status */}
-      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Today's Attendance</span>
-          {today?.status && (
-            <span style={{
-              padding: '0.2rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
-              background: STATUS_COLORS[today.status]?.bg, color: STATUS_COLORS[today.status]?.color,
-            }}>
-              {STATUS_COLORS[today.status]?.label}
-            </span>
+                      {(!reg || reg.status === 'rejected') && (
+                        <button
+                          onClick={() => handleOpenRegModal(att)}
+                          style={{
+                            background: '#f59e0b',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 3px rgba(245,158,11,0.3)',
+                          }}
+                        >
+                          Request Time Adjustment
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
-          <div style={{ textAlign: 'center', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>CLOCK IN</div>
-            <div style={{ fontWeight: 700, fontSize: '1.25rem', color: hasClockIn ? '#22c55e' : 'var(--text-muted)' }}>
-              {hasClockIn ? formatTime(today.clock_in_time) : '—'}
-            </div>
-            {today?.clock_in_address && (
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
-                <MapPin size={10} />{today.clock_in_address.split(',').slice(0, 2).join(', ')}
+        {/* Right Column: Month stats & Quick Navigation */}
+        <div>
+          {/* Month stats */}
+          {monthStats && (
+            <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{month} Attendance</span>
+                <button
+                  onClick={() => navigate('/solar/hr/portal/attendance')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                >
+                  View All <ChevronRight size={14} />
+                </button>
               </div>
-            )}
-          </div>
-          <div style={{ textAlign: 'center', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>CLOCK OUT</div>
-            <div style={{ fontWeight: 700, fontSize: '1.25rem', color: hasClockOut ? '#f59e0b' : 'var(--text-muted)' }}>
-              {hasClockOut ? formatTime(today.clock_out_time) : '—'}
-            </div>
-            {hasClockOut && today?.working_hours && (
-              <div style={{ fontSize: '0.7rem', color: '#22c55e', marginTop: '0.25rem', fontWeight: 600 }}>
-                {formatHours(today.working_hours)} worked
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.5rem' }}>
+                {[
+                  { label: 'Present', val: monthStats.present, color: '#22c55e' },
+                  { label: 'Absent',  val: monthStats.absent,  color: '#ef4444' },
+                  { label: 'Late',    val: monthStats.late,    color: '#f59e0b' },
+                  { label: 'Half',    val: monthStats.halfDay, color: '#8b5cf6' },
+                ].map(s => (
+                  <div key={s.label} style={{ textAlign: 'center', padding: '0.6rem 0.3rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 700, color: s.color }}>{s.val}</div>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 500 }}>{s.label}</div>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
-        {/* GPS Status Alert */}
-        {needsClocking && (
-          <div style={{ marginBottom: '1.25rem', padding: '0.85rem', borderRadius: 'var(--radius-md)', background: zoneAlert.bg, color: zoneAlert.color, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {zoneAlert.loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <AlertCircle size={18} />}
-            {zoneAlert.msg}
-          </div>
-        )}
-
-        {/* Clock In/Out Button */}
-        {canClockIn && (
-          <button
-            onClick={handleClockIn}
-            disabled={clocking}
-            style={{
-              width: '100%', padding: '1rem', borderRadius: 'var(--radius-lg)',
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-              border: 'none', cursor: clocking ? 'not-allowed' : 'pointer',
-              color: '#fff', fontWeight: 700, fontSize: '1.1rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-              boxShadow: '0 4px 15px rgba(34,197,94,0.4)',
-              transition: 'opacity 0.2s', opacity: clocking ? 0.7 : 1,
-            }}
-          >
-            {clocking ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Clock size={20} />}
-            {clocking ? 'Locating...' : 'Clock In'}
-          </button>
-        )}
-        {canClockOut && (
-          <button
-            onClick={handleClockOut}
-            disabled={clocking}
-            style={{
-              width: '100%', padding: '1rem', borderRadius: 'var(--radius-lg)',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              border: 'none', cursor: clocking ? 'not-allowed' : 'pointer',
-              color: '#fff', fontWeight: 700, fontSize: '1.1rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-              boxShadow: '0 4px 15px rgba(245,158,11,0.4)',
-              transition: 'opacity 0.2s', opacity: clocking ? 0.7 : 1,
-            }}
-          >
-            {clocking ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={20} />}
-            {clocking ? 'Locating...' : 'Clock Out'}
-          </button>
-        )}
-        {hasClockIn && hasClockOut && (
-          <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(34,197,94,0.08)', borderRadius: 'var(--radius-md)', color: '#16a34a', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-            <CheckCircle2 size={16} /> Attendance complete for today
-          </div>
-        )}
-      </div>
-
-      {/* Month stats */}
-      {monthStats && (
-        <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{month}</span>
+          {/* Quick Navigation Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
             <button
-              onClick={() => navigate('/solar/hr/portal/attendance')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+              onClick={() => navigate('/solar/hr/portal/appraisals')}
+              className="card"
+              style={{
+                padding: '1rem',
+                border: '1px solid #e0e7ff',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)',
+                transition: 'transform 0.15s ease',
+              }}
             >
-              View All <ChevronRight size={14} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366f1', flexShrink: 0 }}>
+                  <Award size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>MBO Performance Appraisals</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>View monthly targets, submit achievements & scorecards</div>
+                </div>
+              </div>
+              <ChevronRight size={18} color="#6366f1" />
+            </button>
+
+            <button
+              onClick={() => navigate('/solar/hr/portal/leaves')}
+              className="card"
+              style={{
+                padding: '1rem',
+                border: '1px solid #e0f2fe',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                transition: 'transform 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(2,132,199,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', flexShrink: 0 }}>
+                  <CalendarDays size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>Leave Management</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Apply for leave & track approval balance</div>
+                </div>
+              </div>
+              <ChevronRight size={18} color="#0284c7" />
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.5rem' }}>
-            {[
-              { label: 'Present', val: monthStats.present, color: '#22c55e' },
-              { label: 'Absent',  val: monthStats.absent,  color: '#ef4444' },
-              { label: 'Late',    val: monthStats.late,    color: '#f59e0b' },
-              { label: 'Half',    val: monthStats.halfDay, color: '#8b5cf6' },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: 'center', padding: '0.6rem 0.3rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
-                <div style={{ fontSize: '1.3rem', fontWeight: 700, color: s.color }}>{s.val}</div>
-                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 500 }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
         </div>
-      )}
-
-      {/* Quick links */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.65rem' }}>
-        <button
-          onClick={() => navigate('/solar/hr/portal/leaves')}
-          className="card"
-          style={{ padding: '0.85rem 0.65rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', flexShrink: 0 }}>
-            <CalendarDays size={16} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Leave</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Apply / Track</div>
-          </div>
-        </button>
-        <button
-          onClick={() => navigate('/solar/hr/portal/appraisals')}
-          className="card"
-          style={{ padding: '0.85rem 0.65rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366f1', flexShrink: 0 }}>
-            <Award size={16} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>MBO Goals</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Performance</div>
-          </div>
-        </button>
-        <button
-          onClick={() => navigate('/solar/hr/portal/announcements')}
-          className="card"
-          style={{ padding: '0.85rem 0.65rem', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b', flexShrink: 0 }}>
-            <AlertCircle size={16} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Updates</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Announce</div>
-          </div>
-        </button>
       </div>
 
       {/* Clock-Out Adjustment Modal */}

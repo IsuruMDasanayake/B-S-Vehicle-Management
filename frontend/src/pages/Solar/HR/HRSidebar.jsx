@@ -87,7 +87,7 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
       {
         title: 'Performance & MBO',
         items: [
-          { name: 'Appraisals (MBO)', path: '/solar/hr/admin/appraisals', icon: Award },
+          { name: 'Performance', path: '/solar/hr/admin/appraisals', icon: Award },
         ],
       },
       {

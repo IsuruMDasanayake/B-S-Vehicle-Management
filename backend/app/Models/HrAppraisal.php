@@ -34,7 +34,15 @@ class HrAppraisal extends Model
         'director_comments',
         'director_approved_by',
         'director_approved_at',
+        'submitted_at',
+        'finalized_by',
+        'finalized_at',
     ];
+
+    // Simplified workflow statuses
+    public const STATUS_OPEN      = 'open';
+    public const STATUS_SUBMITTED = 'submitted';
+    public const STATUS_FINALIZED = 'finalized';
 
     protected $casts = [
         'objective_score'      => 'decimal:2',
@@ -44,6 +52,8 @@ class HrAppraisal extends Model
         'manager_evaluated_at' => 'datetime',
         'hr_reviewed_at'       => 'datetime',
         'director_approved_at' => 'datetime',
+        'submitted_at'         => 'datetime',
+        'finalized_at'         => 'datetime',
     ];
 
     // ─── Relationships ────────────────────────────────────────────────────────
@@ -73,21 +83,31 @@ class HrAppraisal extends Model
         return $this->belongsTo(User::class, 'director_approved_by');
     }
 
+    public function finalizedBy()
+    {
+        return $this->belongsTo(User::class, 'finalized_by');
+    }
+
+    public function revisions()
+    {
+        return $this->hasMany(HrAppraisalObjectiveRevision::class, 'appraisal_id')->latest();
+    }
+
     // ─── Business Logic & Calculations ────────────────────────────────────────
 
     /**
-     * Recompute objective score, final score, grade, and variable pay adjustment
+     * Recompute objective score, final score, grade, and variable pay adjustment.
+     *
+     * Total = Σ Actual Marks (each given out of its weight) − Attendance − Misconduct
      */
     public function recalculateScores(): void
     {
-        // 1. Objective score sum
+        // 1. Objective score = sum of actual marks (already out of weight)
+        $this->load('objectives');
         $objScore = 0;
         foreach ($this->objectives as $obj) {
-            if ($obj->marks !== null) {
-                $weighted = round(($obj->marks * $obj->weight) / 100, 2);
-                $obj->weighted_marks = $weighted;
-                $obj->save();
-                $objScore += $weighted;
+            if ($obj->actual_marks !== null) {
+                $objScore += (float) $obj->actual_marks;
             }
         }
         $this->objective_score = round(min(100, max(0, $objScore)), 2);
