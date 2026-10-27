@@ -10,7 +10,7 @@ const navItems = [
   { to: 'home',         icon: Home,         label: 'Dashboard' },
   { to: 'attendance',   icon: Clock,        label: 'Attendance' },
   { to: 'leaves',       icon: CalendarDays, label: 'Leave' },
-  { to: 'appraisals',   icon: Award,        label: 'MBO Appraisals' },
+  { to: 'appraisals',   icon: Award,        label: 'Performance' },
   { to: 'profile',      icon: User,         label: 'My Profile' },
 ];
 
