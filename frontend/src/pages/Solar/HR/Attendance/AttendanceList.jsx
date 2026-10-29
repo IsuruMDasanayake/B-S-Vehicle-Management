@@ -13,9 +13,18 @@ const STATUS_MAP = {
   absent:   { label: 'Absent',    color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
   half_day: { label: 'Half Day',  color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
   wfh:      { label: 'WFH',       color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)' },
+  leave:    { label: 'Leave',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
 };
 
 const StatusBadge = ({ status }) => {
+  if (status === 'leave') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>
+        <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: '#3b82f6', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 800 }}>LV</span>
+        Leave
+      </span>
+    );
+  }
   const s = STATUS_MAP[status] || { label: status || 'Absent', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' };
   return (
     <span style={{ padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600, background: s.bg, color: s.color }}>
@@ -95,7 +104,7 @@ const AttendanceList = () => {
     acc[status] = (acc[status] || 0) + 1;
     acc.total++;
     return acc;
-  }, { total: 0, present: 0, late: 0, absent: 0, half_day: 0, wfh: 0 });
+  }, { total: 0, present: 0, late: 0, absent: 0, half_day: 0, wfh: 0, leave: 0 });
 
   const toLocalISO = (utcStr) => {
     if (!utcStr) return '';
@@ -317,6 +326,7 @@ const AttendanceList = () => {
               { key: 'total',    label: 'Total',    val: totals.total,    color: '#3b82f6',  bg: 'rgba(59,130,246,0.1)' },
               { key: 'present',  label: 'Present',  val: totals.present,  color: '#22c55e',  bg: 'rgba(34,197,94,0.1)' },
               { key: 'late',     label: 'Late',     val: totals.late,     color: '#f59e0b',  bg: 'rgba(245,158,11,0.1)' },
+              { key: 'leave',    label: 'Leave (LV)', val: totals.leave,  color: '#3b82f6',  bg: 'rgba(59,130,246,0.12)' },
               { key: 'absent',   label: 'Absent',   val: totals.absent,   color: '#ef4444',  bg: 'rgba(239,68,68,0.1)' },
               { key: 'wfh',      label: 'WFH',      val: totals.wfh,      color: '#0ea5e9',  bg: 'rgba(14,165,233,0.1)' },
               { key: 'half_day', label: 'Half Day', val: totals.half_day, color: '#8b5cf6',  bg: 'rgba(139,92,246,0.1)' },
@@ -389,7 +399,7 @@ const AttendanceList = () => {
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
                         <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          {att ? (
+                          {att?.id ? (
                             <button onClick={() => openEdit(emp)} title="Correct" style={{ background: 'rgba(245,158,11,0.1)', border: 'none', cursor: 'pointer', color: '#d97706', padding: '0.4rem', borderRadius: 'var(--radius-md)', display: 'flex' }}>
                               <Edit2 size={14} />
                             </button>
