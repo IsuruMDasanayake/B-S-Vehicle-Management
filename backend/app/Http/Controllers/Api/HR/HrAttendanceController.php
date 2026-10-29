@@ -581,6 +581,32 @@ class HrAttendanceController extends Controller
         return response()->json($report);
     }
 
+    // ── HR Admin: Send Weekly / Monthly Attendance & Leave Email Report ───────
+    public function sendReportEmail(Request $request, \App\Services\HrAttendanceLeaveReportService $reportService)
+    {
+        $user = $request->user();
+        if (!$user->hasRole('super_admin') && !$user->hasRole('solar_hr_admin') && !HrLeaveController::isLeaveApprovalManager($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'period'        => 'required|in:weekly,monthly',
+            'month'         => 'nullable|string|max:10',
+            'department_id' => 'nullable|integer',
+        ]);
+
+        $result = $reportService->sendReport(
+            $validated['period'],
+            $validated['month'] ?? null,
+            !empty($validated['department_id']) ? (int) $validated['department_id'] : null
+        );
+
+        return response()->json([
+            'message' => ucfirst($result['period']) . ' Attendance & Leave report emailed to ' . count($result['recipients']) . ' recipient(s).',
+            'data'    => $result,
+        ]);
+    }
+
     /** Count Mon–Fri working days in a given Y-m month */
     private function getWorkingDaysInMonth(string $month): int
     {

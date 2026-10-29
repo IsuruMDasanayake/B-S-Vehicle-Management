@@ -29,6 +29,14 @@ class Kernel extends ConsoleKernel
 
         // HR Monthly MBO Appraisal Reminders (25th for Employees, 1st for Managers & Directors)
         $schedule->command('hr:remind-mbo-appraisal')->dailyAt('09:30')->timezone('Asia/Colombo');
+
+        // HR Weekly & Monthly Attendance + Leave Email Reports (to HR, Super Admin, Hasintha, Eranda)
+        $schedule->command('hr:send-attendance-leave-report --period=weekly')
+            ->weeklyOn(5, '18:00')
+            ->timezone('Asia/Colombo');
+        $schedule->command('hr:send-attendance-leave-report --period=monthly')
+            ->monthlyOn(1, '08:00')
+            ->timezone('Asia/Colombo');
     }
 
     /**

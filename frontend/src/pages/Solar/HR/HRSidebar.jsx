@@ -105,13 +105,11 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
           { name: 'HR Reports', path: '/solar/hr/admin/reports', icon: BarChart2 },
         ],
       },
-    ] : []),
-    ...(isSuperAdmin ? [
       {
         title: 'System',
         items: [
           { name: 'Clock-In Locations', path: '/solar/hr/admin/locations', icon: MapPin },
-          { name: 'Settings', path: '/solar/hr/admin/settings', icon: Settings },
+          { name: 'Settings & Mail Reports', path: '/solar/hr/admin/settings', icon: Settings },
         ],
       },
     ] : []),
