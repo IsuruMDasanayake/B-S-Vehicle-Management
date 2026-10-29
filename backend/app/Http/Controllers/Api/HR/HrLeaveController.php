@@ -50,12 +50,22 @@ class HrLeaveController extends Controller
             'short' => 4, // 4 hours per month, but we return the monthly limit here
         ];
 
-        if ($yearsOfService == 0) {
-            // Joining Year
+        if ($yearsOfService < 0) {
             $entitlements['annual'] = 0;
-            // Casual: 0.5 per completed month (up to end of year)
-            $completedMonths = 12 - $joinDate->month;
-            $entitlements['casual'] = $completedMonths * 0.5;
+            $entitlements['casual'] = 0;
+            $entitlements['medical'] = 0;
+        } elseif ($yearsOfService == 0) {
+            // First calendar year (Joining Year)
+            $entitlements['annual'] = 0;
+
+            // Policy 1.5.2: Casual Leave in first calendar year = 0.5 day for each completed month of service
+            $asOfDate = $targetYear < Carbon::now()->year
+                ? Carbon::create($targetYear, 12, 31)->endOfDay()
+                : Carbon::now();
+            $completedMonths = $joinDate->greaterThan($asOfDate)
+                ? 0
+                : (int) floor($joinDate->copy()->startOfDay()->diffInMonths($asOfDate->copy()->startOfDay()));
+            $entitlements['casual'] = min(12, $completedMonths) * 0.5;
             
             if ($joinQuarter == 1) $entitlements['medical'] = 14;
             elseif ($joinQuarter == 2) $entitlements['medical'] = 10;
@@ -300,9 +310,13 @@ class HrLeaveController extends Controller
 
         return response()->json([
             'pending'          => (clone $base)->where('status', 'pending')->count(),
-            'manager_approved' => (clone $base)->where('status', 'manager_approved')->count(),
+            'manager_approved' => (clone $base)->where(function ($q) {
+                $q->whereIn('status', ['manager_approved', 'approved'])
+                  ->orWhereNotNull('manager_approved_at');
+            })->where('status', '!=', 'manager_rejected')->count(),
+            'awaiting_hr'      => (clone $base)->where('status', 'manager_approved')->count(),
             'approved'         => (clone $base)->where('status', 'approved')->count(),
-            'rejected'         => (clone $base)->where('status', 'rejected')->count(),
+            'rejected'         => (clone $base)->whereIn('status', ['rejected', 'manager_rejected'])->count(),
             'total_this_month' => (clone $base)->whereMonth('created_at', $month)->count(),
             'by_type'          => (clone $base)->whereIn('status', ['approved', 'pending', 'manager_approved'])
                 ->selectRaw('leave_type, count(*) as count')
@@ -326,7 +340,7 @@ class HrLeaveController extends Controller
             'pending'           => $pendingCount,
             'manager_approved'  => $mgrApprovedCount,
             'super_admin_count' => $pendingCount,
-            'hr_admin_count'    => $pendingCount + $mgrApprovedCount,
+            'hr_admin_count'    => $mgrApprovedCount,
         ]);
     }
 
@@ -389,7 +403,7 @@ class HrLeaveController extends Controller
         $updateData = ['status' => $validated['status']];
         
         if (str_starts_with($validated['status'], 'manager_')) {
-            if (!$isManager && !$isHR) return response()->json(['message' => 'Unauthorized for manager approval'], 403);
+            if (!$isManager) return response()->json(['message' => 'Unauthorized for manager approval'], 403);
             $updateData['manager_approved_by'] = $user->id;
             $updateData['manager_approved_at'] = Carbon::now();
             if (!empty($validated['notes'])) {
@@ -397,6 +411,11 @@ class HrLeaveController extends Controller
             }
         } else {
             if (!$isHR) return response()->json(['message' => 'Unauthorized for HR finalization'], 403);
+            if ($leave->status !== 'manager_approved') {
+                return response()->json([
+                    'message' => 'Manager approval is required before HR can approve or reject this leave request.',
+                ], 422);
+            }
             $updateData['approved_by'] = $user->id;
             if (!empty($validated['notes'])) {
                 $updateData['hr_notes'] = $validated['notes'];

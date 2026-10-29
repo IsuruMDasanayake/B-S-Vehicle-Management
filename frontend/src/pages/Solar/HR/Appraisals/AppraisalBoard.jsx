@@ -134,9 +134,9 @@ export const AppraisalBoard = ({ isHrView = false }) => {
   return (
     <div>
       {/* ── Top Filter Bar ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem', padding: '0rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.2rem 0', color: 'var(--dark)' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 600, margin: '0 0 0.2rem 0', color: 'var(--dark)' }}>
             {isHrView ? 'MBO Appraisals & HR Deductions' : 'Monthly Performance Appraisal Board'}
           </h2>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>

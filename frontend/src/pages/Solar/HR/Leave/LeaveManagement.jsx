@@ -6,6 +6,7 @@ import {
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../../../store/authStore';
+import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 
 /* ─── constants ──────────────────────────────────────────────────────────── */
 const STATUS_STYLE = {
@@ -85,7 +86,7 @@ export default function LeaveManagement() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const user = useAuthStore(state => state.user);
-  const isManager = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
+  const isManager = user?.role === 'super_admin' || user?.roles?.includes('super_admin') || isLeaveApprovalManager(user);
   const isHR = user?.role === 'solar_hr_admin' || user?.roles?.includes('solar_hr_admin');
 
   /* ── fetch ──────────────────────────────────────────────────────────────── */
@@ -174,7 +175,7 @@ export default function LeaveManagement() {
       {/* ── Header ── */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Leave Management</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Leave Management</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem' }}>Full oversight of leave requests, balances and approvals</p>
         </div>
         <button onClick={() => { fetchLeaves(); fetchStats(); if (tab === 'balances') fetchBalances(); }}
@@ -186,7 +187,13 @@ export default function LeaveManagement() {
       {/* ── Stat Cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         <StatCard icon={Clock} label="Pending" value={statsLoading ? '…' : stats?.pending ?? 0} color="#f59e0b" />
-        <StatCard icon={TrendingUp} label="Mgr Approved" value={statsLoading ? '…' : stats?.manager_approved ?? 0} color="#0ea5e9" />
+        <StatCard
+          icon={TrendingUp}
+          label="Mgr Approved"
+          value={statsLoading ? '…' : stats?.manager_approved ?? 0}
+          color="#0ea5e9"
+          sub={!statsLoading && stats?.awaiting_hr > 0 ? `${stats.awaiting_hr} awaiting HR` : null}
+        />
         <StatCard icon={CheckCircle} label="HR Approved" value={statsLoading ? '…' : stats?.approved ?? 0} color="#22c55e" />
         <StatCard icon={XCircle} label="Rejected" value={statsLoading ? '…' : stats?.rejected ?? 0} color="#ef4444" />
         <StatCard icon={Calendar} label="This Month" value={statsLoading ? '…' : stats?.total_this_month ?? 0} color="#8b5cf6" />
@@ -350,7 +357,7 @@ export default function LeaveManagement() {
                                 </button>
                               </>
                             )}
-                            {isHR && (l.status === 'pending' || l.status === 'manager_approved') && (
+                            {isHR && l.status === 'manager_approved' && (
                               <>
                                 <button onClick={() => confirmAction(l, 'approved')} className="btn btn-ghost"
                                   style={{ padding: '0.3rem 0.5rem', border: '1px solid var(--surface-2)', color: '#22c55e' }} title="HR Approve (Finalize)">
@@ -545,7 +552,7 @@ export default function LeaveManagement() {
                   <button className="btn btn-ghost" style={{ color: '#ef4444', border: '1px solid var(--surface-2)' }} onClick={() => { setDetailOpen(false); confirmAction(selectedLeave, 'manager_rejected'); }}>Mgr Reject</button>
                 </>
               )}
-              {isHR && (selectedLeave.status === 'pending' || selectedLeave.status === 'manager_approved') && (
+              {isHR && selectedLeave.status === 'manager_approved' && (
                 <>
                   <button className="btn btn-primary" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={() => { setDetailOpen(false); confirmAction(selectedLeave, 'approved'); }}>HR Approve</button>
                   <button className="btn btn-ghost" style={{ color: '#ef4444', border: '1px solid var(--surface-2)' }} onClick={() => { setDetailOpen(false); confirmAction(selectedLeave, 'rejected'); }}>Reject</button>
