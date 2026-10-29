@@ -216,6 +216,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('appraisals/send-reminder', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'triggerReminders']);
         Route::post('appraisals/{id}/remind-appraiser', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'remindAppraiserForSheet']);
         Route::get('appraisals/{id}', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'show']);
+
+        // Employee Training & Video Lessons
+        Route::get('training/lessons', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'index']);
+        Route::post('training/lessons', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'store']);
+        Route::get('training/lessons/{id}', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'show']);
+        Route::put('training/lessons/{id}', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'update']);
+        Route::delete('training/lessons/{id}', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'destroy']);
+        Route::post('training/lessons/{id}/remind', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'remind']);
+
+        // Employee Portal Training
+        Route::get('portal/training', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'myLessons']);
+        Route::post('portal/training/{id}/progress', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'recordProgress']);
+        Route::post('portal/training/{id}/complete', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'completeLesson']);
     });
 });
 

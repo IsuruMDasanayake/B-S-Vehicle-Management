@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Clock, CalendarDays, Award, User, LogOut, Shield, ExternalLink } from 'lucide-react';
+import { Home, Clock, CalendarDays, Award, User, LogOut, Shield, ExternalLink, Video } from 'lucide-react';
 import useAuthStore from '../../../../store/authStore';
 import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import api from '../../../../services/api';
@@ -11,6 +11,7 @@ const navItems = [
   { to: 'attendance',   icon: Clock,        label: 'Attendance' },
   { to: 'leaves',       icon: CalendarDays, label: 'Leave' },
   { to: 'appraisals',   icon: Award,        label: 'Performance' },
+  { to: 'training',     icon: Video,        label: 'Training' },
   { to: 'profile',      icon: User,         label: 'My Profile' },
 ];
 

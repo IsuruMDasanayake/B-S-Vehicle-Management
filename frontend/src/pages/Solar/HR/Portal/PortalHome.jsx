@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
-  BellRing, BellOff, X, CalendarDays, Award
+  BellRing, BellOff, X, CalendarDays, Award, Video
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
@@ -788,6 +788,33 @@ const PortalHome = () => {
                 </div>
               </div>
               <ChevronRight size={18} color="#6366f1" />
+            </button>
+
+            <button
+              onClick={() => navigate('/solar/hr/portal/training')}
+              className="card"
+              style={{
+                padding: '1rem',
+                border: '1px solid #bae6fd',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                transition: 'transform 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(2,132,199,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', flexShrink: 0 }}>
+                  <Video size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>Training & Video Lessons</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Watch assigned lessons & submit completion confirmations</div>
+                </div>
+              </div>
+              <ChevronRight size={18} color="#0284c7" />
             </button>
 
             <button

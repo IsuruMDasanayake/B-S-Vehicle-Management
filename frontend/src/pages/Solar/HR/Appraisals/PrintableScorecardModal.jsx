@@ -53,12 +53,89 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
   if (!isOpen || !isAuthorized) return null;
 
   const handlePrint = () => {
-    window.print();
+    const printContent = document.getElementById('printable-scorecard-root');
+    if (!printContent) {
+      window.print();
+      return;
+    }
+
+    // Create an invisible iframe dedicated to printing
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Performance Appraisal Scorecard - ${emp?.full_name || 'Scorecard'} - ${formattedMonth}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm 12mm 10mm 12mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              background: #fff;
+              font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              color: #0f172a;
+              line-height: 1.45;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+            }
+            .print-sheet {
+              width: 100% !important;
+              max-width: 100% !important;
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div style="background: #fff; padding: 0;">
+            ${printContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Iframe print error, falling back to window.print', err);
+        window.print();
+      } finally {
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 1500);
+      }
+    }, 250);
   };
 
-  const emp = data?.employee;
-  const evaluator = data?.evaluator;
-  const gradeKey = data?.grade || 'A1';
+  const emp = data?.employee || appraisalData?.employee;
+  const evaluator = data?.evaluator || appraisalData?.evaluator;
+  const gradeKey = data?.grade || appraisalData?.grade || 'A1';
   const gradeMeta = GRADE_INFO[gradeKey] || GRADE_INFO.A1;
 
   const formattedMonth = data?.period_month
@@ -73,12 +150,55 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
     <>
       <style>{`
         @media print {
+          /* Hide everything in the body by default */
           body * {
             visibility: hidden !important;
           }
-          #printable-scorecard-root, #printable-scorecard-root * {
+
+          /* Reset modal backdrop so it does not darken or fix page */
+          .scorecard-modal-backdrop {
+            position: static !important;
+            inset: auto !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            display: block !important;
+            z-index: auto !important;
+          }
+
+          .scorecard-modal-card {
+            position: static !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            max-height: none !important;
+            overflow: visible !important;
+            display: block !important;
+          }
+
+          /* Hide modal header with buttons */
+          .scorecard-modal-header,
+          .no-print {
+            display: none !important;
+            visibility: hidden !important;
+          }
+
+          /* Scorecard content must be visible and placed cleanly at top of page */
+          #printable-scorecard-root,
+          #printable-scorecard-root * {
             visibility: visible !important;
           }
+
           #printable-scorecard-root {
             position: absolute !important;
             left: 0 !important;
@@ -87,14 +207,15 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
+            overflow: visible !important;
+            display: block !important;
           }
-          .no-print {
-            display: none !important;
-          }
+
           @page {
             size: A4 portrait;
-            margin: 12mm 15mm 12mm 15mm;
+            margin: 10mm 12mm 10mm 12mm;
           }
+
           .print-sheet {
             box-shadow: none !important;
             border: none !important;
@@ -102,6 +223,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
             max-width: 100% !important;
             width: 100% !important;
           }
+
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -111,7 +233,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
 
       {/* Backdrop */}
       <div
-        className="no-print"
+        className="scorecard-modal-backdrop"
         style={{
           position: 'fixed',
           inset: 0,
@@ -126,6 +248,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
         }}
       >
         <div
+          className="scorecard-modal-card"
           style={{
             background: '#f8fafc',
             borderRadius: '16px',
@@ -141,6 +264,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
         >
           {/* Top Control Bar */}
           <div
+            className="scorecard-modal-header no-print"
             style={{
               padding: '1rem 1.5rem',
               background: '#0f172a',
@@ -255,7 +379,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '0.65rem 0.85rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.8rem' }}>
                   <div>
                     <div><strong>Employee Name:</strong> {emp?.full_name || '—'}</div>
-                    <div><strong>Employee ID:</strong> {emp?.employee_id || '—'}</div>
+                    <div><strong>Employee ID:</strong> {emp?.epf_no || emp?.employee_id || '—'}</div>
                     <div><strong>Department:</strong> {emp?.department?.name || '—'}</div>
                     <div><strong>Designation:</strong> {emp?.designation?.title || '—'}</div>
                   </div>

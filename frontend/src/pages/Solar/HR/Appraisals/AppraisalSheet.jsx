@@ -537,7 +537,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>{employee?.full_name}</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {employee?.employee_id ? `${employee.employee_id} · ` : ''}{employee?.designation || 'Staff'} {employee?.department ? `(${employee.department})` : ''}
+                {employee?.epf_no || employee?.employee_id ? `${employee.epf_no || employee.employee_id} · ` : ''}{employee?.designation || 'Staff'} {employee?.department ? `(${employee.department})` : ''}
               </div>
             </div>
           </div>
@@ -1691,7 +1691,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
       {scorecardOpen && sheet && canPrint && (
         <PrintableScorecardModal
           appraisalId={sheet.id}
-          appraisalData={sheet}
+          appraisalData={{ ...sheet, employee: data?.employee || sheet?.employee, evaluator: data?.appraiser || sheet?.evaluator }}
           isOpen={scorecardOpen}
           onClose={() => setScorecardOpen(false)}
         />

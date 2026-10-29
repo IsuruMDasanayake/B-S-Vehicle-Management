@@ -174,7 +174,7 @@ export default function LeaveManagement() {
       {/* ── Header ── */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Leave Management</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Leave Management</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem' }}>Full oversight of leave requests, balances and approvals</p>
         </div>
         <button onClick={() => { fetchLeaves(); fetchStats(); if (tab === 'balances') fetchBalances(); }}

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Clock, Calendar,
-  FileText, Package, Megaphone, BarChart2, Settings, LogOut, Users2, MapPin, Award
+  FileText, Package, Megaphone, BarChart2, Settings, LogOut, Users2, MapPin, Award, Video
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import api from '../../../services/api';
@@ -85,9 +85,10 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
         ],
       },
       {
-        title: 'Performance & MBO',
+        title: 'Performance & Training',
         items: [
           { name: 'Performance', path: '/solar/hr/admin/appraisals', icon: Award },
+          { name: 'Training Lessons', path: '/solar/hr/admin/training', icon: Video },
         ],
       },
       {
