@@ -56,9 +56,17 @@ const PortalAttendance = () => {
   const days = getDays(year, month);
   const firstDay = new Date(year, month, 1).getDay();
 
-  // Stats
-  const stats = records.reduce((a, r) => {
-    if (r.status) a[r.status] = (a[r.status] || 0) + 1;
+  // Compute monthly stats across calendar days (including approved leaves & past weekday absences)
+  const stats = Array.from({ length: days }, (_, i) => i + 1).reduce((a, d) => {
+    const dateStr = `${monthStr}-${String(d).padStart(2, '0')}`;
+    const weekend = isWeekend(dateStr);
+    const rec = byDate[dateStr];
+    let status = rec?.status;
+    if (!status && !weekend && dateStr <= todayStr) status = 'absent';
+    if (weekend) status = 'weekend';
+    if (status && status !== 'weekend') {
+      a[status] = (a[status] || 0) + 1;
+    }
     return a;
   }, {});
 
@@ -79,16 +87,17 @@ const PortalAttendance = () => {
       </div>
 
       {/* Stats strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.45rem', marginBottom: '1.25rem' }}>
         {[
           { key: 'present', label: 'Present', color: '#22c55e' },
           { key: 'late',    label: 'Late',    color: '#f59e0b' },
           { key: 'absent',  label: 'Absent',  color: '#ef4444' },
           { key: 'half_day',label: 'Half Day',color: '#8b5cf6' },
+          { key: 'leave',   label: 'Leave',   color: '#3b82f6' },
         ].map(s => (
-          <div key={s.key} className="card" style={{ padding: '0.65rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: s.color }}>{stats[s.key] || 0}</div>
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{s.label}</div>
+          <div key={s.key} className="card" style={{ padding: '0.6rem 0.35rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: s.color }}>{stats[s.key] || 0}</div>
+            <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -155,7 +164,7 @@ const PortalAttendance = () => {
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
         ) : records.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No records for this month.</div>
-        ) : [...records].reverse().slice(0, 10).map(r => {
+        ) : [...records].slice(0, 10).map(r => {
           const s = STATUS_CELL[r.status] || STATUS_CELL.absent;
           return (
             <div key={r.id} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--surface-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -164,13 +173,19 @@ const PortalAttendance = () => {
                   {new Date(r.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  {r.clock_in_time ? new Date(r.clock_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                  {' → '}
-                  {r.clock_out_time ? new Date(r.clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                  {r.working_hours ? ` · ${formatHours(r.working_hours)}` : ''}
+                  {r.status === 'leave' ? (
+                    <span style={{ color: '#3b82f6', fontWeight: 600 }}>{r.notes || 'Approved Leave'}</span>
+                  ) : (
+                    <>
+                      {r.clock_in_time ? new Date(r.clock_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {' → '}
+                      {r.clock_out_time ? new Date(r.clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {r.working_hours ? ` · ${formatHours(r.working_hours)}` : ''}
+                    </>
+                  )}
                 </div>
               </div>
-              <div style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', background: s.bg, color: s.color, fontSize: '0.7rem', fontWeight: 700 }}>{s.label}</div>
+              <div style={{ padding: '0.2rem 0.6rem', borderRadius: '6px', background: s.bg, color: s.color, fontSize: '0.7rem', fontWeight: 700 }}>{s.label}</div>
             </div>
           );
         })}

@@ -4,13 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 
-// Status display: P / A / L / H / WFH
+// Status display: P / A / L / H / WFH / LV
 const STATUS_CELL = {
   present:  { label: 'P',   color: '#fff',    bg: '#22c55e',           title: 'Present' },
   late:     { label: 'L',   color: '#fff',    bg: '#f59e0b',           title: 'Late' },
   absent:   { label: 'A',   color: '#fff',    bg: '#ef4444',           title: 'Absent' },
   half_day: { label: 'H',   color: '#fff',    bg: '#8b5cf6',           title: 'Half Day' },
   wfh:      { label: 'WFH', color: '#fff',    bg: '#0ea5e9',           title: 'Work From Home' },
+  leave:    { label: 'LV',  color: '#fff',    bg: '#3b82f6',           title: 'Leave' },
   weekend:  { label: '—',   color: '#6b7280', bg: 'var(--surface-2)', title: 'Weekend' },
   holiday:  { label: 'PH',  color: '#fff',    bg: '#ec4899',           title: 'Holiday / Poya' },
 };
@@ -67,8 +68,15 @@ const AttendanceCalendar = () => {
   // Summary per employee
   const getSummary = (empId) => {
     const rec = attendanceMap[empId] || {};
-    const counts = { present: 0, late: 0, absent: 0, half_day: 0, wfh: 0 };
-    Object.values(rec).forEach(s => { if (counts[s] !== undefined) counts[s]++; });
+    const todayStr = new Date().toISOString().split('T')[0];
+    const counts = { present: 0, late: 0, absent: 0, half_day: 0, wfh: 0, leave: 0 };
+    dayNums.forEach(d => {
+      const dateStr = `${monthStr}-${String(d).padStart(2, '0')}`;
+      if (isWeekend(dateStr)) return;
+      let s = rec[dateStr];
+      if (!s && dateStr <= todayStr) s = 'absent';
+      if (s && counts[s] !== undefined) counts[s]++;
+    });
     return counts;
   };
 
@@ -83,7 +91,7 @@ const AttendanceCalendar = () => {
           </button>
           <div>
             <h1 style={{ fontSize: '1.75rem' }}>Monthly Calendar</h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 0 }}>Attendance overview — P / A / L / H / WFH</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 0 }}>Attendance overview — P / A / L / H / WFH / LV</p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -132,9 +140,10 @@ const AttendanceCalendar = () => {
                     </th>
                   );
                 })}
-                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '60px' }}>P</th>
-                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '60px' }}>L</th>
-                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '60px' }}>A</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>P</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>L</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>LV</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>A</th>
               </tr>
             </thead>
             <tbody>
@@ -170,6 +179,7 @@ const AttendanceCalendar = () => {
                     })}
                     <td style={{ textAlign: 'center', fontWeight: 600, color: '#22c55e', padding: '0.5rem 0.75rem' }}>{summary.present + summary.late + summary.wfh}</td>
                     <td style={{ textAlign: 'center', fontWeight: 600, color: '#f59e0b', padding: '0.5rem 0.75rem' }}>{summary.late}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 600, color: '#3b82f6', padding: '0.5rem 0.75rem' }}>{summary.leave}</td>
                     <td style={{ textAlign: 'center', fontWeight: 600, color: '#ef4444', padding: '0.5rem 0.75rem' }}>{summary.absent}</td>
                   </tr>
                 );

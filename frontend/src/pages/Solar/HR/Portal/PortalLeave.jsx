@@ -42,9 +42,14 @@ const Badge = ({ status }) => {
       fontWeight: 700,
       background: s.bg,
       color: s.color,
-      display: 'inline-block',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.35rem',
       whiteSpace: 'nowrap',
     }}>
+      {status === 'approved' && (
+        <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: '#3b82f6', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.56rem', fontWeight: 800 }}>LV</span>
+      )}
       {s.label}
     </span>
   );
@@ -424,16 +429,7 @@ const PortalLeave = () => {
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                        <span style={{
-                          padding: '0.2rem 0.6rem',
-                          borderRadius: '999px',
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          background: s?.bg,
-                          color: s?.color,
-                        }}>
-                          {s?.label || r.status}
-                        </span>
+                        <Badge status={r.status} />
                         {r.status === 'pending' && (
                           <button
                             onClick={() => handleCancel(r.id)}

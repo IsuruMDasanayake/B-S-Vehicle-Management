@@ -28,7 +28,10 @@ const LEAVE_TYPE_COLORS = {
 const Badge = ({ status }) => {
   const s = STATUS_STYLE[status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: status };
   return (
-    <span style={{ padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>
+      {status === 'approved' && (
+        <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: '#3b82f6', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.56rem', fontWeight: 800 }}>LV</span>
+      )}
       {s.label}
     </span>
   );

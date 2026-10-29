@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HrAttendance;
 use App\Models\HrAttendanceRegularization;
 use App\Models\HrEmployee;
+use App\Models\HrLeave;
 use App\Models\HrLocation;
 use App\Models\User;
 use App\Notifications\HrNotification;
@@ -232,6 +233,87 @@ class HrAttendanceController extends Controller
         );
     }
 
+    /**
+     * Expand approved leaves (non-short) for an employee within a given Y-m month into a map of date => HrLeave.
+     */
+    private function getApprovedLeaveDateMap(int $employeeId, string $month): array
+    {
+        $monthStart = Carbon::parse($month . '-01')->startOfDay();
+        $monthEnd   = $monthStart->copy()->endOfMonth()->endOfDay();
+
+        $leaves = HrLeave::where('employee_id', $employeeId)
+            ->where('status', 'approved')
+            ->where('leave_type', '!=', 'short')
+            ->whereDate('start_date', '<=', $monthEnd->toDateString())
+            ->whereDate('end_date', '>=', $monthStart->toDateString())
+            ->get();
+
+        $dateMap = [];
+        foreach ($leaves as $leave) {
+            $start = Carbon::parse($leave->start_date)->startOfDay();
+            $end   = Carbon::parse($leave->end_date ?? $leave->start_date)->startOfDay();
+            if ($start->lt($monthStart)) $start = $monthStart->copy();
+            if ($end->gt($monthEnd)) $end = $monthEnd->copy();
+
+            for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                if (!$d->isWeekend()) {
+                    $dateMap[$d->toDateString()] = $leave;
+                }
+            }
+        }
+
+        return $dateMap;
+    }
+
+    /**
+     * Merge approved leave dates into an attendance collection for a given employee & month.
+     */
+    private function mergeApprovedLeavesIntoHistory(int $employeeId, string $month, $attendances)
+    {
+        $leaveDateMap = $this->getApprovedLeaveDateMap($employeeId, $month);
+        if (empty($leaveDateMap)) {
+            return $attendances;
+        }
+
+        $byDate = [];
+        $items = [];
+        foreach ($attendances as $att) {
+            $dateStr = $att->date instanceof Carbon
+                ? $att->date->format('Y-m-d')
+                : Carbon::parse($att->date)->format('Y-m-d');
+            $arr = $att->toArray();
+            $arr['date'] = $dateStr;
+            if (isset($leaveDateMap[$dateStr]) && (empty($arr['clock_in_time']) || $arr['status'] === 'absent')) {
+                $lv = $leaveDateMap[$dateStr];
+                $arr['status'] = 'leave';
+                $arr['leave_type'] = $lv->leave_type;
+                $arr['notes'] = $arr['notes'] ?: (ucfirst($lv->leave_type) . ' Leave' . ($lv->reason ? ': ' . $lv->reason : ''));
+            }
+            $byDate[$dateStr] = true;
+            $items[] = $arr;
+        }
+
+        foreach ($leaveDateMap as $dateStr => $lv) {
+            if (!isset($byDate[$dateStr])) {
+                $items[] = [
+                    'id'                 => 'leave-' . $lv->id . '-' . $dateStr,
+                    'employee_id'        => $employeeId,
+                    'date'               => $dateStr,
+                    'clock_in_time'      => null,
+                    'clock_out_time'     => null,
+                    'working_hours'      => null,
+                    'status'             => 'leave',
+                    'leave_type'         => $lv->leave_type,
+                    'notes'              => ucfirst($lv->leave_type) . ' Leave' . ($lv->reason ? ': ' . $lv->reason : ''),
+                    'is_approved_leave'  => true,
+                ];
+            }
+        }
+
+        usort($items, fn($a, $b) => strcmp($b['date'], $a['date']));
+        return array_values($items);
+    }
+
     // ── Employee: Monthly History ──────────────────────────────────────────────
     public function myHistory(Request $request)
     {
@@ -239,12 +321,14 @@ class HrAttendanceController extends Controller
         if (!$employee) return response()->json([]);
 
         $month = $request->get('month', Carbon::now()->format('Y-m'));
+        $attendances = HrAttendance::with('clockInLocation')
+            ->where('employee_id', $employee->id)
+            ->where('date', 'like', $month . '%')
+            ->orderBy('date', 'desc')
+            ->get();
+
         return response()->json(
-            HrAttendance::with('clockInLocation')
-                ->where('employee_id', $employee->id)
-                ->where('date', 'like', $month . '%')
-                ->orderBy('date', 'desc')
-                ->get()
+            $this->mergeApprovedLeavesIntoHistory($employee->id, $month, $attendances)
         );
     }
 
@@ -255,11 +339,14 @@ class HrAttendanceController extends Controller
         }
 
         $month = $request->get('month', Carbon::now()->format('Y-m'));
+        $attendances = HrAttendance::with('clockInLocation')
+            ->where('employee_id', $employeeId)
+            ->where('date', 'like', $month . '%')
+            ->orderBy('date', 'desc')
+            ->get();
+
         return response()->json(
-            HrAttendance::with('clockInLocation')
-                ->where('employee_id', $employeeId)
-                ->orderBy('date', 'desc')
-                ->get()
+            $this->mergeApprovedLeavesIntoHistory((int) $employeeId, $month, $attendances)
         );
     }
 
@@ -270,12 +357,46 @@ class HrAttendanceController extends Controller
         $deptId = $request->get('department_id');
 
         $query = HrEmployee::with(['department', 'designation'])
-            ->with(['attendances' => fn($q) => $q->where('date', $date)->with('clockInLocation')])
+            ->with([
+                'attendances' => fn($q) => $q->where('date', $date)->with('clockInLocation'),
+                'leaves'      => fn($q) => $q->where('status', 'approved')
+                    ->where('leave_type', '!=', 'short')
+                    ->whereDate('start_date', '<=', $date)
+                    ->whereDate('end_date', '>=', $date),
+            ])
             ->where('status', 'active');
 
         if ($deptId) $query->where('department_id', $deptId);
 
-        return response()->json($query->get());
+        $employees = $query->get()->map(function ($emp) use ($date) {
+            $empArr = $emp->toArray();
+            $attList = $empArr['attendances'] ?? [];
+            $approvedLeave = $emp->leaves->first();
+
+            if ($approvedLeave) {
+                if (empty($attList)) {
+                    $empArr['attendances'] = [[
+                        'id'                => null,
+                        'employee_id'       => $emp->id,
+                        'date'              => $date,
+                        'clock_in_time'     => null,
+                        'clock_out_time'    => null,
+                        'working_hours'     => null,
+                        'status'            => 'leave',
+                        'leave_type'        => $approvedLeave->leave_type,
+                        'notes'             => ucfirst($approvedLeave->leave_type) . ' Leave' . ($approvedLeave->reason ? ': ' . $approvedLeave->reason : ''),
+                        'is_approved_leave' => true,
+                    ]];
+                } elseif (empty($attList[0]['clock_in_time']) || $attList[0]['status'] === 'absent') {
+                    $empArr['attendances'][0]['status'] = 'leave';
+                    $empArr['attendances'][0]['leave_type'] = $approvedLeave->leave_type;
+                }
+            }
+
+            return $empArr;
+        });
+
+        return response()->json($employees);
     }
 
     // ── HR Admin: Create attendance manually ──────────────────────────────────
@@ -290,7 +411,7 @@ class HrAttendanceController extends Controller
             'date'           => 'required|date',
             'clock_in_time'  => 'nullable|date',
             'clock_out_time' => 'nullable|date',
-            'status'         => 'required|in:present,absent,late,half_day,wfh',
+            'status'         => 'required|in:present,absent,late,half_day,wfh,leave',
             'notes'          => 'nullable|string',
         ]);
 
@@ -321,7 +442,7 @@ class HrAttendanceController extends Controller
         $validated = $request->validate([
             'clock_in_time'  => 'nullable|date',
             'clock_out_time' => 'nullable|date',
-            'status'         => 'required|in:present,absent,late,half_day,wfh',
+            'status'         => 'required|in:present,absent,late,half_day,wfh,leave',
             'notes'          => 'nullable|string',
         ]);
 
@@ -346,8 +467,15 @@ class HrAttendanceController extends Controller
         $month  = $request->get('month', Carbon::now()->format('Y-m'));
         $deptId = $request->get('department_id');
 
+        $monthStart = Carbon::parse($month . '-01')->startOfDay();
+        $monthEnd   = $monthStart->copy()->endOfMonth()->endOfDay();
+
         $query = HrEmployee::with([
             'attendances' => fn($q) => $q->where('date', 'like', $month . '%'),
+            'leaves'      => fn($q) => $q->where('status', 'approved')
+                ->where('leave_type', '!=', 'short')
+                ->whereDate('start_date', '<=', $monthEnd->toDateString())
+                ->whereDate('end_date', '>=', $monthStart->toDateString()),
         ])->where('status', 'active');
 
         if ($deptId) $query->where('department_id', $deptId);
@@ -361,6 +489,23 @@ class HrAttendanceController extends Controller
                     : \Carbon\Carbon::parse($att->date)->format('Y-m-d');
                 $attMap[$dateStr] = $att->status;
             }
+
+            foreach ($emp->leaves as $leave) {
+                $start = Carbon::parse($leave->start_date)->startOfDay();
+                $end   = Carbon::parse($leave->end_date ?? $leave->start_date)->startOfDay();
+                if ($start->lt($monthStart)) $start = $monthStart->copy();
+                if ($end->gt($monthEnd)) $end = $monthEnd->copy();
+
+                for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                    if (!$d->isWeekend()) {
+                        $dateStr = $d->toDateString();
+                        if (!isset($attMap[$dateStr]) || $attMap[$dateStr] === 'absent') {
+                            $attMap[$dateStr] = 'leave';
+                        }
+                    }
+                }
+            }
+
             $map[$emp->id] = $attMap;
         }
 
@@ -373,17 +518,47 @@ class HrAttendanceController extends Controller
         $month  = $request->get('month', Carbon::now()->format('Y-m'));
         $deptId = $request->get('department_id');
 
+        $monthStart = Carbon::parse($month . '-01')->startOfDay();
+        $monthEnd   = $monthStart->copy()->endOfMonth()->endOfDay();
+
         $query = HrEmployee::with([
             'department',
             'attendances' => fn($q) => $q->where('date', 'like', $month . '%'),
+            'leaves'      => fn($q) => $q->where('status', 'approved')
+                ->where('leave_type', '!=', 'short')
+                ->whereDate('start_date', '<=', $monthEnd->toDateString())
+                ->whereDate('end_date', '>=', $monthStart->toDateString()),
         ])->where('status', 'active');
 
         if ($deptId) $query->where('department_id', $deptId);
 
         $workingDays = $this->getWorkingDaysInMonth($month);
 
-        $report = $query->get()->map(function ($emp) use ($workingDays) {
+        $report = $query->get()->map(function ($emp) use ($workingDays, $monthStart, $monthEnd) {
             $att = $emp->attendances;
+            $attendedDates = [];
+            foreach ($att as $a) {
+                $dStr = $a->date instanceof Carbon ? $a->date->format('Y-m-d') : Carbon::parse($a->date)->format('Y-m-d');
+                if ($a->status !== 'absent') {
+                    $attendedDates[$dStr] = $a->status;
+                }
+            }
+
+            $leaveDaysCount = 0;
+            foreach ($emp->leaves as $leave) {
+                $start = Carbon::parse($leave->start_date)->startOfDay();
+                $end   = Carbon::parse($leave->end_date ?? $leave->start_date)->startOfDay();
+                if ($start->lt($monthStart)) $start = $monthStart->copy();
+                if ($end->gt($monthEnd)) $end = $monthEnd->copy();
+
+                for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                    if (!$d->isWeekend() && !isset($attendedDates[$d->toDateString()])) {
+                        $attendedDates[$d->toDateString()] = 'leave';
+                        $leaveDaysCount++;
+                    }
+                }
+            }
+
             $attended = $att->whereIn('status', ['present', 'late', 'wfh'])->count();
             return [
                 'employee_id'          => $emp->employee_id,
@@ -394,6 +569,7 @@ class HrAttendanceController extends Controller
                 'late'                 => $att->where('status', 'late')->count(),
                 'half_day'             => $att->where('status', 'half_day')->count(),
                 'wfh'                  => $att->where('status', 'wfh')->count(),
+                'leave'                => $leaveDaysCount + $att->where('status', 'leave')->count(),
                 'absent'               => $att->where('status', 'absent')->count(),
                 'total_working_hours' => round($att->sum('working_hours'), 1),
                 'attendance_rate'     => $workingDays > 0
