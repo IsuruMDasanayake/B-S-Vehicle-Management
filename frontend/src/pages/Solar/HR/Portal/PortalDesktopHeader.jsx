@@ -12,10 +12,10 @@ const navItems = [
   { to: 'leaves',       icon: CalendarDays, label: 'Leave' },
   { to: 'appraisals',   icon: Award,        label: 'Performance' },
   { to: 'training',     icon: Video,        label: 'Training' },
-  { to: 'profile',      icon: User,         label: 'My Profile' },
+  // { to: 'profile',      icon: User,         label: 'My Profile' },
 ];
 
-export const PortalDesktopHeader = () => {
+export const PortalDesktopHeader = ({ employee }) => {
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
@@ -23,6 +23,8 @@ export const PortalDesktopHeader = () => {
 
   const isManager = isLeaveApprovalManager(user);
   const isHrAdmin = user?.role === 'solar_hr_admin' || user?.role === 'super_admin';
+  const photoUrl = employee?.photo_url || user?.photo_url || user?.avatar || null;
+  const userInitial = (employee?.full_name || user?.name || user?.email || 'U').charAt(0).toUpperCase();
 
   useEffect(() => {
     if (!isManager) return;
@@ -125,39 +127,55 @@ export const PortalDesktopHeader = () => {
           </NavLink>
         )}
 
-        {/* User Pill */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.55rem',
-          padding: '0.3rem 0.65rem',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '999px',
-        }}>
+        {/* User Pill (links to Profile) */}
+        <NavLink
+          to="profile"
+          title="My Profile"
+          style={({ isActive }) => ({
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.55rem',
+            padding: '0.3rem 0.65rem',
+            background: isActive ? '#eff6ff' : '#f8fafc',
+            border: isActive ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+            borderRadius: '999px',
+            textDecoration: 'none',
+            transition: 'all 0.15s ease',
+          })}
+        >
           <div style={{
             width: '28px',
             height: '28px',
             borderRadius: '50%',
-            background: '#0284c7',
+            background: photoUrl ? 'transparent' : '#0284c7',
             color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 800,
             fontSize: '0.75rem',
+            overflow: 'hidden',
+            flexShrink: 0,
           }}>
-            {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt={employee?.full_name || user?.name || 'Profile'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              userInitial
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
-              {user?.name || user?.email?.split('@')[0]}
+              {employee?.full_name || user?.name || user?.email?.split('@')[0]}
             </span>
             <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
               {user?.email}
             </span>
           </div>
-        </div>
+        </NavLink>
 
         {/* Logout */}
         <button
