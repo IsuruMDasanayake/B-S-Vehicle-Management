@@ -92,14 +92,12 @@ export default function HRSettings({ embedded = false }) {
   };
 
   const selectDefaultRecipients = () => {
-    const defaultEmails = ['hasintha@circlegroup.lk', 'eranda@circlegroup.lk'];
     const ids = availableUsers
       .filter(u =>
         u.role === 'super_admin' ||
         u.role === 'solar_hr_admin' ||
         u.roles?.includes('super_admin') ||
-        u.roles?.includes('solar_hr_admin') ||
-        defaultEmails.includes((u.email || '').toLowerCase())
+        u.roles?.includes('solar_hr_admin')
       )
       .map(u => Number(u.id));
     setSelectedUserIds(ids);
@@ -388,7 +386,7 @@ export default function HRSettings({ embedded = false }) {
               onClick={selectDefaultRecipients}
               className="btn btn-ghost"
               style={{ border: '1px solid var(--surface-2)', fontSize: '0.74rem', padding: '0.35rem 0.65rem' }}
-              title="Select HR, Super Admin, Hasintha & Eranda"
+              title="Select HR, Super Admin"
             >
               Default Group
             </button>

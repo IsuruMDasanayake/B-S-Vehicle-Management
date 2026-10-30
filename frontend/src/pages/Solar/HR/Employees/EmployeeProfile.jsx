@@ -26,7 +26,6 @@ const ATTENDANCE_STATUS = {
   absent:  { label: 'Absent',  color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
   leave:   { label: 'Leave',   color: '#2563eb', bg: 'rgba(59,130,246,0.12)' },
   half_day:{ label: 'Half Day',color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-  wfh:     { label: 'WFH',     color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)' },
 };
 
 const InfoRow = ({ label, value }) => (

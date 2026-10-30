@@ -20,7 +20,7 @@ const STATUS_COLORS = {
   late:     { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Late' },
   absent:   { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'Absent' },
   half_day: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', label: 'Half Day' },
-  wfh:      { color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', label: 'WFH' },
+  leave:    { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'Leave (LV)' },
 };
 
 const formatTime = (isoStr) => {
@@ -118,7 +118,7 @@ const PortalHome = () => {
       // Calculate month stats
       const records = histRes.data || [];
       const stats = records.reduce((a, r) => {
-        if (r.status === 'present' || r.status === 'late' || r.status === 'wfh') a.present++;
+        if (r.status === 'present' || r.status === 'late') a.present++;
         if (r.status === 'absent') a.absent++;
         if (r.status === 'late') a.late++;
         if (r.status === 'half_day') a.halfDay++;

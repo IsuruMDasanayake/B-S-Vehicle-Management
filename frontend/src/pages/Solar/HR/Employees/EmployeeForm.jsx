@@ -263,7 +263,7 @@ const EmployeeForm = () => {
                 <div className="form-group"><label className="form-label">Probation End Date</label><input type="date" className="form-control" style={inputStyle} value={form.probation_end_date} onChange={e => set('probation_end_date', e.target.value)} /></div>
                 <div className="form-group"><label className="form-label">Work Location</label>
                   <select className="form-control" style={inputStyle} value={form.work_location} onChange={e => set('work_location', e.target.value)}>
-                    <option value="Office">Office</option><option value="Site">Site</option><option value="Remote">Remote</option><option value="Hybrid">Hybrid</option>
+                    <option value="Office">Office</option><option value="Site">Site</option>
                   </select>
                 </div>
                 <div className="form-group"><label className="form-label">Status</label>
