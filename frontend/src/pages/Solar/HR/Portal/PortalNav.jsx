@@ -9,9 +9,8 @@ const navItems = [
   { to: 'home',         icon: Home,         label: 'Home' },
   { to: 'attendance',   icon: Clock,        label: 'Attendance' },
   { to: 'leaves',       icon: CalendarDays, label: 'Leave' },
-  { to: 'appraisals',   icon: Award,        label: 'MBO' },
+  { to: 'appraisals',   icon: Award,        label: 'Performance' },
   { to: 'training',     icon: Video,        label: 'Training' },
-  { to: 'profile',      icon: User,         label: 'Profile' },
   // { to: 'announcements',icon: Megaphone,    label: 'Updates' },
 ];
 
@@ -110,7 +109,7 @@ const PortalNav = () => {
           )}
         </NavLink>
       ))}
-      <button
+      {/* <button
         onClick={handleLogout}
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -121,7 +120,7 @@ const PortalNav = () => {
       >
         <LogOut size={22} strokeWidth={1.8} />
         Logout
-      </button>
+      </button> */}
     </nav>
   );
 };

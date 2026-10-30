@@ -1,17 +1,33 @@
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, Shield } from 'lucide-react';
+import { LogOut, Shield, User } from 'lucide-react';
 import PortalDesktopHeader from './PortalDesktopHeader';
 import PortalNav from './PortalNav';
 import CELogo from '../../../Website/components/CELogo';
 import useAuthStore from '../../../../store/authStore';
+import api from '../../../../services/api';
 import './portal.css';
 
 const PortalLayout = () => {
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
+  const [employee, setEmployee] = useState(null);
 
   const isHrAdmin = user?.role === 'solar_hr_admin' || user?.role === 'super_admin';
+
+  useEffect(() => {
+    let mounted = true;
+    api.get('/hr/employees/me')
+      .then(res => {
+        if (mounted && res.data) setEmployee(res.data);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const photoUrl = employee?.photo_url || user?.photo_url || user?.avatar || null;
+  const userInitial = (employee?.full_name || user?.name || user?.email || 'U').charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     await logout();
@@ -21,7 +37,7 @@ const PortalLayout = () => {
   return (
     <div className="portal-root">
       {/* ── Desktop Top Navigation Header (>= 768px) ── */}
-      <PortalDesktopHeader />
+      <PortalDesktopHeader employee={employee} />
 
       {/* ── Mobile Top Header Bar (< 768px) ── */}
       <header className="portal-mobile-top-bar">
@@ -37,7 +53,7 @@ const PortalLayout = () => {
           </div>
         </NavLink>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
           {isHrAdmin && (
             <NavLink
               to="/solar/hr/admin/appraisals"
@@ -59,20 +75,38 @@ const PortalLayout = () => {
             </NavLink>
           )}
 
-          <div style={{
-            width: '26px',
-            height: '26px',
-            borderRadius: '50%',
-            background: '#0284c7',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '0.72rem',
-          }}>
-            {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-          </div>
+          <NavLink
+            to="profile"
+            title="My Profile"
+            style={({ isActive }) => ({
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              background: photoUrl ? 'transparent' : '#0284c7',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: '0.76rem',
+              textDecoration: 'none',
+              overflow: 'hidden',
+              border: isActive ? '2px solid #0284c7' : '2px solid #e2e8f0',
+              boxShadow: isActive ? '0 0 0 2px rgba(2,132,199,0.2)' : 'none',
+              transition: 'all 0.15s ease',
+              flexShrink: 0,
+            })}
+          >
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt={employee?.full_name || user?.name || 'Profile'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              userInitial || <User size={15} />
+            )}
+          </NavLink>
 
           <button
             type="button"
