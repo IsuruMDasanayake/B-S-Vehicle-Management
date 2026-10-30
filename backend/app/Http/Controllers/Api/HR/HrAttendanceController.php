@@ -320,8 +320,10 @@ class HrAttendanceController extends Controller
         $employee = HrEmployee::where('user_id', $request->user()->id)->first();
         if (!$employee) return response()->json([]);
 
+        $this->autoClosePastAttendances($employee->id);
+
         $month = $request->get('month', Carbon::now()->format('Y-m'));
-        $attendances = HrAttendance::with('clockInLocation')
+        $attendances = HrAttendance::with(['clockInLocation', 'regularization'])
             ->where('employee_id', $employee->id)
             ->where('date', 'like', $month . '%')
             ->orderBy('date', 'desc')
@@ -338,8 +340,10 @@ class HrAttendanceController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $this->autoClosePastAttendances((int) $employeeId);
+
         $month = $request->get('month', Carbon::now()->format('Y-m'));
-        $attendances = HrAttendance::with('clockInLocation')
+        $attendances = HrAttendance::with(['clockInLocation', 'regularization'])
             ->where('employee_id', $employeeId)
             ->where('date', 'like', $month . '%')
             ->orderBy('date', 'desc')
@@ -353,12 +357,14 @@ class HrAttendanceController extends Controller
     // ── HR Admin: Daily View ───────────────────────────────────────────────────
     public function index(Request $request)
     {
+        $this->autoClosePastAttendances();
+
         $date   = $request->get('date', Carbon::today()->toDateString());
         $deptId = $request->get('department_id');
 
         $query = HrEmployee::with(['department', 'designation'])
             ->with([
-                'attendances' => fn($q) => $q->where('date', $date)->with('clockInLocation'),
+                'attendances' => fn($q) => $q->where('date', $date)->with(['clockInLocation', 'regularization']),
                 'leaves'      => fn($q) => $q->where('status', 'approved')
                     ->where('leave_type', '!=', 'short')
                     ->whereDate('start_date', '<=', $date)
@@ -406,12 +412,14 @@ class HrAttendanceController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $this->ensureStatusColumnSupportsMissing();
+
         $validated = $request->validate([
             'employee_id'    => 'required|exists:hr_employees,id',
             'date'           => 'required|date',
             'clock_in_time'  => 'nullable|date',
             'clock_out_time' => 'nullable|date',
-            'status'         => 'required|in:present,absent,late,half_day,leave',
+            'status'         => 'required|in:present,absent,late,half_day,leave,missing',
             'notes'          => 'nullable|string',
         ]);
 
@@ -419,6 +427,7 @@ class HrAttendanceController extends Controller
             ['employee_id' => $validated['employee_id'], 'date' => $validated['date']],
             array_merge($validated, [
                 'is_manual_override' => true,
+                'is_auto_clock_out'  => $validated['status'] === 'missing',
                 'approved_by'        => $request->user()->id,
             ])
         );
@@ -427,6 +436,8 @@ class HrAttendanceController extends Controller
             $clockIn  = Carbon::parse($att->clock_in_time);
             $clockOut = Carbon::parse($att->clock_out_time);
             $att->update(['working_hours' => round($clockIn->diffInMinutes($clockOut) / 60, 2)]);
+        } else {
+            $att->update(['working_hours' => null]);
         }
 
         return response()->json(['message' => 'Attendance record saved', 'data' => $att], 201);
@@ -439,10 +450,12 @@ class HrAttendanceController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $this->ensureStatusColumnSupportsMissing();
+
         $validated = $request->validate([
             'clock_in_time'  => 'nullable|date',
             'clock_out_time' => 'nullable|date',
-            'status'         => 'required|in:present,absent,late,half_day,leave',
+            'status'         => 'required|in:present,absent,late,half_day,leave,missing',
             'notes'          => 'nullable|string',
         ]);
 
@@ -453,7 +466,17 @@ class HrAttendanceController extends Controller
         if (!empty($validated['clock_in_time']) && !empty($validated['clock_out_time'])) {
             $clockIn  = Carbon::parse($validated['clock_in_time']);
             $clockOut = Carbon::parse($validated['clock_out_time']);
-            $validated['working_hours'] = round($clockIn->diffInMinutes($clockOut) / 60, 2);
+            $hoursWorked = round($clockIn->diffInMinutes($clockOut) / 60, 2);
+            $validated['working_hours'] = $hoursWorked;
+            $validated['is_auto_clock_out'] = false;
+
+            // If status was 'missing' and HR filled clock_out_time, automatically derive present/late/half_day
+            if ($validated['status'] === 'missing') {
+                $derived = $this->deriveStatus($clockIn, Carbon::parse($att->date)->toDateString());
+                $validated['status'] = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $derived;
+            }
+        } else {
+            $validated['working_hours'] = null;
         }
 
         $att->update($validated);
@@ -464,6 +487,8 @@ class HrAttendanceController extends Controller
     // ── HR Admin: Monthly Calendar Data ───────────────────────────────────────
     public function calendar(Request $request)
     {
+        $this->autoClosePastAttendances();
+
         $month  = $request->get('month', Carbon::now()->format('Y-m'));
         $deptId = $request->get('department_id');
 
@@ -515,6 +540,8 @@ class HrAttendanceController extends Controller
     // ── HR Admin: Monthly Report ───────────────────────────────────────────────
     public function report(Request $request)
     {
+        $this->autoClosePastAttendances();
+
         $month  = $request->get('month', Carbon::now()->format('Y-m'));
         $deptId = $request->get('department_id');
 
@@ -568,6 +595,7 @@ class HrAttendanceController extends Controller
                 'present'              => $att->where('status', 'present')->count(),
                 'late'                 => $att->where('status', 'late')->count(),
                 'half_day'             => $att->where('status', 'half_day')->count(),
+                'missing'              => $att->where('status', 'missing')->count(),
                 'leave'                => $leaveDaysCount + $att->where('status', 'leave')->count(),
                 'absent'               => $att->where('status', 'absent')->count(),
                 'total_working_hours' => round($att->sum('working_hours'), 1),
@@ -618,40 +646,62 @@ class HrAttendanceController extends Controller
         return $days;
     }
 
-    /**
-     * Self-heal unclosed past attendances for an employee
-     */
-    private function autoClosePastAttendances(int $employeeId): void
+    private static bool $statusColumnChecked = false;
+
+    private function ensureStatusColumnSupportsMissing(): void
     {
+        if (self::$statusColumnChecked) return;
+        self::$statusColumnChecked = true;
+        try {
+            \Illuminate\Support\Facades\DB::statement("ALTER TABLE hr_attendances MODIFY COLUMN status VARCHAR(30) NOT NULL DEFAULT 'present'");
+        } catch (\Throwable $e) {
+            // Ignore if already VARCHAR or SQLite
+        }
+    }
+
+    /**
+     * Mark unclosed past attendances as Missing Attendance with blank clock_out_time (no automatic 5:30 PM time).
+     * Also converts any previously auto-closed 5:30 PM records (not manually overridden by HR) to blank Missing Attendance.
+     */
+    private function autoClosePastAttendances(?int $employeeId = null): void
+    {
+        $this->ensureStatusColumnSupportsMissing();
+
         $today = Carbon::today('Asia/Colombo')->toDateString();
-        $unclosed = HrAttendance::where('employee_id', $employeeId)
-            ->where('date', '<', $today)
+
+        $query = HrAttendance::where('date', '<', $today)
             ->whereNotNull('clock_in_time')
-            ->whereNull('clock_out_time')
-            ->get();
+            ->where(function ($q) {
+                $q->where(function ($sq) {
+                    $sq->whereNull('clock_out_time')
+                       ->where('status', '!=', 'missing');
+                })->orWhere(function ($sq) {
+                    // Convert any old automatic 5:30 PM records that haven't been manually approved/overridden
+                    $sq->where('is_auto_clock_out', true)
+                       ->where('is_manual_override', false)
+                       ->whereNotNull('clock_out_time');
+                });
+            });
+
+        if ($employeeId !== null) {
+            $query->where('employee_id', $employeeId);
+        }
+
+        $unclosed = $query->get();
 
         foreach ($unclosed as $att) {
-            $dateStr = Carbon::parse($att->date)->toDateString();
-            $clockIn = Carbon::parse($att->clock_in_time);
-            $clockOut = Carbon::parse($dateStr . ' ' . self::SHIFT_END, 'Asia/Colombo')->utc();
-            if ($clockIn->greaterThan($clockOut)) {
-                $clockOut = $clockIn->copy()->addHour();
-            }
-            $hoursWorked = round($clockIn->diffInMinutes($clockOut) / 60, 2);
-            $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $att->status;
-
             $att->update([
-                'clock_out_time'    => $clockOut,
-                'working_hours'     => $hoursWorked,
-                'status'            => $status,
+                'clock_out_time'    => null,
+                'working_hours'     => null,
+                'status'            => 'missing',
                 'is_auto_clock_out' => true,
-                'notes'             => trim(($att->notes ? $att->notes . ' | ' : '') . 'Auto clocked-out at 5:30 PM (System fallback: employee forgot to clock out)'),
+                'notes'             => 'Missing clock-out (Clock-out left blank — employee must submit time & reason before month end)',
             ]);
         }
     }
 
     /**
-     * Employee: Fetch past unclosed or auto-clocked-out attendances eligible for time adjustment
+     * Employee: Fetch past missing-clock-out attendances eligible for time & reason submission before month end
      */
     public function unclosedOrAutoAttendances(Request $request)
     {
@@ -661,12 +711,21 @@ class HrAttendanceController extends Controller
         $this->autoClosePastAttendances($employee->id);
 
         $today = Carbon::today('Asia/Colombo')->toDateString();
-        $cutoff = Carbon::now('Asia/Colombo')->subDays(14)->toDateString();
+        $startOfMonth = Carbon::now('Asia/Colombo')->startOfMonth()->toDateString();
+        $thirtyDaysAgo = Carbon::now('Asia/Colombo')->subDays(31)->toDateString();
+        $cutoff = $thirtyDaysAgo < $startOfMonth ? $thirtyDaysAgo : $startOfMonth;
+
         $records = HrAttendance::with(['regularization', 'clockInLocation'])
             ->where('employee_id', $employee->id)
             ->where('date', '<', $today)
             ->where('date', '>=', $cutoff)
-            ->where('is_auto_clock_out', true)
+            ->whereNotNull('clock_in_time')
+            ->where(function ($q) {
+                $q->whereNull('clock_out_time')
+                  ->orWhere('status', 'missing')
+                  ->orWhere('is_auto_clock_out', true)
+                  ->orWhereHas('regularization');
+            })
             ->orderByDesc('date')
             ->get();
 
@@ -718,14 +777,14 @@ class HrAttendanceController extends Controller
             })->get();
 
             $dateFormatted = Carbon::parse($att->date)->format('d M');
-            $timeFormatted = $requestedTime->format('h:i A');
+            $timeFormatted = $requestedTime->copy()->timezone('Asia/Colombo')->format('h:i A');
 
             Notification::send($adminUsers, new HrNotification([
                 'division'   => 'hr',
                 'category'   => 'attendance',
                 'severity'   => 'warning',
-                'title'      => 'Clock-Out Adjustment Request',
-                'message'    => "{$employee->full_name} submitted a clock-out adjustment for {$dateFormatted} ({$timeFormatted}).",
+                'title'      => 'Missing Attendance Time Request',
+                'message'    => "{$employee->full_name} submitted a clock-out time ({$timeFormatted}) for missing attendance on {$dateFormatted}.",
                 'link'       => '/solar/hr/admin/attendance',
                 'source_id'  => $regularization->id,
             ]));
@@ -734,7 +793,7 @@ class HrAttendanceController extends Controller
         }
 
         return response()->json([
-            'message' => 'Clock-out adjustment request submitted successfully.',
+            'message' => 'Missing attendance clock-out time request submitted to HR.',
             'data'    => $regularization->load('attendance'),
         ], 201);
     }
@@ -778,6 +837,8 @@ class HrAttendanceController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $this->ensureStatusColumnSupportsMissing();
+
         $validated = $request->validate([
             'status'      => 'required|in:approved,rejected',
             'admin_notes' => 'nullable|string|max:500',
@@ -800,7 +861,9 @@ class HrAttendanceController extends Controller
             $localClockOut = $newClockOut->copy()->timezone('Asia/Colombo');
             $shiftEnd = Carbon::parse($localClockOut->toDateString() . ' ' . self::SHIFT_END, 'Asia/Colombo');
             $earlyDepart = $localClockOut->lessThan($shiftEnd);
-            $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $att->status;
+
+            $baseStatus = $this->deriveStatus($clockIn, Carbon::parse($att->date)->toDateString());
+            $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $baseStatus;
 
             $att->update([
                 'clock_out_time'     => $newClockOut,
@@ -810,7 +873,7 @@ class HrAttendanceController extends Controller
                 'is_manual_override' => true,
                 'is_auto_clock_out'  => false,
                 'approved_by'        => $request->user()->id,
-                'notes'              => trim(($att->notes ? $att->notes . ' | ' : '') . 'Regularized by HR: ' . $reg->reason),
+                'notes'              => 'Regularized by HR: ' . $reg->reason,
             ]);
         }
 
@@ -829,10 +892,10 @@ class HrAttendanceController extends Controller
                     'division'   => 'hr',
                     'category'   => 'attendance',
                     'severity'   => $isApp ? 'success' : 'danger',
-                    'title'      => $isApp ? 'Clock-Out Adjustment Approved' : 'Clock-Out Adjustment Rejected',
+                    'title'      => $isApp ? 'Missing Attendance Approved' : 'Missing Attendance Request Rejected',
                     'message'    => $isApp 
-                        ? "HR approved your clock-out adjustment for {$dateStr}."
-                        : "HR rejected your clock-out adjustment for {$dateStr}." . ($validated['admin_notes'] ? " Note: {$validated['admin_notes']}" : ''),
+                        ? "HR approved your clock-out time for {$dateStr}."
+                        : "HR rejected your clock-out time request for {$dateStr}." . ($validated['admin_notes'] ? " Note: {$validated['admin_notes']}" : ''),
                     'link'       => '/solar/hr/portal/home',
                     'source_id'  => $reg->id,
                 ]));

@@ -21,11 +21,12 @@ const ASSET_STATUS = {
 };
 
 const ATTENDANCE_STATUS = {
-  present: { label: 'Present', color: '#16a34a', bg: 'rgba(34,197,94,0.12)' },
-  late:    { label: 'Late',    color: '#d97706', bg: 'rgba(245,158,11,0.12)' },
-  absent:  { label: 'Absent',  color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
-  leave:   { label: 'Leave',   color: '#2563eb', bg: 'rgba(59,130,246,0.12)' },
-  half_day:{ label: 'Half Day',color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+  present: { label: 'Present',            color: '#16a34a', bg: 'rgba(34,197,94,0.12)' },
+  late:    { label: 'Late',               color: '#d97706', bg: 'rgba(245,158,11,0.12)' },
+  missing: { label: 'Missing Attendance', color: '#e11d48', bg: 'rgba(225,29,72,0.12)' },
+  absent:  { label: 'Absent',             color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
+  leave:   { label: 'Leave',              color: '#2563eb', bg: 'rgba(59,130,246,0.12)' },
+  half_day:{ label: 'Half Day',           color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
 };
 
 const InfoRow = ({ label, value }) => (

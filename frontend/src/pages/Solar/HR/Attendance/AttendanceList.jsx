@@ -8,11 +8,12 @@ import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 
 const STATUS_MAP = {
-  present:  { label: 'Present',   color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
-  late:     { label: 'Late',      color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-  absent:   { label: 'Absent',    color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-  half_day: { label: 'Half Day',  color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
-  leave:    { label: 'Leave',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  present:  { label: 'Present',            color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
+  late:     { label: 'Late',               color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  missing:  { label: 'Missing Attendance', color: '#e11d48', bg: 'rgba(225,29,72,0.12)' },
+  absent:   { label: 'Absent',             color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+  half_day: { label: 'Half Day',           color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+  leave:    { label: 'Leave',              color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
 };
 
 const StatusBadge = ({ status }) => {
@@ -103,7 +104,7 @@ const AttendanceList = () => {
     acc[status] = (acc[status] || 0) + 1;
     acc.total++;
     return acc;
-  }, { total: 0, present: 0, late: 0, absent: 0, half_day: 0, leave: 0 });
+  }, { total: 0, present: 0, late: 0, missing: 0, absent: 0, half_day: 0, leave: 0 });
 
   const toLocalISO = (utcStr) => {
     if (!utcStr) return '';
@@ -211,7 +212,7 @@ const AttendanceList = () => {
         <div>
           <h1 style={{ fontSize: '1.75rem', marginBottom: '0.2rem' }}>Attendance Management</h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: 0, fontSize: '0.85rem' }}>
-            Shift: 9:00 AM – 5:30 PM · Grace until 09:10 AM · Automatic 5:30 PM close for forgotten clock-outs
+            Shift: 9:00 AM – 5:30 PM · Grace until 09:10 AM · Unclosed shifts remain blank and marked as Missing Attendance
           </p>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
@@ -325,6 +326,7 @@ const AttendanceList = () => {
               { key: 'total',    label: 'Total',    val: totals.total,    color: '#3b82f6',  bg: 'rgba(59,130,246,0.1)' },
               { key: 'present',  label: 'Present',  val: totals.present,  color: '#22c55e',  bg: 'rgba(34,197,94,0.1)' },
               { key: 'late',     label: 'Late',     val: totals.late,     color: '#f59e0b',  bg: 'rgba(245,158,11,0.1)' },
+              { key: 'missing',  label: 'Missing',  val: totals.missing,  color: '#e11d48',  bg: 'rgba(225,29,72,0.12)' },
               { key: 'leave',    label: 'Leave (LV)', val: totals.leave,  color: '#3b82f6',  bg: 'rgba(59,130,246,0.12)' },
               { key: 'absent',   label: 'Absent',   val: totals.absent,   color: '#ef4444',  bg: 'rgba(239,68,68,0.1)' },
               { key: 'half_day', label: 'Half Day', val: totals.half_day, color: '#8b5cf6',  bg: 'rgba(139,92,246,0.1)' },
@@ -365,23 +367,26 @@ const AttendanceList = () => {
                         {att?.clock_out_time ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             <span>{new Date(att.clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-                            {att.is_auto_clock_out ? (
-                              <span
-                                style={{
-                                  fontSize: '0.62rem',
-                                  padding: '0.12rem 0.4rem',
-                                  borderRadius: '4px',
-                                  background: 'rgba(245,158,11,0.15)',
-                                  color: '#d97706',
-                                  fontWeight: 700,
-                                }}
-                                title="Auto Clocked-Out at 5:30 PM (Employee forgot to clock out)"
-                              >
-                                AUTO
-                              </span>
-                            ) : att.early_departure ? (
+                            {att.early_departure ? (
                               <span style={{ fontSize: '0.62rem', color: '#f59e0b', fontWeight: 600 }}>EARLY</span>
                             ) : null}
+                          </div>
+                        ) : (att?.status === 'missing' || att?.is_auto_clock_out) ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            <span
+                              style={{
+                                fontSize: '0.62rem',
+                                padding: '0.12rem 0.45rem',
+                                borderRadius: '4px',
+                                background: 'rgba(225,29,72,0.12)',
+                                color: '#e11d48',
+                                fontWeight: 700,
+                              }}
+                              title="Employee forgot to clock out — Clock-out is blank (Missing Attendance)"
+                            >
+                              MISSING
+                            </span>
                           </div>
                         ) : '—'}
                       </td>
@@ -480,7 +485,7 @@ const AttendanceList = () => {
                   const isPending = item.status === 'pending';
                   const shiftDate = att?.date ? new Date(att.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
                   const clockIn = att?.clock_in_time ? new Date(att.clock_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
-                  const recordedOut = att?.clock_out_time ? new Date(att.clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '5:30 PM (Auto)';
+                  const recordedOut = att?.clock_out_time ? new Date(att.clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '— (Blank / Missing)';
                   const requestedOut = item.requested_clock_out_time ? new Date(item.requested_clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
 
                   return (
