@@ -799,6 +799,22 @@ class HrAttendanceLeaveReportService
     }
 
     /**
+     * Convert any stored UTC datetime or string safely into an Asia/Colombo (Sri Lanka UTC+5:30) Carbon instance.
+     */
+    private function toColomboCarbon($time): ?Carbon
+    {
+        if (empty($time)) {
+            return null;
+        }
+
+        if ($time instanceof Carbon) {
+            return $time->copy()->timezone('Asia/Colombo');
+        }
+
+        return Carbon::parse($time, 'UTC')->timezone('Asia/Colombo');
+    }
+
+    /**
      * Build comprehensive monthly attendance, timesheet & payroll data for an individual employee.
      */
     public function buildIndividualEmployeePayrollReport(int $employeeId, ?string $month = null): array
@@ -900,8 +916,8 @@ class HrAttendanceLeaveReportService
             $lv  = $leaveByDate[$dateStr] ?? null;
             $shortLvs = $shortLeaveByDate[$dateStr] ?? [];
 
-            $clockIn  = $att?->clock_in_time ? Carbon::parse($att->clock_in_time, 'Asia/Colombo') : null;
-            $clockOut = $att?->clock_out_time ? Carbon::parse($att->clock_out_time, 'Asia/Colombo') : null;
+            $clockIn  = $this->toColomboCarbon($att?->clock_in_time);
+            $clockOut = $this->toColomboCarbon($att?->clock_out_time);
 
             $status = $att?->status;
             $statusLabel = 'Scheduled';
@@ -993,7 +1009,7 @@ class HrAttendanceLeaveReportService
             if ($att?->regularization) {
                 $reg = $att->regularization;
                 $regStatus = strtoupper($reg->status);
-                $regTime = Carbon::parse($reg->requested_clock_out_time)->timezone('Asia/Colombo')->format('h:i A');
+                $regTime = $this->toColomboCarbon($reg->requested_clock_out_time)?->format('h:i A') ?? '—';
                 $remarks[] = "Adj Req: {$regTime} ({$regStatus})" . ($reg->reason ? ' - ' . $reg->reason : '');
             }
             if ($att?->notes && strpos($att->notes, 'Missing clock-out') === false) {
