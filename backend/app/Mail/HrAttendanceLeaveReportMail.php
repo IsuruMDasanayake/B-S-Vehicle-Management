@@ -82,7 +82,6 @@ class HrAttendanceLeaveReportMail extends Mailable
                 . '<td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;color:#16a34a;font-weight:700;">' . (int) $emp['present'] . '</td>'
                 . '<td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;color:#d97706;font-weight:700;">' . (int) $emp['late'] . '</td>'
                 . '<td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;color:#7c3aed;font-weight:700;">' . (int) $emp['half_day'] . '</td>'
-                . '<td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;color:#0284c7;font-weight:700;">' . (int) $emp['wfh'] . '</td>'
                 . '<td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;"><span style="background:#dbeafe;color:#1d4ed8;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10px;">' . (int) $emp['leave'] . '</span></td>'
                 . '<td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;color:#dc2626;font-weight:700;">' . (int) $emp['absent'] . '</td>'
                 . '<td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;color:#334155;">' . e($emp['total_working_hours']) . 'h</td>'
@@ -91,7 +90,7 @@ class HrAttendanceLeaveReportMail extends Mailable
         }
 
         if ($empRowsHtml === '') {
-            $empRowsHtml = '<tr><td colspan="12" style="padding:14px;text-align:center;color:#64748b;font-size:12px;">No active employees found.</td></tr>';
+            $empRowsHtml = '<tr><td colspan="11" style="padding:14px;text-align:center;color:#64748b;font-size:12px;">No active employees found.</td></tr>';
         }
 
         $leaveRowsHtml = '';
@@ -214,7 +213,6 @@ class HrAttendanceLeaveReportMail extends Mailable
             <th style="padding:7px 8px;text-align:center;font-size:10px;color:#16a34a;text-transform:uppercase;">P</th>
             <th style="padding:7px 8px;text-align:center;font-size:10px;color:#d97706;text-transform:uppercase;">L</th>
             <th style="padding:7px 8px;text-align:center;font-size:10px;color:#7c3aed;text-transform:uppercase;">H</th>
-            <th style="padding:7px 8px;text-align:center;font-size:10px;color:#0284c7;text-transform:uppercase;">WFH</th>
             <th style="padding:7px 8px;text-align:center;font-size:10px;color:#2563eb;text-transform:uppercase;">LV</th>
             <th style="padding:7px 8px;text-align:center;font-size:10px;color:#dc2626;text-transform:uppercase;">A</th>
             <th style="padding:7px 8px;text-align:center;font-size:10px;color:#475569;text-transform:uppercase;">Hours</th>

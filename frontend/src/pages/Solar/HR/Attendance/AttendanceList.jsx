@@ -12,7 +12,6 @@ const STATUS_MAP = {
   late:     { label: 'Late',      color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
   absent:   { label: 'Absent',    color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
   half_day: { label: 'Half Day',  color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
-  wfh:      { label: 'WFH',       color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)' },
   leave:    { label: 'Leave',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
 };
 
@@ -104,7 +103,7 @@ const AttendanceList = () => {
     acc[status] = (acc[status] || 0) + 1;
     acc.total++;
     return acc;
-  }, { total: 0, present: 0, late: 0, absent: 0, half_day: 0, wfh: 0, leave: 0 });
+  }, { total: 0, present: 0, late: 0, absent: 0, half_day: 0, leave: 0 });
 
   const toLocalISO = (utcStr) => {
     if (!utcStr) return '';
@@ -328,7 +327,6 @@ const AttendanceList = () => {
               { key: 'late',     label: 'Late',     val: totals.late,     color: '#f59e0b',  bg: 'rgba(245,158,11,0.1)' },
               { key: 'leave',    label: 'Leave (LV)', val: totals.leave,  color: '#3b82f6',  bg: 'rgba(59,130,246,0.12)' },
               { key: 'absent',   label: 'Absent',   val: totals.absent,   color: '#ef4444',  bg: 'rgba(239,68,68,0.1)' },
-              { key: 'wfh',      label: 'WFH',      val: totals.wfh,      color: '#0ea5e9',  bg: 'rgba(14,165,233,0.1)' },
               { key: 'half_day', label: 'Half Day', val: totals.half_day, color: '#8b5cf6',  bg: 'rgba(139,92,246,0.1)' },
             ].map(s => (
               <div key={s.key} className="card" style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '100px', flex: '1 1 100px' }}>

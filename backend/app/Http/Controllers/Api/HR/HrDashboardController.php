@@ -16,7 +16,7 @@ class HrDashboardController extends Controller
         $total      = HrEmployee::whereIn('status', ['active', 'probation', 'on_leave'])->count();
         
         $presentToday = \App\Models\HrAttendance::where('date', $today->toDateString())
-            ->whereIn('status', ['present', 'half_day', 'late', 'wfh'])->count();
+            ->whereIn('status', ['present', 'half_day', 'late'])->count();
         $lateToday = \App\Models\HrAttendance::where('date', $today->toDateString())
             ->where('status', 'late')->count();
         
@@ -78,7 +78,7 @@ class HrDashboardController extends Controller
             $atts = \App\Models\HrAttendance::where('date', $date)->get();
             $attendanceTrend[] = [
                 'day' => Carbon::parse($date)->format('d M'),
-                'present' => $atts->whereIn('status', ['present', 'half_day', 'late', 'wfh'])->count(),
+                'present' => $atts->whereIn('status', ['present', 'half_day', 'late'])->count(),
                 'absent' => $atts->where('status', 'absent')->count(),
                 'leave' => \App\Models\HrLeave::whereIn('status', ['manager_approved', 'approved'])
                     ->where('start_date', '<=', $date)

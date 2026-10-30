@@ -8,7 +8,6 @@ const STATUS_CELL = {
   late:     { label: 'L',   color: '#fff', bg: '#f59e0b',           title: 'Late' },
   absent:   { label: 'A',   color: '#fff', bg: '#ef4444',           title: 'Absent' },
   half_day: { label: 'H',   color: '#fff', bg: '#8b5cf6',           title: 'Half Day' },
-  wfh:      { label: 'WFH', color: '#fff', bg: '#0ea5e9',           title: 'WFH' },
   leave:    { label: 'LV',  color: '#fff', bg: '#3b82f6',           title: 'Leave' },
   weekend:  { label: '—',   color: '#9ca3af', bg: 'var(--surface)', title: 'Weekend' },
 };

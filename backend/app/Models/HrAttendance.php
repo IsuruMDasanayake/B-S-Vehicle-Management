@@ -25,7 +25,7 @@ class HrAttendance extends Model
         'clock_out_address',
         'working_hours',
         'early_departure',
-        'status', // present, absent, late, half_day, wfh
+        'status', // present, absent, late, half_day, leave
         'ip_address',
         'notes',
         'is_manual_override',

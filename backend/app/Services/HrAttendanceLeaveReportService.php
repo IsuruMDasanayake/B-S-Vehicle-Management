@@ -20,16 +20,13 @@ class HrAttendanceLeaveReportService
     private const SETTINGS_FILE = 'hr_mail_report_settings.json';
 
     /**
-     * Get default recipient users (solar_hr_admin, super_admin, hasintha, eranda) for initial seed.
+     * Get default recipient users (solar_hr_admin and super_admin) for initial seed.
      */
     private function getDefaultUsers()
     {
-        $managerEmails = HrLeaveController::$approvalManagerEmails;
-
-        return User::where(function ($q) use ($managerEmails) {
+        return User::where(function ($q) {
             $q->whereIn('role', ['solar_hr_admin', 'super_admin'])
-              ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['solar_hr_admin', 'super_admin']))
-              ->orWhereIn('email', $managerEmails);
+              ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['solar_hr_admin', 'super_admin']));
         })->get();
     }
 
@@ -284,11 +281,6 @@ class HrAttendanceLeaveReportService
             ? $overrideCustomEmails
             : ($settings['custom_emails'] ?? []);
 
-        // If never customized yet, ensure default manager emails are also included
-        if (empty($settings['customized']) && $overrideUserIds === null && $overrideCustomEmails === null) {
-            $customEmails = array_merge($customEmails, HrLeaveController::$approvalManagerEmails);
-        }
-
         $users = !empty($userIds)
             ? User::whereIn('id', $userIds)->get()
             : collect();
@@ -447,7 +439,6 @@ class HrAttendanceLeaveReportService
             'present'             => 0,
             'late'                => 0,
             'half_day'            => 0,
-            'wfh'                 => 0,
             'leave'               => 0,
             'absent'              => 0,
             'total_working_hours' => 0.0,
@@ -484,7 +475,6 @@ class HrAttendanceLeaveReportService
             $present = 0;
             $late    = 0;
             $halfDay = 0;
-            $wfh     = 0;
             $leave   = 0;
             $absent  = 0;
 
@@ -501,13 +491,12 @@ class HrAttendanceLeaveReportService
                 if ($st === 'present') $present++;
                 elseif ($st === 'late') $late++;
                 elseif ($st === 'half_day') $halfDay++;
-                elseif ($st === 'wfh') $wfh++;
                 elseif ($st === 'leave') $leave++;
                 else $absent++;
             }
 
             $hours = round((float) $emp->attendances->sum('working_hours'), 1);
-            $attended = $present + $late + $wfh + ($halfDay * 0.5);
+            $attended = $present + $late + ($halfDay * 0.5);
             $denom = max(1, count($elapsedWorkingDates) - $leave);
             $rate = count($elapsedWorkingDates) > 0
                 ? min(100.0, round(($attended / $denom) * 100, 1))
@@ -522,7 +511,6 @@ class HrAttendanceLeaveReportService
                 'present'             => $present,
                 'late'                => $late,
                 'half_day'            => $halfDay,
-                'wfh'                 => $wfh,
                 'leave'               => $leave,
                 'absent'              => $absent,
                 'short_leave_hours'   => $shortLeaveHours,
@@ -533,7 +521,6 @@ class HrAttendanceLeaveReportService
             $totals['present']  += $present;
             $totals['late']     += $late;
             $totals['half_day'] += $halfDay;
-            $totals['wfh']      += $wfh;
             $totals['leave']    += $leave;
             $totals['absent']   += $absent;
             $totals['total_working_hours'] += $hours;
@@ -629,7 +616,6 @@ class HrAttendanceLeaveReportService
             'Present (P)',
             'Late (L)',
             'Half Day (H)',
-            'WFH',
             'Approved Leave (LV)',
             'Absent (A)',
             'Short Leave (Hrs)',
@@ -646,7 +632,6 @@ class HrAttendanceLeaveReportService
                 $emp['present'],
                 $emp['late'],
                 $emp['half_day'],
-                $emp['wfh'],
                 $emp['leave'],
                 $emp['absent'],
                 $emp['short_leave_hours'],

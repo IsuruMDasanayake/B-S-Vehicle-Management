@@ -46,10 +46,10 @@ const AttendanceReport = () => {
   };
 
   const exportCSV = () => {
-    const headers = ['Employee ID', 'Name', 'Department', 'Working Days', 'Present', 'Late', 'Half Day', 'WFH', 'Leave (LV)', 'Absent', 'Total Hours', 'Attendance %'];
+    const headers = ['Employee ID', 'Name', 'Department', 'Working Days', 'Present', 'Late', 'Half Day', 'Leave (LV)', 'Absent', 'Total Hours', 'Attendance %'];
     const rows = report.map(r => [
       r.employee_id, r.name, r.department,
-      r.working_days, r.present, r.late, r.half_day, r.wfh, r.leave ?? 0, r.absent,
+      r.working_days, r.present, r.late, r.half_day, r.leave ?? 0, r.absent,
       r.total_working_hours, r.attendance_rate,
     ]);
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
@@ -128,9 +128,8 @@ const AttendanceReport = () => {
           leave: a.leave + (r.leave || 0),
           absent: a.absent + r.absent,
           half_day: a.half_day + r.half_day,
-          wfh: a.wfh + r.wfh,
           hours: a.hours + r.total_working_hours,
-        }), { present: 0, late: 0, leave: 0, absent: 0, half_day: 0, wfh: 0, hours: 0 });
+        }), { present: 0, late: 0, leave: 0, absent: 0, half_day: 0, hours: 0 });
         return (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
             {[
@@ -139,7 +138,6 @@ const AttendanceReport = () => {
               { label: 'Leave Days (LV)', val: totals.leave,                color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
               { label: 'Absent Days',     val: totals.absent,               color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
               { label: 'Half Days',       val: totals.half_day,             color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
-              { label: 'WFH Days',        val: totals.wfh,                  color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)' },
               { label: 'Total Hours',     val: `${totals.hours.toFixed(0)}h`, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
             ].map(s => (
               <div key={s.label} className="card" style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flex: '1 1 130px' }}>
@@ -155,16 +153,16 @@ const AttendanceReport = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)' }}>
-              {['EMPLOYEE', 'DEPARTMENT', 'WRKNG DAYS', 'PRESENT', 'LATE', 'HALF DAY', 'WFH', 'LEAVE (LV)', 'ABSENT', 'TOTAL HRS', 'ATTENDANCE %'].map(h => (
+              {['EMPLOYEE', 'DEPARTMENT', 'WRKNG DAYS', 'PRESENT', 'LATE', 'HALF DAY', 'LEAVE (LV)', 'ABSENT', 'TOTAL HRS', 'ATTENDANCE %'].map(h => (
                 <th key={h} style={{ padding: '0.75rem 1rem', textAlign: h === 'EMPLOYEE' || h === 'DEPARTMENT' ? 'left' : 'center', fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="11" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading report...</td></tr>
+              <tr><td colSpan="10" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading report...</td></tr>
             ) : report.length === 0 ? (
-              <tr><td colSpan="11" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data for this month.</td></tr>
+              <tr><td colSpan="10" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data for this month.</td></tr>
             ) : report.map((r, i) => {
               const { color, bg } = getRateBg(r.attendance_rate);
               return (
@@ -178,7 +176,6 @@ const AttendanceReport = () => {
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#22c55e' }}>{r.present}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#f59e0b' }}>{r.late}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#8b5cf6' }}>{r.half_day}</td>
-                  <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#0ea5e9' }}>{r.wfh}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 700, color: '#3b82f6' }}>{r.leave ?? 0}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#ef4444' }}>{r.absent}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 500 }}>{r.total_working_hours}h</td>
