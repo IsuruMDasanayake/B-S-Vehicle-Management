@@ -544,17 +544,17 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
         </div>
 
         <div>
-          <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>Appraiser / Project Director</span>
+          <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>Appraiser (Reporting Manager / HR)</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#8b5cf6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem' }}>
-              {appraiser?.full_name?.charAt(0) || 'H'}
+              {(appraiser?.full_name || employee?.manager?.full_name)?.charAt(0) || 'A'}
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>
-                {appraiser?.full_name || 'Hasintha Rathnayake'}
+                {appraiser?.full_name || employee?.manager?.full_name || 'Reporting Manager / HR'}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {appraiser?.designation || 'GM / Project Director'}
+                {appraiser?.designation || employee?.manager?.designation || 'Reporting Manager / HR'}
               </div>
             </div>
           </div>
@@ -955,7 +955,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                 Appraiser
               </td>
               <td style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, color: '#0f172a' }}>
-                {appraiser?.full_name || 'Hasintha Rathnayake - GM'}
+                {appraiser?.full_name || employee?.manager?.full_name || 'Reporting Manager / HR'}
               </td>
               <td style={{ padding: '0.65rem 0.65rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
                 Total
@@ -1312,7 +1312,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                     )}
 
                     <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-                      Changed by: {rev.changed_by?.name || 'Hasintha'}
+                      Changed by: {rev.changed_by?.name || appraiser?.full_name || 'Appraiser'}
                     </div>
                   </div>
                 ))}

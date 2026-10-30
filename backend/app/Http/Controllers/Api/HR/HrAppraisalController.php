@@ -56,7 +56,7 @@ class HrAppraisalController extends Controller
             || (method_exists($user, 'hasRole') && $user->hasRole('super_admin'));
     }
 
-    /** Appraiser = Hasintha / Eranda / super_admin */
+    /** Legacy helper kept for compatibility */
     public static function isProjectDirector(?object $user): bool
     {
         if (!$user || empty($user->email)) return false;
@@ -86,13 +86,60 @@ class HrAppraisalController extends Controller
         return $employee;
     }
 
+    /** Check whether the employee is a Reporting Manager for at least one employee */
+    private function isReportingManager(?HrEmployee $me): bool
+    {
+        if (!$me) return false;
+        return HrEmployee::where('manager_id', $me->id)
+            ->whereIn('status', ['active', 'probation', 'on_leave'])
+            ->exists();
+    }
+
+    /**
+     * Dynamic Appraiser check for a target employee:
+     * Appraiser is the employee's Reporting Manager ($employee->manager_id === $me->id) OR HR / Super Admin.
+     */
+    private function isAppraiserFor(Request $request, HrEmployee $employee): bool
+    {
+        $user = $request->user();
+        if (!$user) return false;
+
+        if (self::isSuperAdmin($user)) {
+            return true;
+        }
+
+        $me = $this->resolveEmployee($request);
+        $isSelf = $me && (int) $me->id === (int) $employee->id;
+
+        // Reporting Manager of this employee
+        if ($me && $employee->manager_id && (int) $employee->manager_id === (int) $me->id && !$isSelf) {
+            return true;
+        }
+
+        // HR Admin also has Appraiser privileges (except on their own sheet)
+        if (self::isHr($user) && !$isSelf) {
+            return true;
+        }
+
+        return false;
+    }
+
     /** Can the current user view this employee's appraisal? */
     private function canView(Request $request, int $employeeId): bool
     {
         $user = $request->user();
-        if (self::isProjectDirector($user) || self::isHr($user)) return true;
+        if (self::isHr($user)) return true;
+
         $me = $this->resolveEmployee($request);
-        return $me && $me->id === $employeeId;
+        if (!$me) return false;
+        if ((int) $me->id === (int) $employeeId) return true;
+
+        $target = HrEmployee::find($employeeId);
+        if ($target && (int) $target->manager_id === (int) $me->id) {
+            return true;
+        }
+
+        return false;
     }
 
     private function sheetRelations(): array
@@ -102,27 +149,38 @@ class HrAppraisalController extends Controller
             'evaluator.designation',
             'employee.department',
             'employee.designation',
+            'employee.manager.designation',
             'finalizedBy:id,name',
         ];
     }
 
-    /** Default appraiser profile (Hasintha) for display when none recorded yet. */
-    private function defaultAppraiser(): ?HrEmployee
+    /** Default appraiser profile (Employee's Reporting Manager, or HR fallback) when none recorded yet. */
+    private function defaultAppraiser(?HrEmployee $employee = null): ?HrEmployee
     {
+        if ($employee && $employee->manager_id) {
+            $manager = $employee->relationLoaded('manager')
+                ? $employee->manager
+                : HrEmployee::with('designation')->find($employee->manager_id);
+            if ($manager) {
+                $manager->loadMissing('designation');
+                return $manager;
+            }
+        }
+
         return HrEmployee::with('designation')
-            ->where('company_email', self::$directorEmails[0])
+            ->whereHas('user', fn($q) => $q->whereIn('role', ['solar_hr_admin', 'super_admin']))
             ->first();
     }
 
     /** Role permissions for a given sheet (null = not yet created). */
-    private function permissionsFor(Request $request, ?HrAppraisal $sheet, int $employeeId): array
+    private function permissionsFor(Request $request, ?HrAppraisal $sheet, HrEmployee $employee): array
     {
         $user = $request->user();
         $me = $this->resolveEmployee($request);
 
-        $isAppraiser = self::isProjectDirector($user);
+        $isAppraiser = $this->isAppraiserFor($request, $employee);
         $isHr = self::isHr($user);
-        $isSelf = $me && $me->id === $employeeId;
+        $isSelf = $me && (int) $me->id === (int) $employee->id;
 
         $status = $sheet?->status;
         $notFinal = $status !== HrAppraisal::STATUS_FINALIZED;
@@ -141,18 +199,20 @@ class HrAppraisalController extends Controller
             'can_finalize'          => $isAppraiser && $allMarked && $notFinal,
             'can_return'            => $isAppraiser && $status === HrAppraisal::STATUS_SUBMITTED,
             'can_reopen'            => $isAppraiser && $status === HrAppraisal::STATUS_FINALIZED,
-            'can_print'             => $isHr,
+            'can_print'             => $isHr || $isAppraiser,
         ];
     }
 
     private function sheetResponse(Request $request, HrEmployee $employee, ?HrAppraisal $sheet, ?string $message = null)
     {
+        $employee->loadMissing(['department', 'designation', 'manager.designation']);
+
         if ($sheet) {
             $sheet->load($this->sheetRelations());
             $sheet->loadCount('revisions');
         }
 
-        $appraiser = $sheet?->evaluator ?? $this->defaultAppraiser();
+        $appraiser = $sheet?->evaluator ?? $this->defaultAppraiser($employee);
 
         $payload = [
             'employee' => [
@@ -163,6 +223,12 @@ class HrAppraisalController extends Controller
                 'department'  => $employee->department?->name,
                 'designation' => $employee->designation?->title,
                 'photo_url'   => $employee->photo_url,
+                'manager_id'  => $employee->manager_id,
+                'manager'     => $employee->manager ? [
+                    'id'          => $employee->manager->id,
+                    'full_name'   => $employee->manager->full_name,
+                    'designation' => $employee->manager->designation?->title,
+                ] : null,
             ],
             'appraiser' => $appraiser ? [
                 'id'          => $appraiser->id,
@@ -170,7 +236,7 @@ class HrAppraisalController extends Controller
                 'designation' => $appraiser->designation?->title,
             ] : null,
             'sheet'       => $sheet,
-            'permissions' => $this->permissionsFor($request, $sheet, $employee->id),
+            'permissions' => $this->permissionsFor($request, $sheet, $employee),
         ];
 
         if ($message) $payload['message'] = $message;
@@ -207,11 +273,30 @@ class HrAppraisalController extends Controller
         }
     }
 
-    private function notifyAppraisers(string $title, string $message, $sourceId): void
+    private function notifyAppraisersForEmployee(HrEmployee $employee, string $title, string $message, $sourceId): void
     {
-        $users = User::whereIn('email', self::$directorEmails)->get();
-        foreach ($users as $u) {
-            $this->notify($u, $title, $message, '/solar/hr/portal/appraisals?tab=team', $sourceId);
+        $recipients = collect();
+
+        // 1. Employee's Reporting Manager
+        if ($employee->manager_id) {
+            $manager = $employee->relationLoaded('manager')
+                ? $employee->manager
+                : HrEmployee::with('user')->find($employee->manager_id);
+            $managerUser = $this->userForEmployee($manager);
+            if ($managerUser) {
+                $recipients->push($managerUser);
+            }
+        }
+
+        // 2. HR Admins & Super Admins
+        $hrUsers = User::whereIn('role', ['solar_hr_admin', 'super_admin'])->get();
+        $recipients = $recipients->concat($hrUsers)->unique('id');
+
+        foreach ($recipients as $u) {
+            $link = in_array($u->role, ['solar_hr_admin', 'super_admin'], true)
+                ? "/solar/hr/admin/appraisals"
+                : "/solar/hr/portal/appraisals?tab=team";
+            $this->notify($u, $title, $message, $link, $sourceId);
         }
     }
 
@@ -228,7 +313,7 @@ class HrAppraisalController extends Controller
         }
 
         if ($request->filled('employee_id')) {
-            $employee = HrEmployee::with(['department', 'designation'])->findOrFail($request->employee_id);
+            $employee = HrEmployee::with(['department', 'designation', 'manager.designation'])->findOrFail($request->employee_id);
             if (!$this->canView($request, $employee->id)) {
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
@@ -237,7 +322,7 @@ class HrAppraisalController extends Controller
             if (!$employee) {
                 return response()->json(['message' => 'Employee profile not found'], 404);
             }
-            $employee->load(['department', 'designation']);
+            $employee->load(['department', 'designation', 'manager.designation']);
         }
 
         $sheet = HrAppraisal::where('employee_id', $employee->id)
@@ -260,23 +345,28 @@ class HrAppraisalController extends Controller
         );
     }
 
-    /** GET appraisals/board?month=&search=&department_id= — Appraiser / HR overview of all employees */
+    /** GET appraisals/board?month=&search=&department_id= — Reporting Manager / HR overview of employees */
     public function board(Request $request)
     {
         $user = $request->user();
-        if (!self::isProjectDirector($user) && !self::isHr($user)) {
+        $me = $this->resolveEmployee($request);
+        $isHr = self::isHr($user);
+        $isManager = $this->isReportingManager($me);
+
+        if (!$isHr && !$isManager) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $month = $request->get('month', Carbon::now()->format('Y-m'));
 
-        $empQuery = HrEmployee::with(['department', 'designation'])
+        $empQuery = HrEmployee::with(['department', 'designation', 'manager.designation'])
             ->where('status', 'active')
-            // Appraisers themselves are not appraised on this sheet
-            ->where(function ($q) {
-                $q->whereNull('company_email')->orWhereNotIn('company_email', self::$directorEmails);
-            })
             ->orderBy('full_name');
+
+        // Reporting Managers (who are not HR/Super Admin) only see employees who report to them
+        if (!$isHr && $me) {
+            $empQuery->where('manager_id', $me->id);
+        }
 
         if ($request->filled('department_id')) {
             $empQuery->where('department_id', $request->department_id);
@@ -288,7 +378,7 @@ class HrAppraisalController extends Controller
 
         $employees = $empQuery->get();
 
-        $sheets = HrAppraisal::with('objectives:id,appraisal_id,weight,actual_marks,status')
+        $sheets = HrAppraisal::with(['objectives:id,appraisal_id,weight,actual_marks,status', 'evaluator.designation'])
             ->where('period_month', $month)
             ->whereIn('employee_id', $employees->pluck('id'))
             ->get()
@@ -309,6 +399,8 @@ class HrAppraisalController extends Controller
                 }
             }
 
+            $appraiser = $sheet?->evaluator ?? $emp->manager;
+
             return [
                 'employee' => [
                     'id'          => $emp->id,
@@ -318,6 +410,17 @@ class HrAppraisalController extends Controller
                     'department'  => $emp->department?->name,
                     'designation' => $emp->designation?->title,
                     'photo_url'   => $emp->photo_url,
+                    'manager_id'  => $emp->manager_id,
+                    'manager'     => $emp->manager ? [
+                        'id'          => $emp->manager->id,
+                        'full_name'   => $emp->manager->full_name,
+                        'designation' => $emp->manager->designation?->title,
+                    ] : null,
+                    'appraiser'   => $appraiser ? [
+                        'id'          => $appraiser->id,
+                        'full_name'   => $appraiser->full_name,
+                        'designation' => $appraiser->designation?->title,
+                    ] : null,
                 ],
                 'sheet' => $sheet ? [
                     'id'               => $sheet->id,
@@ -348,7 +451,7 @@ class HrAppraisalController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         if (!$appraisal->evaluator) {
-            $appraisal->setRelation('evaluator', $this->defaultAppraiser());
+            $appraisal->setRelation('evaluator', $this->defaultAppraiser($appraisal->employee));
         }
         return response()->json($appraisal);
     }
@@ -377,9 +480,6 @@ class HrAppraisalController extends Controller
     public function saveObjectives(Request $request)
     {
         $user = $request->user();
-        if (!self::isProjectDirector($user)) {
-            return response()->json(['message' => 'Only the Appraiser can set objectives.'], 403);
-        }
 
         $validated = $request->validate([
             'employee_id'            => 'required|exists:hr_employees,id',
@@ -396,17 +496,21 @@ class HrAppraisalController extends Controller
             'objectives.max'               => 'Maximum 5 objectives allowed.',
         ]);
 
+        $employee = HrEmployee::findOrFail($validated['employee_id']);
+        if (!$this->isAppraiserFor($request, $employee)) {
+            return response()->json(['message' => 'Only the employee\'s Reporting Manager or HR can set objectives.'], 403);
+        }
+
         $totalWeight = round(array_sum(array_map(fn($o) => (float) $o['weight'], $validated['objectives'])), 2);
         if (abs($totalWeight - 100.0) > 0.01) {
             return response()->json(['message' => "Total weight must equal 100%. Current total: {$totalWeight}%"], 422);
         }
 
-        $employee = HrEmployee::findOrFail($validated['employee_id']);
         $appraiserEmp = $this->resolveEmployee($request);
 
         $sheet = HrAppraisal::firstOrCreate(
             ['employee_id' => $employee->id, 'period_month' => $validated['month']],
-            ['status' => HrAppraisal::STATUS_OPEN, 'evaluator_id' => $appraiserEmp?->id]
+            ['status' => HrAppraisal::STATUS_OPEN, 'evaluator_id' => $appraiserEmp?->id ?? $employee->manager_id]
         );
 
         if ($sheet->status === HrAppraisal::STATUS_FINALIZED) {
@@ -545,7 +649,7 @@ class HrAppraisalController extends Controller
     /** PUT appraisals/{id}/achievements — body: objectives[{id, achievement, status}], employee_comments, submit */
     public function saveAchievements(Request $request, $id)
     {
-        $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        $sheet = HrAppraisal::with(['objectives', 'employee.manager.user'])->findOrFail($id);
         $me = $this->resolveEmployee($request);
 
         if (!$me || $sheet->employee_id !== $me->id) {
@@ -595,7 +699,7 @@ class HrAppraisalController extends Controller
 
         if ($submit) {
             $monthLabel = Carbon::parse($sheet->period_month . '-01')->format('F Y');
-            $this->notifyAppraisers('Appraisal Submitted',
+            $this->notifyAppraisersForEmployee($sheet->employee, 'Appraisal Submitted',
                 "{$sheet->employee->full_name} submitted achievements for {$monthLabel}. Ready for marks.",
                 $sheet->id);
         }
@@ -611,12 +715,10 @@ class HrAppraisalController extends Controller
     /** PUT appraisals/{id}/marks — body: objectives[{id, actual_marks}], appraiser_comments */
     public function saveMarks(Request $request, $id)
     {
-        $user = $request->user();
-        if (!self::isProjectDirector($user)) {
-            return response()->json(['message' => 'Only the Appraiser can enter marks.'], 403);
-        }
-
         $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
+        if (!$this->isAppraiserFor($request, $sheet->employee)) {
+            return response()->json(['message' => 'Only the employee\'s Reporting Manager or HR can enter marks.'], 403);
+        }
         if ($sheet->status === HrAppraisal::STATUS_FINALIZED) {
             return response()->json(['message' => 'This appraisal is finalized. Reopen it to change marks.'], 422);
         }
@@ -650,8 +752,10 @@ class HrAppraisalController extends Controller
             }
             $sheet->manager_comments = $validated['appraiser_comments'] ?? null;
             $sheet->manager_evaluated_at = Carbon::now();
-            if (!$sheet->evaluator_id && $appraiserEmp) {
+            if ($appraiserEmp) {
                 $sheet->evaluator_id = $appraiserEmp->id;
+            } elseif (!$sheet->evaluator_id && $sheet->employee?->manager_id) {
+                $sheet->evaluator_id = $sheet->employee->manager_id;
             }
             $sheet->recalculateScores();
         });
@@ -668,7 +772,7 @@ class HrAppraisalController extends Controller
     {
         $user = $request->user();
         $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
-        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee);
 
         if (!$perms['is_hr']) {
             return response()->json(['message' => 'Only HR can enter attendance & misconduct.'], 403);
@@ -748,13 +852,18 @@ class HrAppraisalController extends Controller
     {
         $user = $request->user();
         $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
-        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee);
 
         if (!$perms['is_appraiser']) {
-            return response()->json(['message' => 'Only the Appraiser can finalize.'], 403);
+            return response()->json(['message' => 'Only the employee\'s Reporting Manager or HR can finalize.'], 403);
         }
         if (!$perms['can_finalize']) {
             return response()->json(['message' => 'Enter Actual Marks for every objective before finalizing.'], 422);
+        }
+
+        $appraiserEmp = $this->resolveEmployee($request);
+        if (!$sheet->evaluator_id && $appraiserEmp) {
+            $sheet->evaluator_id = $appraiserEmp->id;
         }
 
         $sheet->status = HrAppraisal::STATUS_FINALIZED;
@@ -775,7 +884,7 @@ class HrAppraisalController extends Controller
     public function returnToEmployee(Request $request, $id)
     {
         $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
-        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee);
         if (!$perms['can_return']) {
             return response()->json(['message' => 'This appraisal cannot be returned.'], 422);
         }
@@ -794,7 +903,7 @@ class HrAppraisalController extends Controller
     public function reopen(Request $request, $id)
     {
         $sheet = HrAppraisal::with(['objectives', 'employee'])->findOrFail($id);
-        $perms = $this->permissionsFor($request, $sheet, $sheet->employee_id);
+        $perms = $this->permissionsFor($request, $sheet, $sheet->employee);
         if (!$perms['can_reopen']) {
             return response()->json(['message' => 'Only a finalized appraisal can be reopened.'], 422);
         }
@@ -859,7 +968,8 @@ class HrAppraisalController extends Controller
     public function triggerReminders(Request $request)
     {
         $user = $request->user();
-        if (!self::isHr($user) && !self::isProjectDirector($user)) {
+        $me = $this->resolveEmployee($request);
+        if (!self::isHr($user) && !$this->isReportingManager($me)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -879,7 +989,7 @@ class HrAppraisalController extends Controller
         ]);
     }
 
-    /** POST appraisals/{id}/remind-appraiser — HR sends targeted reminder to Hasintha / Project Director */
+    /** POST appraisals/{id}/remind-appraiser — HR sends targeted reminder to the employee's Reporting Manager / Appraiser */
     public function remindAppraiserForSheet(Request $request, int $id)
     {
         $user = $request->user();
@@ -887,25 +997,31 @@ class HrAppraisalController extends Controller
             return response()->json(['message' => 'Only HR administrators can send this reminder.'], 403);
         }
 
-        $sheet = HrAppraisal::with(['employee', 'evaluator'])->findOrFail($id);
+        $sheet = HrAppraisal::with(['employee.manager.user', 'evaluator.user'])->findOrFail($id);
         $empName = $sheet->employee?->full_name ?? 'Employee';
         $month = $sheet->period_month;
         $monthName = Carbon::parse($month . '-01')->format('F Y');
 
-        $directors = User::whereIn('email', self::$directorEmails)->get();
-        foreach ($directors as $dirUser) {
+        $appraiserEmp = $sheet->employee?->manager ?? $sheet->evaluator;
+        $targetUser = $this->userForEmployee($appraiserEmp);
+
+        if ($targetUser) {
             $this->notify(
-                $dirUser,
+                $targetUser,
                 "🎯 HR Reminder: Evaluation Pending for {$empName}",
                 "HR Reminder: {$empName} has submitted their MBO sheet for {$monthName}. Please review achievements and assign marks.",
                 "/solar/hr/portal/appraisals?tab=team&employee_id={$sheet->employee_id}",
                 "mbo-nudge-{$sheet->id}-" . time(),
                 'warning'
             );
+            $appraiserName = $appraiserEmp?->full_name ?? $targetUser->name;
+            return response()->json([
+                'message' => "Reminder notification sent to {$appraiserName} (Reporting Manager) for {$empName}.",
+            ]);
         }
 
         return response()->json([
-            'message' => "Reminder notification sent to Hasintha (Project Director) for {$empName}.",
-        ]);
+            'message' => "No Reporting Manager account found for {$empName}. Please assign a Reporting Manager in Employee Profile.",
+        ], 422);
     }
 }

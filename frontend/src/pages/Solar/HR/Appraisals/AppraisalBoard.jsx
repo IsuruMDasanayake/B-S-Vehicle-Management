@@ -91,11 +91,11 @@ export const AppraisalBoard = ({ isHrView = false }) => {
     }
   };
 
-  // HR Nudge Hasintha for a specific employee
-  const handleRemindAppraiser = async (sheetId, empName) => {
+  // HR Nudge Reporting Manager / Appraiser for a specific employee
+  const handleRemindAppraiser = async (sheetId, empName, managerName) => {
     try {
       const res = await api.post(`/hr/appraisals/${sheetId}/remind-appraiser`);
-      toast.success(res.data?.message || `Reminder sent to Hasintha for ${empName}`);
+      toast.success(res.data?.message || `Reminder sent to ${managerName || 'Reporting Manager'} for ${empName}`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send reminder');
     }
@@ -292,6 +292,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--surface-2)', color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Employee</th>
+                  <th style={{ padding: '0.75rem 0.75rem', textAlign: 'left' }}>Reporting Manager / Appraiser</th>
                   <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Objectives</th>
                   <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Status</th>
                   <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Marks</th>
@@ -305,6 +306,8 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                 {filteredRows.map(({ employee: emp, sheet }) => {
                   const hasSheet = Boolean(sheet && sheet.objectives_count > 0);
                   const isFinal = sheet?.status === 'finalized';
+                  const managerName = emp.manager?.full_name || emp.appraiser?.full_name || null;
+                  const managerTitle = emp.manager?.designation || emp.appraiser?.designation || null;
 
                   return (
                     <tr
@@ -326,6 +329,20 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                             </div>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Reporting Manager / Appraiser */}
+                      <td style={{ padding: '0.75rem 0.75rem' }}>
+                        {managerName ? (
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#1e293b' }}>{managerName}</div>
+                            {managerTitle && (
+                              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{managerTitle}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>HR / Unassigned</span>
+                        )}
                       </td>
 
                       {/* Objectives Count */}
@@ -400,9 +417,9 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                           {isHr && sheet?.status === 'submitted' && (
                             <button
                               type="button"
-                              onClick={() => handleRemindAppraiser(sheet.id, emp.full_name)}
+                              onClick={() => handleRemindAppraiser(sheet.id, emp.full_name, managerName)}
                               className="btn btn-sm"
-                              title={`Send reminder to Hasintha to evaluate ${emp.full_name}`}
+                              title={`Send reminder to ${managerName || 'Reporting Manager'} to evaluate ${emp.full_name}`}
                               style={{
                                 fontSize: '0.72rem',
                                 padding: '0.35rem 0.65rem',
@@ -417,7 +434,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                               }}
                             >
                               <BellRing size={12} color="#9333ea" />
-                              <span>Nudge Hasintha</span>
+                              <span>Nudge {managerName ? managerName.split(' ')[0] : 'Manager'}</span>
                             </button>
                           )}
                           <button
@@ -448,11 +465,11 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Dispatch MBO Reminders</h3>
             </div>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
-              Automated notifications normally dispatch on the 25th (for employees) and 1st (for appraiser & HR). You can also trigger them on-demand:
+              Automated notifications normally dispatch on the 25th (for employees) and 1st (for Reporting Managers & HR). You can also trigger them on-demand:
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
-              {/* Option 1: Remind Hasintha about pending evaluations */}
+              {/* Option 1: Remind Reporting Managers & HR about pending evaluations */}
               <button
                 type="button"
                 onClick={() => handleTriggerReminders('appraiser')}
@@ -462,7 +479,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               >
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#6b21a8' }}>
-                    Remind Hasintha (Pending Evaluations)
+                    Remind Reporting Managers & HR (Pending Evaluations)
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#7e22ce' }}>
                     "HR Reminder: Team member appraisals for {month} are submitted and awaiting your final marks & sign-off."
@@ -471,7 +488,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#9333ea" />}
               </button>
 
-              {/* Option 2: Remind Hasintha to assign objectives */}
+              {/* Option 2: Remind Reporting Managers & HR to assign objectives */}
               <button
                 type="button"
                 onClick={() => handleTriggerReminders('objectives')}
@@ -481,10 +498,10 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               >
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0369a1' }}>
-                    Remind Hasintha (Assign Objectives)
+                    Remind Reporting Managers & HR (Assign Objectives)
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#0284c7' }}>
-                    "HR Reminder: Please assign monthly MBO objectives and weights for staff for {month}."
+                    "HR Reminder: Please assign monthly MBO objectives and weights for your team for {month}."
                   </div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#0284c7" />}
