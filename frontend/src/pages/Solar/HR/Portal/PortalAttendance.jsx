@@ -70,8 +70,15 @@ const PortalAttendance = () => {
     }
     setRegSubmitting(true);
     try {
-      await api.post(`/hr/attendance/${selectedReg.id}/regularize`, regForm);
-      toast.success('Clock-out adjustment submitted for HR approval');
+      const datePart = typeof selectedReg.date === 'string' ? selectedReg.date.split('T')[0] : selectedReg.date;
+      const targetDateTime = `${datePart} ${regForm.requested_time}:00`;
+
+      await api.post('/hr/attendance/regularize', {
+        attendance_id: selectedReg.id,
+        requested_clock_out_time: targetDateTime,
+        reason: regForm.reason,
+      });
+      toast.success('Missing attendance clock-out time submitted for HR approval');
       setRegModalOpen(false);
       setSelectedReg(null);
       await fetchHistory();

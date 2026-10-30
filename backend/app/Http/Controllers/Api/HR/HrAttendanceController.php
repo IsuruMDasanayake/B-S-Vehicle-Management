@@ -735,22 +735,36 @@ class HrAttendanceController extends Controller
     /**
      * Employee: Request clock-out adjustment/regularization
      */
-    public function requestRegularization(Request $request)
+    public function requestRegularization(Request $request, $id = null)
     {
         $employee = HrEmployee::where('user_id', $request->user()->id)->first();
         if (!$employee) return response()->json(['message' => 'Employee profile not found.'], 404);
 
-        $validated = $request->validate([
-            'attendance_id'            => 'required|exists:hr_attendances,id',
-            'requested_clock_out_time' => 'required|date',
-            'reason'                   => 'required|string|max:500',
-        ]);
+        $attendanceId = $id ?: $request->input('attendance_id');
+        if (!$attendanceId) {
+            return response()->json(['message' => 'Attendance record ID is required.'], 422);
+        }
 
-        $att = HrAttendance::where('id', $validated['attendance_id'])
+        $att = HrAttendance::where('id', $attendanceId)
             ->where('employee_id', $employee->id)
             ->firstOrFail();
 
-        $requestedTime = Carbon::parse($validated['requested_clock_out_time'], 'Asia/Colombo')->utc();
+        $requestedClockOut = $request->input('requested_clock_out_time');
+        if (!$requestedClockOut && $request->filled('requested_time')) {
+            $datePart = $att->date instanceof Carbon ? $att->date->toDateString() : substr((string)$att->date, 0, 10);
+            $requestedClockOut = $datePart . ' ' . $request->input('requested_time') . ':00';
+        }
+
+        if (!$requestedClockOut) {
+            return response()->json(['message' => 'Requested departure time is required.'], 422);
+        }
+
+        $reason = trim((string) $request->input('reason', ''));
+        if ($reason === '') {
+            return response()->json(['message' => 'Reason for adjustment is required.'], 422);
+        }
+
+        $requestedTime = Carbon::parse($requestedClockOut, 'Asia/Colombo')->utc();
 
         if ($att->clock_in_time && $requestedTime->lessThan(Carbon::parse($att->clock_in_time))) {
             return response()->json(['message' => 'Requested clock-out time must be after clock-in time.'], 422);
@@ -763,7 +777,7 @@ class HrAttendanceController extends Controller
             ],
             [
                 'requested_clock_out_time' => $requestedTime,
-                'reason'                   => $validated['reason'],
+                'reason'                   => $reason,
                 'status'                   => 'pending',
                 'reviewed_by'              => null,
                 'admin_notes'              => null,
