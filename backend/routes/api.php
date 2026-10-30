@@ -237,6 +237,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('settings/mail-reports', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'saveMailReportSettings']);
         Route::post('settings/mail-reports/send-now', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'sendMailReportNow']);
         Route::get('settings/mail-reports/download', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'downloadMailReport']);
+        Route::get('settings/employee-payroll-report/preview', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'previewIndividualPayrollReport']);
+        Route::get('settings/employee-payroll-report/download', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'downloadIndividualPayrollReport']);
     });
 });
 

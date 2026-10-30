@@ -113,12 +113,12 @@ const AttendanceReport = () => {
         </div>
       </div>
 
-      <div style={{ marginBottom: '1rem', padding: '0.65rem 1rem', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      {/* <div style={{ marginBottom: '1rem', padding: '0.65rem 1rem', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <Mail size={14} style={{ color: '#3b82f6', flexShrink: 0 }} />
         <span>
           <strong>Automated Email Schedule:</strong> Weekly report every Friday at 6:00 PM &amp; Monthly report on the 1st at 8:00 AM sent to <strong>HR Admin</strong>, <strong>Super Admin</strong>, <strong>Hasintha</strong>, and <strong>Eranda</strong>.
         </span>
-      </div>
+      </div> */}
 
       {/* Summary cards */}
       {report.length > 0 && (() => {
