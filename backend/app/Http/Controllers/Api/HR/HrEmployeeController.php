@@ -166,13 +166,15 @@ class HrEmployeeController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $employee = HrEmployee::with(['department', 'designation'])
+        $employee = HrEmployee::with(['department', 'designation', 'manager.designation'])
+            ->withCount(['subordinates' => fn($q) => $q->where('status', 'active')])
             ->where('user_id', $user->id)
             ->first();
 
         // 1. If not linked by user_id, search by company_email or personal_email and link
         if (!$employee && !empty($user->email)) {
-            $employee = HrEmployee::with(['department', 'designation'])
+            $employee = HrEmployee::with(['department', 'designation', 'manager.designation'])
+                ->withCount(['subordinates' => fn($q) => $q->where('status', 'active')])
                 ->where(function($q) use ($user) {
                     $q->where('company_email', $user->email)
                       ->orWhere('personal_email', $user->email);

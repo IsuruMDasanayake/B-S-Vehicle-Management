@@ -1,22 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Award, Users, Calendar, Sparkles } from 'lucide-react';
+import { Award, Users, Calendar } from 'lucide-react';
 import useAuthStore from '../../../../store/authStore';
-import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import AppraisalSheet from '../Appraisals/AppraisalSheet';
 import AppraisalBoard from '../Appraisals/AppraisalBoard';
 import api from '../../../../services/api';
 
 const PortalAppraisal = () => {
   const user = useAuthStore(s => s.user);
-  const isAppraiser = isLeaveApprovalManager(user);
+  const isHrOrSuper = user?.role === 'solar_hr_admin' || user?.role === 'super_admin';
+  const [isReportingManager, setIsReportingManager] = useState(false);
+  const isAppraiser = isHrOrSuper || isReportingManager;
+
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Active tab: 'my' or 'team' (only for Hasintha / Eranda)
+  // Active tab: 'my' or 'team' (for Reporting Managers & HR)
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam && ['my', 'team'].includes(tabParam)) return tabParam;
-    return isAppraiser ? 'team' : 'my';
+    return isHrOrSuper ? 'team' : 'my';
   });
 
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -26,12 +28,24 @@ const PortalAppraisal = () => {
 
   const [historyMonths, setHistoryMonths] = useState([]);
 
-  // Fetch my appraisal past months for quick switching
+  // Check if current employee is a Reporting Manager (has subordinates) and fetch past months
   useEffect(() => {
+    api.get('/hr/employees/me')
+      .then(res => {
+        const subCount = Number(res.data?.subordinates_count || 0);
+        if (subCount > 0) {
+          setIsReportingManager(true);
+          if (!searchParams.get('tab')) {
+            setActiveTab('team');
+          }
+        }
+      })
+      .catch(() => {});
+
     api.get('/hr/appraisals/my')
       .then(res => setHistoryMonths(res.data || []))
       .catch(() => {});
-  }, []);
+  }, [searchParams]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);

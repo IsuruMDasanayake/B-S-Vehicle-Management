@@ -384,8 +384,8 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
                     <div><strong>Designation:</strong> {emp?.designation?.title || '—'}</div>
                   </div>
                   <div>
-                    <div><strong>Appraiser:</strong> {evaluator?.full_name || 'Hasintha Rathnayake - GM'}</div>
-                    <div><strong>Appraiser Role:</strong> {evaluator?.designation?.title || 'GM / Project Director'}</div>
+                    <div><strong>Appraiser:</strong> {evaluator?.full_name || emp?.manager?.full_name || 'Reporting Manager / HR'}</div>
+                    <div><strong>Appraiser Role:</strong> {evaluator?.designation?.title || evaluator?.designation || emp?.manager?.designation?.title || emp?.manager?.designation || 'Reporting Manager / HR'}</div>
                     <div><strong>Cycle Month:</strong> {formattedMonth}</div>
                   </div>
                 </div>
@@ -484,7 +484,7 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
                           Appraiser
                         </td>
                         <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1' }}>
-                          {evaluator?.full_name || 'Hasintha Rathnayake - GM'}
+                          {evaluator?.full_name || emp?.manager?.full_name || 'Reporting Manager / HR'}
                         </td>
                         <td style={{ padding: '0.5rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
                           Total
@@ -525,8 +525,8 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
 
                   <div>
                     <div style={{ borderBottom: '1px solid #0f172a', marginBottom: '0.4rem', height: '24px' }}></div>
-                    <strong>{evaluator?.full_name || 'Hasintha Rathnayake'}</strong>
-                    <div style={{ color: '#64748b' }}>Appraiser / PM Signature</div>
+                    <strong>{evaluator?.full_name || emp?.manager?.full_name || 'Reporting Manager / Appraiser'}</strong>
+                    <div style={{ color: '#64748b' }}>Appraiser / Reporting Manager Signature</div>
                   </div>
 
                   <div>
