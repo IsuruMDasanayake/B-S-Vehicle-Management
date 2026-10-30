@@ -57,11 +57,14 @@ services:
       CACHE_DRIVER: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: redis
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
-      MAIL_FROM_ADDRESS: noreply@bstransport.lk
-      MAIL_FROM_NAME: "B&S Transport"
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@bstransport.lk}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-"B&S Transport"}
       SANCTUM_STATEFUL_DOMAINS: localhost
       FILESYSTEM_DISK: public
     volumes:

@@ -81,6 +81,7 @@ import PortalAppraisal from './pages/Solar/HR/Portal/PortalAppraisal';
 import PortalTraining from './pages/Solar/HR/Portal/PortalTraining';
 import AppraisalManagement from './pages/Solar/HR/Appraisals/AppraisalManagement';
 import TrainingManagement from './pages/Solar/HR/Training/TrainingManagement';
+import HRSettings from './pages/Solar/HR/Settings/HRSettings';
 import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
 import SolarSites from './pages/Solar/Admin/SolarSites';
 import SolarProjects from './pages/Solar/Admin/SolarProjects';
@@ -236,6 +237,8 @@ function App() {
         <Route path="leave" element={<LeaveManagement />} />
         <Route path="appraisals" element={<AppraisalManagement />} />
         <Route path="training" element={<TrainingManagement />} />
+        <Route path="reports" element={<AttendanceReport />} />
+        <Route path="settings" element={<HRSettings />} />
       </Route>
 
       {/* ── HR Employee Portal ──────────────────────────────────────────── */}

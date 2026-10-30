@@ -174,6 +174,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('attendance/my-history', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myHistory']);
         Route::get('attendance/employee/{id}/history', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'employeeHistory']);
         Route::get('attendance/report', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'report']);
+        Route::post('attendance/send-report-email', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'sendReportEmail']);
         Route::get('attendance/calendar', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'calendar']);
         Route::get('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'index']);
         Route::patch('attendance/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'update']);
@@ -229,6 +230,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('portal/training', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'myLessons']);
         Route::post('portal/training/{id}/progress', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'recordProgress']);
         Route::post('portal/training/{id}/complete', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'completeLesson']);
+
+        // Super Admin / HR Settings (Mail Report Recipients & Manual Trigger)
+        Route::get('settings/mail-reports', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'getMailReportSettings']);
+        Route::put('settings/mail-reports', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'saveMailReportSettings']);
+        Route::post('settings/mail-reports/send-now', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'sendMailReportNow']);
+        Route::get('settings/mail-reports/download', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'downloadMailReport']);
     });
 });
 
