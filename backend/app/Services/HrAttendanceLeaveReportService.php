@@ -308,15 +308,54 @@ class HrAttendanceLeaveReportService
     }
 
     /**
-     * Resolve start & end dates for weekly or monthly report.
+     * Resolve start & end dates for daily, custom, weekly, or monthly report.
      *
-     * @param string $period 'weekly' | 'monthly'
+     * @param string $period 'daily' | 'custom' | 'weekly' | 'monthly'
      * @param string|null $month Optional 'YYYY-MM' when period='monthly'
      * @param bool $isScheduled True when invoked from cron schedule
+     * @param string|null $startDate Optional 'YYYY-MM-DD' for daily, custom, or weekly reference date
+     * @param string|null $endDate Optional 'YYYY-MM-DD' for custom range
      */
-    public function resolveDateRange(string $period = 'weekly', ?string $month = null, bool $isScheduled = false): array
-    {
+    public function resolveDateRange(
+        string $period = 'weekly',
+        ?string $month = null,
+        bool $isScheduled = false,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
         $now = Carbon::now('Asia/Colombo');
+
+        if ($period === 'daily') {
+            $day = !empty($startDate)
+                ? Carbon::parse($startDate, 'Asia/Colombo')
+                : $now->copy();
+            $start = $day->copy()->startOfDay();
+            $end   = $day->copy()->endOfDay();
+            return [
+                'start'       => $start,
+                'end'         => $end,
+                'range_label' => $start->format('M d, Y') . ' (' . $start->toDateString() . ')',
+            ];
+        }
+
+        if ($period === 'custom') {
+            $start = !empty($startDate)
+                ? Carbon::parse($startDate, 'Asia/Colombo')->startOfDay()
+                : $now->copy()->startOfDay();
+            $end = !empty($endDate)
+                ? Carbon::parse($endDate, 'Asia/Colombo')->endOfDay()
+                : $start->copy()->endOfDay();
+            if ($end->lt($start)) {
+                [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+            }
+            return [
+                'start'       => $start,
+                'end'         => $end,
+                'range_label' => $start->toDateString() === $end->toDateString()
+                    ? $start->format('M d, Y') . ' (' . $start->toDateString() . ')'
+                    : $start->format('M d, Y') . ' – ' . $end->format('M d, Y'),
+            ];
+        }
 
         if ($period === 'monthly') {
             if (!empty($month) && preg_match('/^\d{4}-\d{2}$/', $month)) {
@@ -336,13 +375,24 @@ class HrAttendanceLeaveReportService
             ];
         }
 
-        // Weekly report: Monday to Friday of current week (or previous week if scheduled early Monday)
-        if ($isScheduled && $now->isMonday() && $now->hour < 12) {
+        // Weekly report: if custom startDate & endDate are given, use them; if startDate is given, use its week
+        if (!empty($startDate) && !empty($endDate)) {
+            $start = Carbon::parse($startDate, 'Asia/Colombo')->startOfDay();
+            $end   = Carbon::parse($endDate, 'Asia/Colombo')->endOfDay();
+            if ($end->lt($start)) {
+                [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+            }
+        } elseif (!empty($startDate)) {
+            $ref   = Carbon::parse($startDate, 'Asia/Colombo');
+            $start = $ref->copy()->startOfWeek(Carbon::MONDAY);
+            $end   = $start->copy()->addDays(4)->endOfDay();
+        } elseif ($isScheduled && $now->isMonday() && $now->hour < 12) {
             $start = $now->copy()->subWeek()->startOfWeek(Carbon::MONDAY);
+            $end   = $start->copy()->addDays(4)->endOfDay();
         } else {
             $start = $now->copy()->startOfWeek(Carbon::MONDAY);
+            $end   = $start->copy()->addDays(4)->endOfDay();
         }
-        $end = $start->copy()->addDays(4)->endOfDay(); // Mon–Fri work week
 
         return [
             'start'       => $start,
@@ -354,9 +404,15 @@ class HrAttendanceLeaveReportService
     /**
      * Build complete Attendance & Leave report data for the given period.
      */
-    public function buildReport(string $period = 'weekly', ?string $month = null, ?int $deptId = null, bool $isScheduled = false): array
-    {
-        $range        = $this->resolveDateRange($period, $month, $isScheduled);
+    public function buildReport(
+        string $period = 'weekly',
+        ?string $month = null,
+        ?int $deptId = null,
+        bool $isScheduled = false,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
+        $range        = $this->resolveDateRange($period, $month, $isScheduled, $startDate, $endDate);
         $start        = $range['start']->copy()->startOfDay();
         $end          = $range['end']->copy()->endOfDay();
         $today        = Carbon::today('Asia/Colombo')->endOfDay();
@@ -365,7 +421,7 @@ class HrAttendanceLeaveReportService
         $workingDays = 0;
         $elapsedWorkingDates = [];
         for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
-            if (!$d->isWeekend()) {
+            if (!$d->isWeekend() || $period === 'daily') {
                 $workingDays++;
                 if ($d->lte($effectiveEnd)) {
                     $elapsedWorkingDates[] = $d->toDateString();
@@ -645,7 +701,9 @@ class HrAttendanceLeaveReportService
         ?int $deptId = null,
         ?array $overrideUserIds = null,
         ?array $overrideCustomEmails = null,
-        bool $isScheduled = false
+        bool $isScheduled = false,
+        ?string $startDate = null,
+        ?string $endDate = null
     ): array {
         $settings = $this->getSettings();
 
@@ -672,7 +730,7 @@ class HrAttendanceLeaveReportService
             }
         }
 
-        $reportData = $this->buildReport($period, $month, $deptId, $isScheduled);
+        $reportData = $this->buildReport($period, $month, $deptId, $isScheduled, $startDate, $endDate);
         $baseName   = sprintf(
             'attendance_leave_%s_report_%s_to_%s',
             $period,
