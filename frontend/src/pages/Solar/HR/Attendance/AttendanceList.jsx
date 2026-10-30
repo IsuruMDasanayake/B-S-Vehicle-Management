@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   RefreshCw, Edit2, Plus, MapPin, Calendar, BarChart2,
-  CheckCircle, XCircle, Clock, AlertTriangle, Check, X, Loader2
+  CheckCircle, XCircle, Clock, AlertTriangle, Check, X, Loader2, FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import PayrollReportPanel from './PayrollReportPanel';
 
 const STATUS_MAP = {
   present:  { label: 'Present',            color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
@@ -281,6 +282,26 @@ const AttendanceList = () => {
               {pendingRegCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setViewTab('reports')}
+          style={{
+            background: viewTab === 'reports' ? 'var(--primary, #3b82f6)' : 'transparent',
+            color: viewTab === 'reports' ? '#fff' : 'var(--text-muted)',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '0.45rem 1rem',
+            fontSize: '0.84rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <FileSpreadsheet size={15} />
+          Payroll &amp; Attendance Reports
         </button>
       </div>
 
@@ -582,6 +603,17 @@ const AttendanceList = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ── View 3: Payroll & Attendance Reports ── */}
+      {viewTab === 'reports' && (
+        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+          <PayrollReportPanel
+            initialScope="employee"
+            title="Payroll Timesheets & Attendance Reports"
+            subtitle="Download individual monthly employee timesheets with punches, late minutes, leaves, and payable days for payroll, or export company summary reports."
+          />
         </div>
       )}
 

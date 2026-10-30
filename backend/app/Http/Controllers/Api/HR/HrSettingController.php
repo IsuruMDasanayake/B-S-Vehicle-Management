@@ -187,6 +187,10 @@ class HrSettingController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        if ($request->filled('employee_id')) {
+            return $this->downloadIndividualPayrollReport($request, $service);
+        }
+
         $period    = in_array($request->get('period'), ['daily', 'weekly', 'monthly', 'custom'], true) ? $request->get('period') : 'weekly';
         $format    = in_array($request->get('format'), ['pdf', 'csv'], true) ? $request->get('format') : 'pdf';
         $month     = $request->get('month');
@@ -211,6 +215,71 @@ class HrSettingController extends Controller
         }
 
         $pdf = $service->buildPdf($reportData);
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $baseName . '.pdf"',
+        ]);
+    }
+
+    /**
+     * GET /api/hr/settings/employee-payroll-report/preview?employee_id=X&month=YYYY-MM
+     * Fetch JSON summary and daily breakdown for an individual employee for live preview in UI.
+     */
+    public function previewIndividualPayrollReport(Request $request, HrAttendanceLeaveReportService $service)
+    {
+        if (!$this->authorizeSuperOrHrAdmin($request)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:hr_employees,id',
+            'month'       => 'nullable|string|max:10',
+        ]);
+
+        $reportData = $service->buildIndividualEmployeePayrollReport(
+            (int) $validated['employee_id'],
+            $validated['month'] ?? null
+        );
+
+        return response()->json($reportData);
+    }
+
+    /**
+     * GET /api/hr/settings/employee-payroll-report/download?employee_id=X&month=YYYY-MM&format=pdf|csv
+     * Download the individual employee monthly payroll report directly as PDF or CSV.
+     */
+    public function downloadIndividualPayrollReport(Request $request, HrAttendanceLeaveReportService $service)
+    {
+        if (!$this->authorizeSuperOrHrAdmin($request)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:hr_employees,id',
+            'month'       => 'nullable|string|max:10',
+            'format'      => 'nullable|in:pdf,csv',
+        ]);
+
+        $format = $validated['format'] ?? 'pdf';
+        $reportData = $service->buildIndividualEmployeePayrollReport(
+            (int) $validated['employee_id'],
+            $validated['month'] ?? null
+        );
+
+        $emp = $reportData['employee'];
+        $cleanName = preg_replace('/[^A-Za-z0-9_-]/', '_', $emp['name']);
+        $cleanEpf  = preg_replace('/[^A-Za-z0-9_-]/', '_', $emp['epf_no'] ?: $emp['employee_id']);
+        $baseName  = sprintf('payroll_timesheet_%s_%s_%s', $cleanEpf, $cleanName, $reportData['month']);
+
+        if ($format === 'csv') {
+            $csv = $service->buildIndividualEmployeeCsv($reportData);
+            return response($csv, 200, [
+                'Content-Type'        => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $baseName . '.csv"',
+            ]);
+        }
+
+        $pdf = $service->buildIndividualEmployeePdf($reportData);
         return response($pdf, 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="' . $baseName . '.pdf"',

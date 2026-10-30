@@ -1,20 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Mail, Save, Send, Users, CheckCircle2, FileText, FileSpreadsheet,
-  Search, Plus, X, Clock, Download, Loader2, RefreshCw, Server, ChevronDown, ChevronUp
+  Search, Plus, X, Clock, Download, Loader2, RefreshCw, Server, ChevronDown, ChevronUp,
+  UserCheck, Building2, Calendar
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import PayrollReportPanel from '../Attendance/PayrollReportPanel';
 
 export default function HRSettings({ embedded = false }) {
-  const now = new Date();
-  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sendingPeriod, setSendingPeriod] = useState(''); // '' | 'daily' | 'weekly' | 'monthly' | 'custom'
-  const [downloadingFormat, setDownloadingFormat] = useState(''); // '' | 'pdf' | 'csv'
   const [mailSectionExpanded, setMailSectionExpanded] = useState(true);
 
   // Settings state
@@ -38,22 +34,13 @@ export default function HRSettings({ embedded = false }) {
   const [smtpFromAddress, setSmtpFromAddress] = useState('noreply@circlegroup.lk');
   const [smtpFromName, setSmtpFromName] = useState('Circle Engineering HR');
 
-  // User search & manual test controls
+  // User search
   const [userSearch, setUserSearch] = useState('');
-  const [testPeriod, setTestPeriod] = useState('weekly');
-  const [testMonth, setTestMonth] = useState(defaultMonth);
-  const [testStartDate, setTestStartDate] = useState(defaultDate);
-  const [testEndDate, setTestEndDate] = useState(defaultDate);
-  const [departments, setDepartments] = useState([]);
-  const [testDeptId, setTestDeptId] = useState('');
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const [res, deptRes] = await Promise.all([
-        api.get('/hr/settings/mail-reports'),
-        api.get('/hr/departments').catch(() => ({ data: [] })),
-      ]);
+      const res = await api.get('/hr/settings/mail-reports');
 
       const s = res.data?.settings || {};
       setAvailableUsers(res.data?.available_users || []);
@@ -72,7 +59,6 @@ export default function HRSettings({ embedded = false }) {
       setSmtpFromName(s.smtp_from_name || 'Circle Engineering HR');
       setLastSentAt(s.last_sent_at || null);
       setLastSentSummary(s.last_sent_summary || null);
-      setDepartments(deptRes.data || []);
     } catch {
       toast.error('Failed to load mail report settings');
     } finally {
@@ -174,89 +160,6 @@ export default function HRSettings({ embedded = false }) {
       toast.error(err.response?.data?.message || 'Failed to save settings');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const getPeriodLabel = (p) => {
-    if (p === 'daily') return 'Daily';
-    if (p === 'custom') return 'Custom Date Range';
-    if (p === 'monthly') return 'Monthly';
-    return 'Weekly';
-  };
-
-  const handleSendReportNow = async (periodToTrigger = testPeriod) => {
-    if (resolvedEmails.length === 0) {
-      toast.error('Please assign at least one recipient user or email address.');
-      return;
-    }
-    if (!smtpHost.trim()) {
-      toast.error('Please enter your SMTP Host (e.g. smtp.gmail.com).');
-      return;
-    }
-    setSendingPeriod(periodToTrigger);
-    try {
-      const res = await api.post('/hr/settings/mail-reports/send-now', {
-        period: periodToTrigger,
-        month: periodToTrigger === 'monthly' ? testMonth : undefined,
-        start_date: ['daily', 'weekly', 'custom'].includes(periodToTrigger) ? testStartDate : undefined,
-        end_date: periodToTrigger === 'custom' ? testEndDate : undefined,
-        department_id: testDeptId ? Number(testDeptId) : undefined,
-        recipient_user_ids: selectedUserIds,
-        custom_emails: customEmails,
-        weekly_enabled: weeklyEnabled,
-        monthly_enabled: monthlyEnabled,
-        include_pdf: includePdf,
-        include_csv: includeCsv,
-        smtp_mode: 'custom',
-        smtp_host: smtpHost,
-        smtp_port: Number(smtpPort) || 587,
-        smtp_encryption: smtpEncryption,
-        smtp_username: smtpUsername,
-        smtp_password: smtpPassword,
-        smtp_from_address: smtpFromAddress,
-        smtp_from_name: smtpFromName,
-      });
-      toast.success(res.data?.message || 'Report emailed successfully!', { duration: 6000 });
-      if (res.data?.settings) {
-        setLastSentAt(res.data.settings.last_sent_at);
-        setLastSentSummary(res.data.settings.last_sent_summary);
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send report email', { duration: 6000 });
-    } finally {
-      setSendingPeriod('');
-    }
-  };
-
-  const handleDownloadReport = async (format) => {
-    setDownloadingFormat(format);
-    try {
-      const params = {
-        period: testPeriod,
-        format,
-        month: testPeriod === 'monthly' ? testMonth : undefined,
-        start_date: ['daily', 'weekly', 'custom'].includes(testPeriod) ? testStartDate : undefined,
-        end_date: testPeriod === 'custom' ? testEndDate : undefined,
-        department_id: testDeptId || undefined,
-      };
-      const res = await api.get('/hr/settings/mail-reports/download', {
-        params,
-        responseType: 'blob',
-      });
-      const blob = new Blob([res.data], {
-        type: format === 'pdf' ? 'application/pdf' : 'text/csv;charset=utf-8',
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `attendance_leave_${testPeriod}_report.${format}`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      toast.success(`${format.toUpperCase()} report downloaded!`);
-    } catch {
-      toast.error(`Failed to download ${format.toUpperCase()} report`);
-    } finally {
-      setDownloadingFormat('');
     }
   };
 
@@ -727,7 +630,7 @@ export default function HRSettings({ embedded = false }) {
                   <button
                     type="button"
                     onClick={handleSaveSettings}
-                    disabled={saving || !!sendingPeriod}
+                    disabled={saving}
                     className="btn btn-primary"
                     style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem', fontWeight: 700 }}
                   >
@@ -736,189 +639,12 @@ export default function HRSettings({ embedded = false }) {
                   </button>
                 </div>
 
-                {/* Sub-panel 3: Test & Manually Send Current Report */}
-                <div style={{ background: 'var(--surface)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: '12px', padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--surface-2)' }}>
-                    <div style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', padding: '0.5rem', borderRadius: '10px', display: 'flex' }}>
-                      <Send size={18} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700 }}>
-                        3. Test &amp; Manually Send Current Report
-                      </h3>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-                        Select report period, specific day or date range, and email or download (PDF + CSV)
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: testPeriod === 'custom' ? '1fr' : '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Report Period</label>
-                      <select
-                        className="form-control"
-                        value={testPeriod}
-                        onChange={e => setTestPeriod(e.target.value)}
-                      >
-                        <option value="daily">Daily Report (Single Day)</option>
-                        <option value="custom">Custom Date Range (From Day – To Day)</option>
-                        <option value="weekly">Weekly Report (Mon–Fri)</option>
-                        <option value="monthly">Monthly Report (Full Month)</option>
-                      </select>
-                    </div>
-
-                    {testPeriod === 'daily' && (
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Select Day</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={testStartDate}
-                          onChange={e => setTestStartDate(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {testPeriod === 'weekly' && (
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Select Day in Week</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={testStartDate}
-                          onChange={e => setTestStartDate(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {testPeriod === 'monthly' && (
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Select Month</label>
-                        <input
-                          type="month"
-                          className="form-control"
-                          value={testMonth}
-                          onChange={e => setTestMonth(e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {testPeriod === 'custom' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>From Day (Start Date)</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={testStartDate}
-                          onChange={e => setTestStartDate(e.target.value)}
-                        />
-                      </div>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>To Day (End Date)</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={testEndDate}
-                          min={testStartDate}
-                          onChange={e => setTestEndDate(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Department Filter (Optional)</label>
-                    <select
-                      className="form-control"
-                      value={testDeptId}
-                      onChange={e => setTestDeptId(e.target.value)}
-                    >
-                      <option value="">All Departments (Company-Wide)</option>
-                      {departments.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Trigger Buttons */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleSendReportNow(testPeriod)}
-                      disabled={!!sendingPeriod}
-                      className="btn btn-primary"
-                      style={{
-                        background: '#16a34a',
-                        borderColor: '#16a34a',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        padding: '0.7rem 1rem',
-                        fontWeight: 700,
-                        fontSize: '0.88rem',
-                      }}
-                    >
-                      {sendingPeriod ? (
-                        <>
-                          <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                          Generating &amp; Sending {getPeriodLabel(sendingPeriod)} Report (PDF + CSV)...
-                        </>
-                      ) : (
-                        <>
-                          <Mail size={16} />
-                          Send {getPeriodLabel(testPeriod)} Report Now (PDF &amp; CSV)
-                        </>
-                      )}
-                    </button>
-
-                    {/* Direct Download Preview Buttons */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadReport('pdf')}
-                        disabled={!!downloadingFormat}
-                        className="btn btn-ghost"
-                        style={{ border: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600 }}
-                      >
-                        {downloadingFormat === 'pdf' ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} style={{ color: '#dc2626' }} />}
-                        Download PDF
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadReport('csv')}
-                        disabled={!!downloadingFormat}
-                        className="btn btn-ghost"
-                        style={{ border: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600 }}
-                      >
-                        {downloadingFormat === 'csv' ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} style={{ color: '#16a34a' }} />}
-                        Download CSV
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Last Sent Status Box */}
-                  {lastSentAt && (
-                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '8px', fontSize: '0.76rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#15803d', marginBottom: '0.25rem' }}>
-                        <CheckCircle2 size={14} /> Last Report Dispatched: {lastSentAt}
-                      </div>
-                      {lastSentSummary && (
-                        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                          <div><strong>Period:</strong> {lastSentSummary.period?.toUpperCase()} ({lastSentSummary.range_label})</div>
-                          {lastSentSummary.attachments?.length > 0 && (
-                            <div><strong>Attachments:</strong> {lastSentSummary.attachments.join(', ')}</div>
-                          )}
-                          {lastSentSummary.recipients?.length > 0 && (
-                            <div><strong>Sent To:</strong> {lastSentSummary.recipients.join(', ')}</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* Sub-panel 3: Test & Download Reports (Company & Payroll Timesheet) */}
+                {/* <PayrollReportPanel
+                  initialScope="company"
+                  title="3. Test &amp; Download Reports (Company &amp; Payroll)"
+                  subtitle="Select report period, specific day or date range, and email or download (PDF + CSV), or download individual employee payroll timesheets."
+                /> */}
               </div>
             </div>
           )}
