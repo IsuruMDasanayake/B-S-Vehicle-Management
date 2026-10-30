@@ -180,6 +180,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('attendance/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'update']);
         Route::get('attendance/unclosed-past', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'unclosedOrAutoAttendances']);
         Route::post('attendance/regularize', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'requestRegularization']);
+        Route::post('attendance/{id}/regularize', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'requestRegularization']);
         Route::get('attendance/regularizations', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'listRegularizations']);
         Route::patch('attendance/regularizations/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'updateRegularization']);
 
