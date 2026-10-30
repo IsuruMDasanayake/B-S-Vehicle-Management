@@ -18,6 +18,7 @@ import {
 const STATUS_COLORS = {
   present:  { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'Present' },
   late:     { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Late' },
+  missing:  { color: '#e11d48', bg: 'rgba(225,29,72,0.12)',  label: 'Missing Attendance' },
   absent:   { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'Absent' },
   half_day: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', label: 'Half Day' },
   leave:    { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'Leave (LV)' },
@@ -119,11 +120,12 @@ const PortalHome = () => {
       const records = histRes.data || [];
       const stats = records.reduce((a, r) => {
         if (r.status === 'present' || r.status === 'late') a.present++;
+        if (r.status === 'missing') a.missing++;
         if (r.status === 'absent') a.absent++;
         if (r.status === 'late') a.late++;
         if (r.status === 'half_day') a.halfDay++;
         return a;
-      }, { present: 0, absent: 0, late: 0, halfDay: 0 });
+      }, { present: 0, missing: 0, absent: 0, late: 0, halfDay: 0 });
       setMonthStats(stats);
 
       // Check pending leave approvals for executive manager
@@ -637,32 +639,32 @@ const PortalHome = () => {
             )}
           </div>
 
-          {/* Missed Clock-Out Notices */}
+          {/* Missing Attendance (Forgot Clock-Out) Notices */}
           {unclosedPast.length > 0 && (
             <div
               className="card"
               style={{
                 padding: '1.25rem',
                 marginBottom: '1.25rem',
-                background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(217,119,6,0.04) 100%)',
-                border: '1px solid rgba(245,158,11,0.25)',
+                background: 'linear-gradient(135deg, rgba(225,29,72,0.08) 0%, rgba(245,158,11,0.05) 100%)',
+                border: '1px solid rgba(225,29,72,0.28)',
                 borderRadius: 'var(--radius-lg, 12px)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
                 <div style={{
                   width: '32px', height: '32px', borderRadius: '50%',
-                  background: 'rgba(245,158,11,0.15)', color: '#d97706',
+                  background: 'rgba(225,29,72,0.14)', color: '#e11d48',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
                   <AlertCircle size={18} />
                 </div>
                 <div>
                   <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--dark)' }}>
-                    Missed Clock-Out Notice ({unclosedPast.length})
+                    Missing Attendance — Clock-Out Required ({unclosedPast.length})
                   </h4>
                   <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    You forgot to clock out on shift(s) below. The system recorded departure at 5:30 PM.
+                    Clock-out time is blank for the date(s) below and marked as Missing Attendance. Please fill your clock-out time and reason before month end.
                   </p>
                 </div>
               </div>
@@ -678,7 +680,7 @@ const PortalHome = () => {
                         padding: '0.75rem 1rem',
                         background: 'var(--white)',
                         borderRadius: '8px',
-                        border: '1px solid rgba(245,158,11,0.2)',
+                        border: '1px solid rgba(225,29,72,0.2)',
                         display: 'flex',
                         flexWrap: 'wrap',
                         justifyContent: 'space-between',
@@ -687,20 +689,20 @@ const PortalHome = () => {
                       }}
                     >
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dark)' }}>{dateStr}</span>
-                          <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(245,158,11,0.15)', color: '#d97706', fontWeight: 600 }}>
-                            Auto Clocked-Out (5:30 PM)
+                          <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.45rem', borderRadius: '4px', background: 'rgba(225,29,72,0.12)', color: '#e11d48', fontWeight: 700 }}>
+                            Missing Attendance (Clock-Out Blank)
                           </span>
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                          Clock-in: {formatTime(att.clock_in_time)} · Recorded Hours: {formatHours(att.working_hours) || '8h 30m'}
+                          Clock-in: {formatTime(att.clock_in_time)} · Clock-out: <strong>— (Blank)</strong>
                         </div>
                         {reg && (
                           <div style={{ fontSize: '0.72rem', marginTop: '0.3rem', fontWeight: 500, color: reg.status === 'pending' ? '#d97706' : reg.status === 'approved' ? '#16a34a' : '#dc2626' }}>
-                            {reg.status === 'pending' && `⏳ Adjustment to ${formatTime(reg.requested_clock_out_time)} pending HR approval`}
-                            {reg.status === 'approved' && `✅ Adjustment approved (${formatTime(reg.requested_clock_out_time)})`}
-                            {reg.status === 'rejected' && `❌ Adjustment rejected by HR`}
+                            {reg.status === 'pending' && `⏳ Requested clock-out (${formatTime(reg.requested_clock_out_time)}) pending HR approval`}
+                            {reg.status === 'approved' && `✅ Clock-out approved (${formatTime(reg.requested_clock_out_time)})`}
+                            {reg.status === 'rejected' && `❌ Request rejected by HR — please resubmit`}
                           </div>
                         )}
                       </div>
@@ -709,7 +711,7 @@ const PortalHome = () => {
                         <button
                           onClick={() => handleOpenRegModal(att)}
                           style={{
-                            background: '#f59e0b',
+                            background: '#e11d48',
                             color: '#ffffff',
                             border: 'none',
                             borderRadius: '6px',
@@ -717,10 +719,10 @@ const PortalHome = () => {
                             fontSize: '0.75rem',
                             fontWeight: 600,
                             cursor: 'pointer',
-                            boxShadow: '0 1px 3px rgba(245,158,11,0.3)',
+                            boxShadow: '0 1px 3px rgba(225,29,72,0.3)',
                           }}
                         >
-                          Request Time Adjustment
+                          Fill Time & Reason
                         </button>
                       )}
                     </div>
@@ -745,16 +747,17 @@ const PortalHome = () => {
                   View All <ChevronRight size={14} />
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem' }}>
                 {[
                   { label: 'Present', val: monthStats.present, color: '#22c55e' },
-                  { label: 'Absent',  val: monthStats.absent,  color: '#ef4444' },
                   { label: 'Late',    val: monthStats.late,    color: '#f59e0b' },
+                  { label: 'Missing', val: monthStats.missing, color: '#e11d48' },
+                  { label: 'Absent',  val: monthStats.absent,  color: '#ef4444' },
                   { label: 'Half',    val: monthStats.halfDay, color: '#8b5cf6' },
                 ].map(s => (
-                  <div key={s.label} style={{ textAlign: 'center', padding: '0.6rem 0.3rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 700, color: s.color }}>{s.val}</div>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 500 }}>{s.label}</div>
+                  <div key={s.label} style={{ textAlign: 'center', padding: '0.6rem 0.25rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 700, color: s.color }}>{s.val}</div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 500 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -856,10 +859,10 @@ const PortalHome = () => {
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '440px', padding: '1.5rem', background: 'var(--white)', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--dark)' }}>
-              Request Clock-Out Adjustment
+              Fill Missing Attendance Clock-Out
             </h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
-              For shift on <strong>{new Date(selectedReg.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}</strong> (Clock-in: {formatTime(selectedReg.clock_in_time)}).
+              For shift on <strong>{new Date(selectedReg.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}</strong> (Clock-in: {formatTime(selectedReg.clock_in_time)} · Clock-out: Blank). Please submit your actual departure time and reason before month end.
             </p>
 
             <form onSubmit={handleRegularizeSubmit}>

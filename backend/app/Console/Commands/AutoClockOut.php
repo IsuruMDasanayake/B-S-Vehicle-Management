@@ -5,21 +5,27 @@ namespace App\Console\Commands;
 use App\Models\HrAttendance;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AutoClockOut extends Command
 {
     protected $signature = 'hr:auto-clock-out {--date= : Specific date to process (YYYY-MM-DD)}';
-    protected $description = 'Automatically clocks out employees who forgot to clock out at the end of their shift';
-
-    const SHIFT_END = '17:30:00';
-    const HALF_DAY_HRS = 4.5;
+    protected $description = 'Marks employees who forgot to clock out at the end of their shift as Missing Attendance with blank clock-out time';
 
     public function handle(): int
     {
+        // Ensure status column can store 'missing' even if originally created as an ENUM
+        try {
+            DB::statement("ALTER TABLE hr_attendances MODIFY COLUMN status VARCHAR(30) NOT NULL DEFAULT 'present'");
+        } catch (\Throwable $e) {
+            // Ignore if already VARCHAR or SQLite
+        }
+
         $specificDate = $this->option('date');
         $query = HrAttendance::whereNotNull('clock_in_time')
-            ->whereNull('clock_out_time');
+            ->whereNull('clock_out_time')
+            ->where('status', '!=', 'missing');
 
         if ($specificDate) {
             $query->where('date', $specificDate);
@@ -38,34 +44,19 @@ class AutoClockOut extends Command
 
         $processed = 0;
         foreach ($records as $att) {
-            $dateStr = Carbon::parse($att->date)->toDateString();
-            $clockIn = Carbon::parse($att->clock_in_time);
-            
-            // Default auto clock-out time: 17:30:00 (5:30 PM) on that shift day in Sri Lanka timezone
-            // Stored as UTC (12:00:00 UTC) so that client browsers in Sri Lanka render 17:30 (5:30 PM)
-            $clockOut = Carbon::parse($dateStr . ' ' . self::SHIFT_END, 'Asia/Colombo')->utc();
-
-            // If employee clocked in after 17:30, set clock out to clock in + 1 hour as safety fallback
-            if ($clockIn->greaterThan($clockOut)) {
-                $clockOut = $clockIn->copy()->addHour();
-            }
-
-            $hoursWorked = round($clockIn->diffInMinutes($clockOut) / 60, 2);
-            $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $att->status;
-
             $att->update([
-                'clock_out_time'    => $clockOut,
-                'working_hours'     => $hoursWorked,
-                'status'            => $status,
+                'clock_out_time'    => null,
+                'working_hours'     => null,
+                'status'            => 'missing',
                 'is_auto_clock_out' => true,
-                'notes'             => trim(($att->notes ? $att->notes . ' | ' : '') . 'Auto clocked-out at 5:30 PM (System fallback: employee forgot to clock out)'),
+                'notes'             => 'Missing clock-out (Clock-out left blank — employee must submit time & reason before month end)',
             ]);
 
             $processed++;
         }
 
-        $this->info("Successfully auto clocked-out {$processed} record(s).");
-        Log::info("hr:auto-clock-out completed: {$processed} records updated.");
+        $this->info("Marked {$processed} record(s) as Missing Attendance (blank clock-out).");
+        Log::info("hr:auto-clock-out completed: {$processed} records marked as missing attendance.");
         return Command::SUCCESS;
     }
 }

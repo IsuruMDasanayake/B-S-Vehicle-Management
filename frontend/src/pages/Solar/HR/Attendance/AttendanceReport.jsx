@@ -46,10 +46,10 @@ const AttendanceReport = () => {
   };
 
   const exportCSV = () => {
-    const headers = ['Employee ID', 'Name', 'Department', 'Working Days', 'Present', 'Late', 'Half Day', 'Leave (LV)', 'Absent', 'Total Hours', 'Attendance %'];
+    const headers = ['Employee ID', 'Name', 'Department', 'Working Days', 'Present', 'Late', 'Missing Attendance', 'Half Day', 'Leave (LV)', 'Absent', 'Total Hours', 'Attendance %'];
     const rows = report.map(r => [
       r.employee_id, r.name, r.department,
-      r.working_days, r.present, r.late, r.half_day, r.leave ?? 0, r.absent,
+      r.working_days, r.present, r.late, r.missing ?? 0, r.half_day, r.leave ?? 0, r.absent,
       r.total_working_hours, r.attendance_rate,
     ]);
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
@@ -125,16 +125,18 @@ const AttendanceReport = () => {
         const totals = report.reduce((a, r) => ({
           present: a.present + r.present,
           late: a.late + r.late,
+          missing: a.missing + (r.missing || 0),
           leave: a.leave + (r.leave || 0),
           absent: a.absent + r.absent,
           half_day: a.half_day + r.half_day,
           hours: a.hours + r.total_working_hours,
-        }), { present: 0, late: 0, leave: 0, absent: 0, half_day: 0, hours: 0 });
+        }), { present: 0, late: 0, missing: 0, leave: 0, absent: 0, half_day: 0, hours: 0 });
         return (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
             {[
               { label: 'Total Present',   val: totals.present,              color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
               { label: 'Late Arrivals',   val: totals.late,                 color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+              { label: 'Missing (M)',     val: totals.missing,              color: '#e11d48', bg: 'rgba(225,29,72,0.12)' },
               { label: 'Leave Days (LV)', val: totals.leave,                color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
               { label: 'Absent Days',     val: totals.absent,               color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
               { label: 'Half Days',       val: totals.half_day,             color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
@@ -153,16 +155,16 @@ const AttendanceReport = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)' }}>
-              {['EMPLOYEE', 'DEPARTMENT', 'WRKNG DAYS', 'PRESENT', 'LATE', 'HALF DAY', 'LEAVE (LV)', 'ABSENT', 'TOTAL HRS', 'ATTENDANCE %'].map(h => (
+              {['EMPLOYEE', 'DEPARTMENT', 'WRKNG DAYS', 'PRESENT', 'LATE', 'MISSING', 'HALF DAY', 'LEAVE (LV)', 'ABSENT', 'TOTAL HRS', 'ATTENDANCE %'].map(h => (
                 <th key={h} style={{ padding: '0.75rem 1rem', textAlign: h === 'EMPLOYEE' || h === 'DEPARTMENT' ? 'left' : 'center', fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="10" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading report...</td></tr>
+              <tr><td colSpan="11" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading report...</td></tr>
             ) : report.length === 0 ? (
-              <tr><td colSpan="10" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data for this month.</td></tr>
+              <tr><td colSpan="11" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data for this month.</td></tr>
             ) : report.map((r, i) => {
               const { color, bg } = getRateBg(r.attendance_rate);
               return (
@@ -175,6 +177,7 @@ const AttendanceReport = () => {
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', color: 'var(--text-muted)' }}>{r.working_days}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#22c55e' }}>{r.present}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#f59e0b' }}>{r.late}</td>
+                  <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 700, color: '#e11d48' }}>{r.missing ?? 0}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#8b5cf6' }}>{r.half_day}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 700, color: '#3b82f6' }}>{r.leave ?? 0}</td>
                   <td style={{ textAlign: 'center', padding: '0.875rem 1rem', fontWeight: 600, color: '#ef4444' }}>{r.absent}</td>
