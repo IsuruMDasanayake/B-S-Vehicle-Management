@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Mail, Save, Send, Users, CheckCircle2, FileText, FileSpreadsheet,
-  Search, Plus, X, Clock, Download, Loader2, RefreshCw, Server, ExternalLink, AlertTriangle
+  Search, Plus, X, Clock, Download, Loader2, RefreshCw, Server, ChevronDown, ChevronUp
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
@@ -9,11 +9,13 @@ import toast from 'react-hot-toast';
 export default function HRSettings({ embedded = false }) {
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sendingPeriod, setSendingPeriod] = useState(''); // '' | 'weekly' | 'monthly'
+  const [sendingPeriod, setSendingPeriod] = useState(''); // '' | 'daily' | 'weekly' | 'monthly' | 'custom'
   const [downloadingFormat, setDownloadingFormat] = useState(''); // '' | 'pdf' | 'csv'
+  const [mailSectionExpanded, setMailSectionExpanded] = useState(true);
 
   // Settings state
   const [availableUsers, setAvailableUsers] = useState([]);
@@ -26,10 +28,8 @@ export default function HRSettings({ embedded = false }) {
   const [includeCsv, setIncludeCsv] = useState(true);
   const [lastSentAt, setLastSentAt] = useState(null);
   const [lastSentSummary, setLastSentSummary] = useState(null);
-  const [mailTransport, setMailTransport] = useState(null);
 
   // Outgoing SMTP Server state
-  const [smtpMode, setSmtpMode] = useState('env'); // 'env' | 'custom'
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState(587);
   const [smtpEncryption, setSmtpEncryption] = useState('tls');
@@ -42,6 +42,8 @@ export default function HRSettings({ embedded = false }) {
   const [userSearch, setUserSearch] = useState('');
   const [testPeriod, setTestPeriod] = useState('weekly');
   const [testMonth, setTestMonth] = useState(defaultMonth);
+  const [testStartDate, setTestStartDate] = useState(defaultDate);
+  const [testEndDate, setTestEndDate] = useState(defaultDate);
   const [departments, setDepartments] = useState([]);
   const [testDeptId, setTestDeptId] = useState('');
 
@@ -61,7 +63,6 @@ export default function HRSettings({ embedded = false }) {
       setMonthlyEnabled(s.monthly_enabled !== false);
       setIncludePdf(s.include_pdf !== false);
       setIncludeCsv(s.include_csv !== false);
-      setSmtpMode(s.smtp_mode || 'env');
       setSmtpHost(s.smtp_host || '');
       setSmtpPort(s.smtp_port || 587);
       setSmtpEncryption(s.smtp_encryption || 'tls');
@@ -71,7 +72,6 @@ export default function HRSettings({ embedded = false }) {
       setSmtpFromName(s.smtp_from_name || 'Circle Engineering HR');
       setLastSentAt(s.last_sent_at || null);
       setLastSentSummary(s.last_sent_summary || null);
-      setMailTransport(res.data?.mail_transport || null);
       setDepartments(deptRes.data || []);
     } catch {
       toast.error('Failed to load mail report settings');
@@ -149,7 +149,7 @@ export default function HRSettings({ embedded = false }) {
       toast.error('Please keep at least one attachment format (PDF or CSV) enabled.');
       return;
     }
-    if (smtpMode === 'custom' && !smtpHost.trim()) {
+    if (!smtpHost.trim()) {
       toast.error('Please enter your SMTP Host (e.g. smtp.gmail.com or mail.circlegroup.lk).');
       return;
     }
@@ -162,7 +162,7 @@ export default function HRSettings({ embedded = false }) {
         monthly_enabled: monthlyEnabled,
         include_pdf: includePdf,
         include_csv: includeCsv,
-        smtp_mode: smtpMode,
+        smtp_mode: 'custom',
         smtp_host: smtpHost,
         smtp_port: Number(smtpPort) || 587,
         smtp_encryption: smtpEncryption,
@@ -172,9 +172,6 @@ export default function HRSettings({ embedded = false }) {
         smtp_from_name: smtpFromName,
       });
       toast.success(res.data?.message || 'Settings saved!');
-      if (res.data?.mail_transport) {
-        setMailTransport(res.data.mail_transport);
-      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save settings');
     } finally {
@@ -182,13 +179,20 @@ export default function HRSettings({ embedded = false }) {
     }
   };
 
+  const getPeriodLabel = (p) => {
+    if (p === 'daily') return 'Daily';
+    if (p === 'custom') return 'Custom Date Range';
+    if (p === 'monthly') return 'Monthly';
+    return 'Weekly';
+  };
+
   const handleSendReportNow = async (periodToTrigger = testPeriod) => {
     if (resolvedEmails.length === 0) {
       toast.error('Please assign at least one recipient user or email address.');
       return;
     }
-    if (smtpMode === 'custom' && !smtpHost.trim()) {
-      toast.error('Please enter your SMTP Host (e.g. smtp.gmail.com) or switch back to Default (.env).');
+    if (!smtpHost.trim()) {
+      toast.error('Please enter your SMTP Host (e.g. smtp.gmail.com).');
       return;
     }
     setSendingPeriod(periodToTrigger);
@@ -196,6 +200,8 @@ export default function HRSettings({ embedded = false }) {
       const res = await api.post('/hr/settings/mail-reports/send-now', {
         period: periodToTrigger,
         month: periodToTrigger === 'monthly' ? testMonth : undefined,
+        start_date: ['daily', 'weekly', 'custom'].includes(periodToTrigger) ? testStartDate : undefined,
+        end_date: periodToTrigger === 'custom' ? testEndDate : undefined,
         department_id: testDeptId ? Number(testDeptId) : undefined,
         recipient_user_ids: selectedUserIds,
         custom_emails: customEmails,
@@ -203,7 +209,7 @@ export default function HRSettings({ embedded = false }) {
         monthly_enabled: monthlyEnabled,
         include_pdf: includePdf,
         include_csv: includeCsv,
-        smtp_mode: smtpMode,
+        smtp_mode: 'custom',
         smtp_host: smtpHost,
         smtp_port: Number(smtpPort) || 587,
         smtp_encryption: smtpEncryption,
@@ -216,9 +222,6 @@ export default function HRSettings({ embedded = false }) {
       if (res.data?.settings) {
         setLastSentAt(res.data.settings.last_sent_at);
         setLastSentSummary(res.data.settings.last_sent_summary);
-      }
-      if (res.data?.mail_transport) {
-        setMailTransport(res.data.mail_transport);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send report email', { duration: 6000 });
@@ -234,6 +237,8 @@ export default function HRSettings({ embedded = false }) {
         period: testPeriod,
         format,
         month: testPeriod === 'monthly' ? testMonth : undefined,
+        start_date: ['daily', 'weekly', 'custom'].includes(testPeriod) ? testStartDate : undefined,
+        end_date: testPeriod === 'custom' ? testEndDate : undefined,
         department_id: testDeptId || undefined,
       };
       const res = await api.get('/hr/settings/mail-reports/download', {
@@ -279,10 +284,10 @@ export default function HRSettings({ embedded = false }) {
         <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-              HR System &amp; Mail Report Settings
+              HR System Settings
             </h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.88rem' }}>
-              Manually assign users to receive automated Weekly &amp; Monthly Attendance and Leave Reports (PDF &amp; CSV), or trigger an instant test report.
+              Configure HR modules, automated mail reports, and system preferences.
             </p>
           </div>
           <button
@@ -296,29 +301,75 @@ export default function HRSettings({ embedded = false }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+      {/* Settings Blocks Stack (additional HR setting blocks can be added below) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* ═════════════════════════════════════════════════════════════════════
-            LEFT COLUMN: MANUAL USER ASSIGNMENT FOR MAIL REPORTS
+            BLOCK 1: ATTENDANCE & LEAVE MAIL REPORT SETTINGS
         ═════════════════════════════════════════════════════════════════════ */}
-        <div className="card" style={{ padding: '1.35rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--surface-2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{ background: 'rgba(59,130,246,0.12)', color: '#2563eb', padding: '0.55rem', borderRadius: '10px', display: 'flex' }}>
-                <Users size={20} />
+        <div className="card" style={{ padding: '1.5rem' }}>
+          {/* Unified Block Header */}
+          <div
+            onClick={() => setMailSectionExpanded(prev => !prev)}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              cursor: 'pointer',
+              paddingBottom: mailSectionExpanded ? '1rem' : 0,
+              marginBottom: mailSectionExpanded ? '1.25rem' : 0,
+              borderBottom: mailSectionExpanded ? '1px solid var(--surface-2)' : 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ background: 'rgba(37,99,235,0.12)', color: '#2563eb', padding: '0.65rem', borderRadius: '12px', display: 'flex' }}>
+                <Mail size={22} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                  1. Assign Mail Report Recipients
-                </h3>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                  Select which users receive Weekly &amp; Monthly Attendance and Leave Reports
+                <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
+                  Attendance &amp; Leave Mail Report Settings
+                </h2>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                  Assign recipients, configure automated Weekly &amp; Monthly schedules, SMTP server, and manually send or download reports (PDF &amp; CSV).
                 </div>
               </div>
             </div>
-            <span style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.65rem', borderRadius: '999px' }}>
-              {resolvedEmails.length} Assigned
-            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.65rem', borderRadius: '999px' }}>
+                {resolvedEmails.length} Recipient{resolvedEmails.length === 1 ? '' : 's'} Assigned
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: '0.35rem', border: '1px solid var(--surface-2)', borderRadius: '8px', display: 'flex' }}
+                aria-label="Toggle Mail Report Settings"
+              >
+                {mailSectionExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+            </div>
           </div>
+
+          {mailSectionExpanded && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+              {/*Sub-panel 1: Assign Mail Report Recipients */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: '12px', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--surface-2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div style={{ background: 'rgba(59,130,246,0.12)', color: '#2563eb', padding: '0.5rem', borderRadius: '10px', display: 'flex' }}>
+                      <Users size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700 }}>
+                        1. Assign Mail Report Recipients
+                      </h3>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                        Select which users receive Attendance and Leave Reports
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
           {/* Search & Quick Actions */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.85rem' }}>
@@ -493,429 +544,386 @@ export default function HRSettings({ embedded = false }) {
           </div>
         </div>
 
-        {/* ═════════════════════════════════════════════════════════════════════
-            RIGHT COLUMN: SCHEDULE SETTINGS + MANUAL TRIGGER (PDF & CSV)
-        ═════════════════════════════════════════════════════════════════════ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Card 2A: Schedule & Attachment Settings */}
-          <div className="card" style={{ padding: '1.35rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--surface-2)' }}>
-              <div style={{ background: 'rgba(139,92,246,0.12)', color: '#7c3aed', padding: '0.55rem', borderRadius: '10px', display: 'flex' }}>
-                <Clock size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                  2. Automated Schedule &amp; Report Formats
-                </h3>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                  Configure automatic Weekly &amp; Monthly dispatch and attachment types
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={weeklyEnabled}
-                  onChange={e => setWeeklyEnabled(e.target.checked)}
-                  style={{ width: '16px', height: '16px', marginTop: '0.15rem', accentColor: '#2563eb' }}
-                />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>Weekly Attendance &amp; Leave Report</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Automatically emailed every <strong>Friday at 6:00 PM</strong> (Asia/Colombo) covering Mon–Fri.
+              {/* Right Column inside Mail Report Settings Block: Schedule + SMTP + Manual Trigger */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Sub-panel 2: Schedule, Report Formats & SMTP */}
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: '12px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--surface-2)' }}>
+                    <div style={{ background: 'rgba(139,92,246,0.12)', color: '#7c3aed', padding: '0.5rem', borderRadius: '10px', display: 'flex' }}>
+                      <Clock size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700 }}>
+                        2. Automated Schedule, Formats &amp; SMTP Server
+                      </h3>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                        Configure automatic Weekly &amp; Monthly dispatch, attachments, and SMTP server
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </label>
 
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={monthlyEnabled}
-                  onChange={e => setMonthlyEnabled(e.target.checked)}
-                  style={{ width: '16px', height: '16px', marginTop: '0.15rem', accentColor: '#2563eb' }}
-                />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>Monthly Attendance &amp; Leave Report</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Automatically emailed on the <strong>1st of every month at 8:00 AM</strong> (Asia/Colombo).
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={weeklyEnabled}
+                        onChange={e => setWeeklyEnabled(e.target.checked)}
+                        style={{ width: '16px', height: '16px', marginTop: '0.15rem', accentColor: '#2563eb' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>Weekly Attendance &amp; Leave Report</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Automatically emailed every <strong>Friday at 6:00 PM</strong> (Asia/Colombo) covering Mon–Fri.
+                        </div>
+                      </div>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={monthlyEnabled}
+                        onChange={e => setMonthlyEnabled(e.target.checked)}
+                        style={{ width: '16px', height: '16px', marginTop: '0.15rem', accentColor: '#2563eb' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>Monthly Attendance &amp; Leave Report</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Automatically emailed on the <strong>1st of every month at 8:00 AM</strong> (Asia/Colombo).
+                        </div>
+                      </div>
+                    </label>
                   </div>
-                </div>
-              </label>
-            </div>
 
-            <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                Attached Report Files in Email:
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.65rem 0.85rem', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer', background: includePdf ? 'rgba(239,68,68,0.06)' : 'transparent' }}>
-                  <input
-                    type="checkbox"
-                    checked={includePdf}
-                    onChange={e => setIncludePdf(e.target.checked)}
-                    style={{ width: '15px', height: '15px', accentColor: '#dc2626' }}
-                  />
-                  <FileText size={16} style={{ color: '#dc2626' }} />
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>PDF Document (.pdf)</span>
-                </label>
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                      Attached Report Files in Email:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.65rem 0.85rem', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer', background: includePdf ? 'rgba(239,68,68,0.06)' : 'transparent' }}>
+                        <input
+                          type="checkbox"
+                          checked={includePdf}
+                          onChange={e => setIncludePdf(e.target.checked)}
+                          style={{ width: '15px', height: '15px', accentColor: '#dc2626' }}
+                        />
+                        <FileText size={16} style={{ color: '#dc2626' }} />
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>PDF Document (.pdf)</span>
+                      </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.65rem 0.85rem', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer', background: includeCsv ? 'rgba(22,163,74,0.06)' : 'transparent' }}>
-                  <input
-                    type="checkbox"
-                    checked={includeCsv}
-                    onChange={e => setIncludeCsv(e.target.checked)}
-                    style={{ width: '15px', height: '15px', accentColor: '#16a34a' }}
-                  />
-                  <FileSpreadsheet size={16} style={{ color: '#16a34a' }} />
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>CSV Spreadsheet (.csv)</span>
-                </label>
-              </div>
-            </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.65rem 0.85rem', border: '1px solid var(--surface-2)', borderRadius: '8px', cursor: 'pointer', background: includeCsv ? 'rgba(22,163,74,0.06)' : 'transparent' }}>
+                        <input
+                          type="checkbox"
+                          checked={includeCsv}
+                          onChange={e => setIncludeCsv(e.target.checked)}
+                          style={{ width: '15px', height: '15px', accentColor: '#16a34a' }}
+                        />
+                        <FileSpreadsheet size={16} style={{ color: '#16a34a' }} />
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>CSV Spreadsheet (.csv)</span>
+                      </label>
+                    </div>
+                  </div>
 
-            {/* Outgoing Mail Server (Mailpit vs Live External SMTP) */}
-            <div style={{ marginBottom: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--surface-2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', fontWeight: 700 }}>
-                  <Server size={15} style={{ color: '#2563eb' }} />
-                  Outgoing Mail Server (SMTP Mode)
-                </div>
-                {mailTransport?.is_sandbox && smtpMode === 'env' ? (
-                  <a
-                    href="http://localhost:8025"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                      fontSize: '0.73rem',
-                      fontWeight: 700,
-                      color: '#b45309',
-                      background: 'rgba(245,158,11,0.14)',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '999px',
-                      textDecoration: 'none',
-                    }}
+                  {/* Outgoing Mail Server (SMTP Configuration) */}
+                  <div style={{ marginBottom: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--surface-2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', fontWeight: 700 }}>
+                        <Server size={15} style={{ color: '#2563eb' }} />
+                        Outgoing Mail Server (SMTP)
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.12)', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
+                        Live External SMTP
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.85rem', background: 'var(--bg)', border: '1px solid var(--surface-2)', borderRadius: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.55rem' }}>
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>SMTP Host *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="smtp.gmail.com or mail.circlegroup.lk"
+                            value={smtpHost}
+                            onChange={e => setSmtpHost(e.target.value)}
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>Port *</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            placeholder="587"
+                            value={smtpPort}
+                            onChange={e => setSmtpPort(e.target.value)}
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>Encryption</label>
+                          <select
+                            className="form-control"
+                            value={smtpEncryption}
+                            onChange={e => setSmtpEncryption(e.target.value)}
+                            style={{ fontSize: '0.8rem' }}
+                          >
+                            <option value="tls">TLS (587)</option>
+                            <option value="ssl">SSL (465)</option>
+                            <option value="none">None</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>SMTP Username / Email</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="you@circlegroup.lk"
+                            value={smtpUsername}
+                            onChange={e => setSmtpUsername(e.target.value)}
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>SMTP Password / App Password</label>
+                          <input
+                            type="password"
+                            className="form-control"
+                            placeholder="SMTP or App Password"
+                            value={smtpPassword}
+                            onChange={e => setSmtpPassword(e.target.value)}
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>From Email Address</label>
+                          <input
+                            type="email"
+                            className="form-control"
+                            placeholder="noreply@circlegroup.lk"
+                            value={smtpFromAddress}
+                            onChange={e => setSmtpFromAddress(e.target.value)}
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>From Sender Name</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Circle Engineering HR"
+                            value={smtpFromName}
+                            onChange={e => setSmtpFromName(e.target.value)}
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveSettings}
+                    disabled={saving || !!sendingPeriod}
+                    className="btn btn-primary"
+                    style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem', fontWeight: 700 }}
                   >
-                    <ExternalLink size={12} /> Open Local Mailpit Inbox (localhost:8025)
-                  </a>
-                ) : (
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.12)', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
-                    Live External SMTP
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem', marginBottom: '0.75rem' }}>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem 0.75rem',
-                    border: smtpMode === 'env' ? '1.5px solid #f59e0b' : '1px solid var(--surface-2)',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: smtpMode === 'env' ? 'rgba(245,158,11,0.07)' : 'transparent',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="smtp_mode"
-                    checked={smtpMode === 'env'}
-                    onChange={() => setSmtpMode('env')}
-                    style={{ accentColor: '#f59e0b' }}
-                  />
-                  Local Mailpit / .env Default
-                </label>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem 0.75rem',
-                    border: smtpMode === 'custom' ? '1.5px solid #2563eb' : '1px solid var(--surface-2)',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: smtpMode === 'custom' ? 'rgba(59,130,246,0.07)' : 'transparent',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="smtp_mode"
-                    checked={smtpMode === 'custom'}
-                    onChange={() => setSmtpMode('custom')}
-                    style={{ accentColor: '#2563eb' }}
-                  />
-                  Live External SMTP Server
-                </label>
-              </div>
-
-              {smtpMode === 'env' ? (
-                <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#92400e', lineHeight: 1.5 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, marginBottom: '0.2rem' }}>
-                    <AlertTriangle size={14} /> Why didn&apos;t the email arrive in your external inbox?
-                  </div>
-                  Docker is currently routing default mail to <strong>Mailpit ({mailTransport?.host || 'mailpit'}:{mailTransport?.port || 1025})</strong>. All sent emails are captured safely inside <a href="http://localhost:8025" target="_blank" rel="noreferrer" style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}>http://localhost:8025</a>. Switch to <strong>Live External SMTP Server</strong> above to deliver directly to real email addresses (<code>@circlegroup.lk</code>, Gmail, Office 365, etc.).
+                    {saving ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={16} />}
+                    {saving ? 'Saving Settings...' : 'Save Recipient, Schedule & SMTP Settings'}
+                  </button>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.85rem', background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: '8px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.55rem' }}>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>SMTP Host *</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="smtp.gmail.com or mail.circlegroup.lk"
-                        value={smtpHost}
-                        onChange={e => setSmtpHost(e.target.value)}
-                        style={{ fontSize: '0.8rem' }}
-                      />
+
+                {/* Sub-panel 3: Test & Manually Send Current Report */}
+                <div style={{ background: 'var(--surface)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: '12px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--surface-2)' }}>
+                    <div style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', padding: '0.5rem', borderRadius: '10px', display: 'flex' }}>
+                      <Send size={18} />
                     </div>
                     <div>
-                      <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>Port *</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="587"
-                        value={smtpPort}
-                        onChange={e => setSmtpPort(e.target.value)}
-                        style={{ fontSize: '0.8rem' }}
-                      />
+                      <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700 }}>
+                        3. Test &amp; Manually Send Current Report
+                      </h3>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                        Select report period, specific day or date range, and email or download (PDF + CSV)
+                      </div>
                     </div>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>Encryption</label>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: testPeriod === 'custom' ? '1fr' : '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Report Period</label>
                       <select
                         className="form-control"
-                        value={smtpEncryption}
-                        onChange={e => setSmtpEncryption(e.target.value)}
-                        style={{ fontSize: '0.8rem' }}
+                        value={testPeriod}
+                        onChange={e => setTestPeriod(e.target.value)}
                       >
-                        <option value="tls">TLS (587)</option>
-                        <option value="ssl">SSL (465)</option>
-                        <option value="none">None</option>
+                        <option value="daily">Daily Report (Single Day)</option>
+                        <option value="custom">Custom Date Range (From Day – To Day)</option>
+                        <option value="weekly">Weekly Report (Mon–Fri)</option>
+                        <option value="monthly">Monthly Report (Full Month)</option>
                       </select>
                     </div>
-                  </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>SMTP Username / Email</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="you@circlegroup.lk"
-                        value={smtpUsername}
-                        onChange={e => setSmtpUsername(e.target.value)}
-                        style={{ fontSize: '0.8rem' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>SMTP Password / App Password</label>
-                      <input
-                        type="password"
-                        className="form-control"
-                        placeholder="SMTP or App Password"
-                        value={smtpPassword}
-                        onChange={e => setSmtpPassword(e.target.value)}
-                        style={{ fontSize: '0.8rem' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>From Email Address</label>
-                      <input
-                        type="email"
-                        className="form-control"
-                        placeholder="noreply@circlegroup.lk"
-                        value={smtpFromAddress}
-                        onChange={e => setSmtpFromAddress(e.target.value)}
-                        style={{ fontSize: '0.8rem' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.72rem', fontWeight: 600 }}>From Sender Name</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Circle Engineering HR"
-                        value={smtpFromName}
-                        onChange={e => setSmtpFromName(e.target.value)}
-                        style={{ fontSize: '0.8rem' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-              <button
-                type="button"
-                onClick={handleSaveSettings}
-                disabled={saving || !!sendingPeriod}
-                className="btn btn-primary"
-                style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem', fontWeight: 700 }}
-              >
-                {saving ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={16} />}
-                {saving ? 'Saving Settings...' : 'Save Recipient, Schedule & SMTP Settings'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSendReportNow(testPeriod)}
-                disabled={saving || !!sendingPeriod}
-                className="btn btn-primary"
-                style={{ width: '100%', background: '#16a34a', borderColor: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem', fontWeight: 700 }}
-              >
-                {sendingPeriod ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} />}
-                {sendingPeriod ? 'Saving & Sending Report Email...' : `Save & Send ${testPeriod === 'weekly' ? 'Weekly' : 'Monthly'} Report Email Now`}
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2B: Manual Test / Trigger Current Report Now */}
-          <div className="card" style={{ padding: '1.35rem', border: '1px solid rgba(59,130,246,0.3)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--surface-2)' }}>
-              <div style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', padding: '0.55rem', borderRadius: '10px', display: 'flex' }}>
-                <Send size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                  3. Test &amp; Manually Send Current Report
-                </h3>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                  Immediately generate and email current Attendance &amp; Leave Report (PDF + CSV)
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: testPeriod === 'monthly' ? '1fr 1fr' : '1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Report Period</label>
-                <select
-                  className="form-control"
-                  value={testPeriod}
-                  onChange={e => setTestPeriod(e.target.value)}
-                >
-                  <option value="weekly">Current Weekly Report (Mon–Fri)</option>
-                  <option value="monthly">Monthly Report (Full Month)</option>
-                </select>
-              </div>
-
-              {testPeriod === 'monthly' && (
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Select Month</label>
-                  <input
-                    type="month"
-                    className="form-control"
-                    value={testMonth}
-                    onChange={e => setTestMonth(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Department Filter (Optional)</label>
-              <select
-                className="form-control"
-                value={testDeptId}
-                onChange={e => setTestDeptId(e.target.value)}
-              >
-                <option value="">All Departments (Company-Wide)</option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Trigger Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <button
-                type="button"
-                onClick={() => handleSendReportNow(testPeriod)}
-                disabled={!!sendingPeriod}
-                className="btn btn-primary"
-                style={{
-                  background: '#16a34a',
-                  borderColor: '#16a34a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  padding: '0.7rem 1rem',
-                  fontWeight: 700,
-                  fontSize: '0.88rem',
-                }}
-              >
-                {sendingPeriod ? (
-                  <>
-                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                    Generating &amp; Sending {sendingPeriod === 'weekly' ? 'Weekly' : 'Monthly'} Report (PDF + CSV)...
-                  </>
-                ) : (
-                  <>
-                    <Mail size={16} />
-                    Send Current {testPeriod === 'weekly' ? 'Weekly' : 'Monthly'} Report Now (PDF &amp; CSV)
-                  </>
-                )}
-              </button>
-
-              {/* Direct Download Preview Buttons */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                <button
-                  type="button"
-                  onClick={() => handleDownloadReport('pdf')}
-                  disabled={!!downloadingFormat}
-                  className="btn btn-ghost"
-                  style={{ border: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600 }}
-                >
-                  {downloadingFormat === 'pdf' ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} style={{ color: '#dc2626' }} />}
-                  Download PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDownloadReport('csv')}
-                  disabled={!!downloadingFormat}
-                  className="btn btn-ghost"
-                  style={{ border: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600 }}
-                >
-                  {downloadingFormat === 'csv' ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} style={{ color: '#16a34a' }} />}
-                  Download CSV
-                </button>
-              </div>
-            </div>
-
-            {/* Last Sent Status Box */}
-            {lastSentAt && (
-              <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '8px', fontSize: '0.76rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#15803d', marginBottom: '0.25rem' }}>
-                  <CheckCircle2 size={14} /> Last Report Dispatched: {lastSentAt}
-                </div>
-                {lastSentSummary && (
-                  <div style={{ color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                    <div><strong>Period:</strong> {lastSentSummary.period?.toUpperCase()} ({lastSentSummary.range_label})</div>
-                    {lastSentSummary.attachments?.length > 0 && (
-                      <div><strong>Attachments:</strong> {lastSentSummary.attachments.join(', ')}</div>
+                    {testPeriod === 'daily' && (
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Select Day</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={testStartDate}
+                          onChange={e => setTestStartDate(e.target.value)}
+                        />
+                      </div>
                     )}
-                    {lastSentSummary.recipients?.length > 0 && (
-                      <div><strong>Sent To:</strong> {lastSentSummary.recipients.join(', ')}</div>
+
+                    {testPeriod === 'weekly' && (
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Select Day in Week</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={testStartDate}
+                          onChange={e => setTestStartDate(e.target.value)}
+                        />
+                      </div>
+                    )}
+
+                    {testPeriod === 'monthly' && (
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Select Month</label>
+                        <input
+                          type="month"
+                          className="form-control"
+                          value={testMonth}
+                          onChange={e => setTestMonth(e.target.value)}
+                        />
+                      </div>
                     )}
                   </div>
-                )}
+
+                  {testPeriod === 'custom' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>From Day (Start Date)</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={testStartDate}
+                          onChange={e => setTestStartDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>To Day (End Date)</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={testEndDate}
+                          min={testStartDate}
+                          onChange={e => setTestEndDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Department Filter (Optional)</label>
+                    <select
+                      className="form-control"
+                      value={testDeptId}
+                      onChange={e => setTestDeptId(e.target.value)}
+                    >
+                      <option value="">All Departments (Company-Wide)</option>
+                      {departments.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Trigger Buttons */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleSendReportNow(testPeriod)}
+                      disabled={!!sendingPeriod}
+                      className="btn btn-primary"
+                      style={{
+                        background: '#16a34a',
+                        borderColor: '#16a34a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        padding: '0.7rem 1rem',
+                        fontWeight: 700,
+                        fontSize: '0.88rem',
+                      }}
+                    >
+                      {sendingPeriod ? (
+                        <>
+                          <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                          Generating &amp; Sending {getPeriodLabel(sendingPeriod)} Report (PDF + CSV)...
+                        </>
+                      ) : (
+                        <>
+                          <Mail size={16} />
+                          Send {getPeriodLabel(testPeriod)} Report Now (PDF &amp; CSV)
+                        </>
+                      )}
+                    </button>
+
+                    {/* Direct Download Preview Buttons */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadReport('pdf')}
+                        disabled={!!downloadingFormat}
+                        className="btn btn-ghost"
+                        style={{ border: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600 }}
+                      >
+                        {downloadingFormat === 'pdf' ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} style={{ color: '#dc2626' }} />}
+                        Download PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadReport('csv')}
+                        disabled={!!downloadingFormat}
+                        className="btn btn-ghost"
+                        style={{ border: '1px solid var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600 }}
+                      >
+                        {downloadingFormat === 'csv' ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} style={{ color: '#16a34a' }} />}
+                        Download CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Last Sent Status Box */}
+                  {lastSentAt && (
+                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '8px', fontSize: '0.76rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#15803d', marginBottom: '0.25rem' }}>
+                        <CheckCircle2 size={14} /> Last Report Dispatched: {lastSentAt}
+                      </div>
+                      {lastSentSummary && (
+                        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                          <div><strong>Period:</strong> {lastSentSummary.period?.toUpperCase()} ({lastSentSummary.range_label})</div>
+                          {lastSentSummary.attachments?.length > 0 && (
+                            <div><strong>Attachments:</strong> {lastSentSummary.attachments.join(', ')}</div>
+                          )}
+                          {lastSentSummary.recipients?.length > 0 && (
+                            <div><strong>Sent To:</strong> {lastSentSummary.recipients.join(', ')}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

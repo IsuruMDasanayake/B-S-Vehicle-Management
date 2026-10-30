@@ -92,8 +92,10 @@ class HrSettingController extends Controller
         }
 
         $validated = $request->validate([
-            'period'               => 'required|in:weekly,monthly',
+            'period'               => 'required|in:daily,weekly,monthly,custom',
             'month'                => 'nullable|string|max:10',
+            'start_date'           => 'nullable|date_format:Y-m-d',
+            'end_date'             => 'nullable|date_format:Y-m-d',
             'department_id'        => 'nullable|integer',
             'recipient_user_ids'   => 'nullable|array',
             'recipient_user_ids.*' => 'integer',
@@ -147,7 +149,9 @@ class HrSettingController extends Controller
                 !empty($validated['department_id']) ? (int) $validated['department_id'] : null,
                 $validated['recipient_user_ids'] ?? null,
                 $validated['custom_emails'] ?? null,
-                false
+                false,
+                $validated['start_date'] ?? null,
+                $validated['end_date'] ?? null
             );
         } catch (\Throwable $e) {
             return response()->json([
@@ -156,9 +160,7 @@ class HrSettingController extends Controller
         }
 
         $transport = $result['transport'] ?? $service->getMailTransportStatus();
-        $viaNote   = !empty($transport['is_sandbox'])
-            ? ' (Captured in Local Mailpit Sandbox: http://localhost:8025 — configure Live SMTP in Section 2 to deliver to real inboxes)'
-            : ' via ' . ($transport['host'] ?? 'SMTP');
+        $viaNote   = ' via ' . ($transport['host'] ?? 'SMTP');
 
         return response()->json([
             'message' => sprintf(
@@ -176,7 +178,7 @@ class HrSettingController extends Controller
     }
 
     /**
-     * GET /api/hr/settings/mail-reports/download?period=weekly|monthly&format=pdf|csv&month=YYYY-MM
+     * GET /api/hr/settings/mail-reports/download?period=daily|weekly|monthly|custom&format=pdf|csv&month=YYYY-MM&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
      * Download the generated PDF or CSV report directly.
      */
     public function downloadMailReport(Request $request, HrAttendanceLeaveReportService $service)
@@ -185,12 +187,14 @@ class HrSettingController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $period = in_array($request->get('period'), ['weekly', 'monthly'], true) ? $request->get('period') : 'weekly';
-        $format = in_array($request->get('format'), ['pdf', 'csv'], true) ? $request->get('format') : 'pdf';
-        $month  = $request->get('month');
-        $deptId = $request->get('department_id') ? (int) $request->get('department_id') : null;
+        $period    = in_array($request->get('period'), ['daily', 'weekly', 'monthly', 'custom'], true) ? $request->get('period') : 'weekly';
+        $format    = in_array($request->get('format'), ['pdf', 'csv'], true) ? $request->get('format') : 'pdf';
+        $month     = $request->get('month');
+        $startDate = $request->get('start_date');
+        $endDate   = $request->get('end_date');
+        $deptId    = $request->get('department_id') ? (int) $request->get('department_id') : null;
 
-        $reportData = $service->buildReport($period, $month, $deptId, false);
+        $reportData = $service->buildReport($period, $month, $deptId, false, $startDate, $endDate);
         $baseName   = sprintf(
             'attendance_leave_%s_report_%s_to_%s',
             $period,
