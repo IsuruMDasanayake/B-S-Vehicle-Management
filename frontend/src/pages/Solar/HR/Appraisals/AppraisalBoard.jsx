@@ -137,7 +137,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 600, margin: '0 0 0.2rem 0', color: 'var(--dark)' }}>
-            {isHrView ? 'MBO Appraisals & HR Deductions' : 'Monthly Performance Appraisal Board'}
+            {isHrView ? 'Performance & HR Evaluation' : 'Monthly Performance Appraisal Board'}
           </h2>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             Circle Engineering · Single-Sheet Management by Objectives (MBO)
