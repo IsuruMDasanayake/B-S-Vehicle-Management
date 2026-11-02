@@ -161,12 +161,8 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
   // Has existing objectives assigned
   const hasAssignedObjectives = Boolean(sheet?.objectives && sheet.objectives.length > 0);
 
-  // ── Objective Row Manipulation (Hasintha only) ─────────────────────────────
+  // ── Objective Row Manipulation (Appraiser) ───────────────────────────────
   const addObjectiveRow = () => {
-    if (objectives.length >= 5) {
-      toast.error('Maximum 5 objectives allowed per policy.');
-      return;
-    }
     const currentSum = objectives.reduce((s, o) => s + (parseFloat(o.weight) || 0), 0);
     const rem = Math.max(0, 100 - currentSum);
     setObjectives([...objectives, {
@@ -814,7 +810,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
             })}
 
             {/* Add row button for Appraiser in editing mode */}
-            {canEditObj && objectives.length < 5 && (
+            {canEditObj && (
               <tr>
                 <td colSpan={6} style={{ padding: '0.5rem', textAlign: 'center', background: '#f8fafc' }}>
                   <button
@@ -822,7 +818,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                     onClick={addObjectiveRow}
                     style={{ background: 'transparent', border: '1px dashed #0284c7', color: '#0284c7', padding: '0.35rem 0.9rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
                   >
-                    + Add Objective Row ({objectives.length}/5)
+                    + Add Objective Row
                   </button>
                 </td>
               </tr>
@@ -991,7 +987,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
         <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', padding: '0.85rem 1rem', borderRadius: '10px', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f766e', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <ShieldAlert size={15} /> HR Deduction Management
+              <ShieldAlert size={15} /> HR Evaluation
             </span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button

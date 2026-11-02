@@ -484,7 +484,7 @@ class HrAppraisalController extends Controller
         $validated = $request->validate([
             'employee_id'            => 'required|exists:hr_employees,id',
             'month'                  => ['required', 'regex:/^\d{4}-\d{2}$/'],
-            'objectives'             => 'required|array|min:1|max:5',
+            'objectives'             => 'required|array|min:1',
             'objectives.*.id'        => 'nullable|integer',
             'objectives.*.title'     => 'required|string|max:255',
             'objectives.*.weight'    => 'required|numeric|min:1|max:100',
@@ -493,7 +493,6 @@ class HrAppraisalController extends Controller
         ], [
             'objectives.*.title.required'  => 'Every objective needs a title.',
             'objectives.*.weight.required' => 'Every objective needs a weight.',
-            'objectives.max'               => 'Maximum 5 objectives allowed.',
         ]);
 
         $employee = HrEmployee::findOrFail($validated['employee_id']);
