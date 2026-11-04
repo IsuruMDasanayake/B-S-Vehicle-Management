@@ -113,7 +113,7 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
         title: 'System',
         items: [
           { name: 'Clock-In Locations', path: '/solar/hr/admin/locations', icon: MapPin },
-          { name: 'Settings & Mail Reports', path: '/solar/hr/admin/settings', icon: Settings },
+          ...(isSuperAdmin ? [{ name: 'Settings & Mail Reports', path: '/solar/hr/admin/settings', icon: Settings }] : []),
         ],
       },
     ] : []),

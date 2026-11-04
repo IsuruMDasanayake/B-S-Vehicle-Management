@@ -23,12 +23,6 @@ class HrAttendanceController extends Controller
     const SHIFT_END    = '17:30:00'; // Official end (5:30 PM)
     const HALF_DAY_HRS = 4.5;        // Below this = half day
 
-    // ── Management Approvers (General Manager & Project Director / CEO) ───────
-    public static array $managementApproverEmails = [
-        'hasintha@circlegroup.lk',
-        'eranda@circlegroup.lk',
-    ];
-
     /**
      * Check if user is authorized as an adjustment manager.
      * Rule: Only users explicitly assigned in HR Settings (or Super Admin) have approval authority.

@@ -238,7 +238,7 @@ function App() {
         <Route path="appraisals" element={<AppraisalManagement />} />
         <Route path="training" element={<TrainingManagement />} />
         <Route path="reports" element={<AttendanceReport />} />
-        <Route path="settings" element={<HRSettings />} />
+        <Route path="settings" element={<RoleProtectedRoute allowedRoles={['super_admin']} fallbackUnauthorized="/solar/hr/admin/dashboard"><HRSettings /></RoleProtectedRoute>} />
       </Route>
 
       {/* ── HR Employee Portal ──────────────────────────────────────────── */}

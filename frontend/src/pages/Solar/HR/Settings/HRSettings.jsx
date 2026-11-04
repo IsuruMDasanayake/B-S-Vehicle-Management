@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Mail, Save, Send, Users, CheckCircle2, FileText, FileSpreadsheet,
   Search, Plus, X, Clock, Download, Loader2, RefreshCw, Server, ChevronDown, ChevronUp,
-  UserCheck, Building2, Calendar, ShieldCheck, Check, AlertTriangle, UserMinus, RotateCcw
+  UserCheck, Building2, Calendar, ShieldCheck, Check, AlertTriangle, UserMinus, ShieldAlert
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
@@ -10,9 +10,12 @@ import useAuthStore from '../../../../store/authStore';
 import PayrollReportPanel from '../Attendance/PayrollReportPanel';
 
 export default function HRSettings({ embedded = false }) {
+  const user = useAuthStore(state => state.user);
+  const isSuperAdmin = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [mailSectionExpanded, setMailSectionExpanded] = useState(true);
+  const [mailSectionExpanded, setMailSectionExpanded] = useState(false);
 
   // Settings state
   const [availableUsers, setAvailableUsers] = useState([]);
@@ -68,7 +71,7 @@ export default function HRSettings({ embedded = false }) {
   }, []);
 
   // ── Approval Managers State (Manual Assignment) ──────────────────────────────
-  const [managerSectionExpanded, setManagerSectionExpanded] = useState(true);
+  const [managerSectionExpanded, setManagerSectionExpanded] = useState(false);
   const [loadingManagers, setLoadingManagers] = useState(true);
   const [savingManagers, setSavingManagers] = useState(false);
   const [approvalManagerIds, setApprovalManagerIds] = useState([]);
@@ -94,28 +97,20 @@ export default function HRSettings({ embedded = false }) {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-    fetchApprovalManagers();
-  }, [fetchSettings, fetchApprovalManagers]);
+    if (isSuperAdmin) {
+      fetchSettings();
+      fetchApprovalManagers();
+    } else {
+      setLoading(false);
+      setLoadingManagers(false);
+    }
+  }, [fetchSettings, fetchApprovalManagers, isSuperAdmin]);
 
   const toggleApprovalManager = (id) => {
     const numId = Number(id);
     setApprovalManagerIds(prev =>
       prev.includes(numId) ? prev.filter(x => x !== numId) : [...prev, numId]
     );
-  };
-
-  const handleSetDefaultManagers = () => {
-    const defaultEmails = ['hasintha@circlegroup.lk', 'eranda@circlegroup.lk'];
-    const matched = availableManagerUsers
-      .filter(u => u.email && defaultEmails.includes(u.email.toLowerCase().trim()))
-      .map(u => Number(u.id));
-    if (matched.length > 0) {
-      setApprovalManagerIds(matched);
-      toast.success('Selected default managers (Hasintha & Eranda)');
-    } else {
-      toast.error('Default manager accounts not found in users list');
-    }
   };
 
   const handleSaveApprovalManagers = async () => {
@@ -256,6 +251,20 @@ export default function HRSettings({ embedded = false }) {
     if (role === 'solar_employee') return { bg: 'rgba(16,185,129,0.12)', color: '#059669', label: 'Employee' };
     return { bg: 'rgba(100,116,139,0.12)', color: '#475569', label: role || 'User' };
   };
+
+  if (!isSuperAdmin) {
+    return (
+      <div style={{ maxWidth: '560px', margin: '3rem auto', padding: '2.5rem 2rem', textAlign: 'center' }} className="card">
+        <div style={{ background: 'rgba(239,68,68,0.1)', color: '#dc2626', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+          <ShieldAlert size={28} />
+        </div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Access Restricted</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+          The HR System Settings page is restricted to Super Administrators only. HR Administrators do not have access to configure system settings.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -927,15 +936,6 @@ export default function HRSettings({ embedded = false }) {
 
                 <button
                   type="button"
-                  onClick={handleSetDefaultManagers}
-                  className="btn btn-ghost"
-                  style={{ border: '1px solid var(--surface-2)', fontSize: '0.74rem', padding: '0.4rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                  title="Assign Hasintha & Eranda"
-                >
-                  <RotateCcw size={13} /> Default (Hasintha &amp; Eranda)
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
                     const filteredIds = filteredManagerUsers.map(u => Number(u.id));
                     setApprovalManagerIds(prev => Array.from(new Set([...prev, ...filteredIds])));
@@ -1070,7 +1070,7 @@ export default function HRSettings({ embedded = false }) {
                   {managersUpdatedAt ? (
                     <>Last updated: <strong>{new Date(managersUpdatedAt).toLocaleString()}</strong></>
                   ) : (
-                    'Default seeded managers active until explicitly updated.'
+                    'No managers assigned yet. Select candidates above and click Save.'
                   )}
                 </div>
 
