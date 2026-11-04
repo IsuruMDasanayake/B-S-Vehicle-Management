@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Mail, Save, Send, Users, CheckCircle2, FileText, FileSpreadsheet,
   Search, Plus, X, Clock, Download, Loader2, RefreshCw, Server, ChevronDown, ChevronUp,
-  UserCheck, Building2, Calendar, ShieldCheck, Check, AlertTriangle, UserMinus, RotateCcw
+  UserCheck, Building2, Calendar, ShieldCheck, Check, AlertTriangle, UserMinus, ShieldAlert
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
@@ -10,9 +10,12 @@ import useAuthStore from '../../../../store/authStore';
 import PayrollReportPanel from '../Attendance/PayrollReportPanel';
 
 export default function HRSettings({ embedded = false }) {
+  const user = useAuthStore(state => state.user);
+  const isSuperAdmin = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [mailSectionExpanded, setMailSectionExpanded] = useState(true);
+  const [mailSectionExpanded, setMailSectionExpanded] = useState(false);
 
   // Settings state
   const [availableUsers, setAvailableUsers] = useState([]);
@@ -68,7 +71,7 @@ export default function HRSettings({ embedded = false }) {
   }, []);
 
   // ── Approval Managers State (Manual Assignment) ──────────────────────────────
-  const [managerSectionExpanded, setManagerSectionExpanded] = useState(true);
+  const [managerSectionExpanded, setManagerSectionExpanded] = useState(false);
   const [loadingManagers, setLoadingManagers] = useState(true);
   const [savingManagers, setSavingManagers] = useState(false);
   const [approvalManagerIds, setApprovalManagerIds] = useState([]);
@@ -94,28 +97,20 @@ export default function HRSettings({ embedded = false }) {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-    fetchApprovalManagers();
-  }, [fetchSettings, fetchApprovalManagers]);
+    if (isSuperAdmin) {
+      fetchSettings();
+      fetchApprovalManagers();
+    } else {
+      setLoading(false);
+      setLoadingManagers(false);
+    }
+  }, [fetchSettings, fetchApprovalManagers, isSuperAdmin]);
 
   const toggleApprovalManager = (id) => {
     const numId = Number(id);
     setApprovalManagerIds(prev =>
       prev.includes(numId) ? prev.filter(x => x !== numId) : [...prev, numId]
     );
-  };
-
-  const handleSetDefaultManagers = () => {
-    const defaultEmails = ['hasintha@circlegroup.lk', 'eranda@circlegroup.lk'];
-    const matched = availableManagerUsers
-      .filter(u => u.email && defaultEmails.includes(u.email.toLowerCase().trim()))
-      .map(u => Number(u.id));
-    if (matched.length > 0) {
-      setApprovalManagerIds(matched);
-      toast.success('Selected default managers (Hasintha & Eranda)');
-    } else {
-      toast.error('Default manager accounts not found in users list');
-    }
   };
 
   const handleSaveApprovalManagers = async () => {
@@ -257,11 +252,25 @@ export default function HRSettings({ embedded = false }) {
     return { bg: 'rgba(100,116,139,0.12)', color: '#475569', label: role || 'User' };
   };
 
+  if (!isSuperAdmin) {
+    return (
+      <div style={{ maxWidth: '560px', margin: '3rem auto', padding: '2.5rem 2rem', textAlign: 'center' }} className="card">
+        <div style={{ background: 'rgba(239,68,68,0.1)', color: '#dc2626', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+          <ShieldAlert size={28} />
+        </div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Access Restricted</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+          The HR System Settings page is restricted to Super Administrators only. HR Administrators do not have access to configure system settings.
+        </p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '45vh', color: 'var(--text-muted)' }}>
         <Loader2 size={26} style={{ animation: 'spin 1s linear infinite', marginRight: '0.6rem' }} />
-        Loading HR Mail Report Settings...
+        Loading HR Settings...
       </div>
     );
   }
@@ -271,7 +280,7 @@ export default function HRSettings({ embedded = false }) {
       {!embedded && (
         <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>
               HR System Settings
             </h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.88rem' }}>
@@ -757,15 +766,15 @@ export default function HRSettings({ embedded = false }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ background: 'rgba(139,92,246,0.12)', color: '#7c3aed', padding: '0.65rem', borderRadius: '12px', display: 'flex' }}>
+              <div style={{ background: 'rgba(139,92,246,0.12)', color: '#ed3a3aff', padding: '0.65rem', borderRadius: '12px', display: 'flex' }}>
                 <ShieldCheck size={22} />
               </div>
               <div>
                 <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
-                  Approval Managers (Manual Assignment)
+                  Approval Managers
                 </h2>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                  Assign users authorized to approve Leave Requests &amp; Missing Attendance Clock-Out Adjustments. Approvals are strictly assigned manually (not automatic).
+                  Assign users authorized to approve Leave Requests &amp; Missing Attendance Clock-Out Adjustments. Approvals are strictly assigned manually.
                 </div>
               </div>
             </div>
@@ -807,10 +816,10 @@ export default function HRSettings({ embedded = false }) {
                 fontSize: '0.82rem',
                 lineHeight: 1.45,
               }}>
-                <ShieldCheck size={18} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '2px' }} />
+                <ShieldCheck size={18} style={{ color: '#ed3a3aff', flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <strong style={{ color: '#7c3aed' }}>Strict Manual Assignment Policy:</strong>{' '}
-                  Only users assigned below will receive approval capabilities in their Employee Portal (including the <strong>Leave Approvals</strong> tab and <strong>Team Clock-Out Adjustments</strong> tab). Approval rights are <strong>never assigned automatically</strong> based on job title or reporting line.
+                  <strong style={{ color: '#ed3a3aff' }}>Strict Manual Assignment Policy:</strong>{' '}
+                  Only users assigned below will receive approval capabilities in their Employee Portal (including the <strong>Leave Approvals</strong> tab, <strong>Team Clock-Out Adjustments</strong> tab and <strong>Remote Login</strong> tab). Approval rights are <strong>never assigned automatically</strong> based on job title or reporting line.
                 </div>
               </div>
 
@@ -925,15 +934,6 @@ export default function HRSettings({ embedded = false }) {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleSetDefaultManagers}
-                  className="btn btn-ghost"
-                  style={{ border: '1px solid var(--surface-2)', fontSize: '0.74rem', padding: '0.4rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                  title="Assign Hasintha & Eranda"
-                >
-                  <RotateCcw size={13} /> Default (Hasintha &amp; Eranda)
-                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -1070,7 +1070,7 @@ export default function HRSettings({ embedded = false }) {
                   {managersUpdatedAt ? (
                     <>Last updated: <strong>{new Date(managersUpdatedAt).toLocaleString()}</strong></>
                   ) : (
-                    'Default seeded managers active until explicitly updated.'
+                    'No managers assigned yet. Select candidates above and click Save.'
                   )}
                 </div>
 

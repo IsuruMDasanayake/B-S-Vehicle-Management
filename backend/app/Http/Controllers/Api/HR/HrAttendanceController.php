@@ -8,12 +8,14 @@ use App\Models\HrAttendanceRegularization;
 use App\Models\HrEmployee;
 use App\Models\HrLeave;
 use App\Models\HrLocation;
+use App\Models\HrRemoteAttendanceRequest;
 use App\Models\User;
 use App\Notifications\HrNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 class HrAttendanceController extends Controller
 {
@@ -22,12 +24,6 @@ class HrAttendanceController extends Controller
     const GRACE_END    = '09:10:00'; // Late after this (grace period 9–9:10 AM)
     const SHIFT_END    = '17:30:00'; // Official end (5:30 PM)
     const HALF_DAY_HRS = 4.5;        // Below this = half day
-
-    // ── Management Approvers (General Manager & Project Director / CEO) ───────
-    public static array $managementApproverEmails = [
-        'hasintha@circlegroup.lk',
-        'eranda@circlegroup.lk',
-    ];
 
     /**
      * Check if user is authorized as an adjustment manager.
@@ -1082,6 +1078,410 @@ class HrAttendanceController extends Controller
         return response()->json([
             'message' => "Request has been finalized as {$status} by HR.",
             'data'    => $reg->load(['attendance', 'reviewer', 'managerReviewer']),
+        ]);
+    }
+
+    // ── Remote Attendance (Clock-In & Clock-Out with 2-Tier Approval) ─────────
+
+    /**
+     * Get employee's remote clock-in and clock-out status for today
+     */
+    public function myTodayRemoteRequests(Request $request)
+    {
+        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        if (!$employee) {
+            return response()->json([
+                'clock_in'  => null,
+                'clock_out' => null,
+            ]);
+        }
+
+        $today = Carbon::today()->toDateString();
+        $clockInReq = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+            ->where('date', $today)
+            ->where('request_type', 'clock_in')
+            ->latest()
+            ->first();
+
+        $clockOutReq = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+            ->where('date', $today)
+            ->where('request_type', 'clock_out')
+            ->latest()
+            ->first();
+
+        return response()->json([
+            'clock_in'  => $clockInReq,
+            'clock_out' => $clockOutReq,
+        ]);
+    }
+
+    /**
+     * Submit a remote clock-in or remote clock-out request
+     */
+    public function requestRemoteAttendance(Request $request)
+    {
+        $request->validate([
+            'request_type'    => 'required|in:clock_in,clock_out',
+            'latitude'        => 'required|numeric|between:-90,90',
+            'longitude'       => 'required|numeric|between:-180,180',
+            'accuracy_meters' => 'nullable|numeric|min:0',
+            'location_name'   => 'required|string|max:255',
+            'address'         => 'nullable|string|max:500',
+            'reason_category' => 'required|string|max:100',
+            'reason_notes'    => 'required|string|max:1000',
+            'evidence_photo'  => 'nullable|image|max:10240', // max 10MB
+        ]);
+
+        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        if (!$employee) {
+            return response()->json(['message' => 'Employee profile not found.'], 404);
+        }
+
+        $today = Carbon::today()->toDateString();
+        $now = Carbon::now();
+        $requestType = $request->input('request_type');
+
+        $att = HrAttendance::where('employee_id', $employee->id)->where('date', $today)->first();
+
+        if ($requestType === 'clock_in') {
+            if ($att?->clock_in_time) {
+                return response()->json(['message' => 'You have already clocked in today.'], 400);
+            }
+
+            $existingPending = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+                ->where('date', $today)
+                ->where('request_type', 'clock_in')
+                ->whereIn('status', ['pending', 'manager_approved'])
+                ->first();
+
+            if ($existingPending) {
+                return response()->json(['message' => 'You already have a remote clock-in request pending review.'], 400);
+            }
+        } else { // clock_out
+            // Must have clock in (either direct or existing remote clock in)
+            $hasExistingRemoteIn = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+                ->where('date', $today)
+                ->where('request_type', 'clock_in')
+                ->whereIn('status', ['pending', 'manager_approved', 'approved'])
+                ->exists();
+
+            if (!$att?->clock_in_time && !$hasExistingRemoteIn) {
+                return response()->json(['message' => 'You must clock in before requesting remote clock-out.'], 400);
+            }
+
+            if ($att?->clock_out_time) {
+                return response()->json(['message' => 'You have already clocked out today.'], 400);
+            }
+
+            $existingPending = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+                ->where('date', $today)
+                ->where('request_type', 'clock_out')
+                ->whereIn('status', ['pending', 'manager_approved'])
+                ->first();
+
+            if ($existingPending) {
+                return response()->json(['message' => 'You already have a remote clock-out request pending review.'], 400);
+            }
+        }
+
+        $photoPath = null;
+        if ($request->hasFile('evidence_photo')) {
+            $photoPath = $request->file('evidence_photo')->store('hr/remote_attendance', 'public');
+        }
+
+        $remoteReq = HrRemoteAttendanceRequest::create([
+            'employee_id'         => $employee->id,
+            'attendance_id'       => $att?->id,
+            'date'                => $today,
+            'request_type'        => $requestType,
+            'requested_time'      => $now,
+            'latitude'            => (float) $request->input('latitude'),
+            'longitude'           => (float) $request->input('longitude'),
+            'accuracy_meters'     => $request->filled('accuracy_meters') ? (float) $request->input('accuracy_meters') : null,
+            'location_name'       => trim($request->input('location_name')),
+            'address'             => $request->input('address') ? trim($request->input('address')) : null,
+            'reason_category'     => $request->input('reason_category'),
+            'reason_notes'        => trim($request->input('reason_notes')),
+            'evidence_photo_path' => $photoPath,
+            'status'              => 'pending',
+        ]);
+
+        // Dispatch notification to assigned Approval Managers
+        try {
+            $mgrSettings = HrSettingController::getApprovalManagerSettings();
+            $approverUsers = User::where(function($q) use ($mgrSettings) {
+                $q->whereIn('id', $mgrSettings['manager_user_ids'] ?? [])
+                  ->orWhereIn('email', $mgrSettings['manager_emails'] ?? []);
+            })->get();
+
+            $actionLabel = $requestType === 'clock_in' ? 'Clock-In' : 'Clock-Out';
+            $timeStr = $now->timezone('Asia/Colombo')->format('h:i A');
+
+            foreach ($approverUsers as $mgr) {
+                $mgr->notify(new HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'attendance',
+                    'severity'   => 'warning',
+                    'title'      => "Remote {$actionLabel} Request",
+                    'message'    => "{$employee->full_name} requested remote {$actionLabel} at {$remoteReq->location_name} ({$timeStr}). Awaiting Manager review.",
+                    'link'       => '/solar/hr/portal/attendance?tab=remote-approvals',
+                    'source_id'  => $remoteReq->id,
+                ]));
+            }
+        } catch (\Throwable $e) {
+            Log::error('Remote attendance notification error: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'Remote ' . ($requestType === 'clock_in' ? 'Clock-In' : 'Clock-Out') . ' request submitted for manager review.',
+            'data'    => $remoteReq->load('employee.department'),
+        ], 201);
+    }
+
+    /**
+     * List remote attendance requests (scoped for employees or managers/HR)
+     */
+    public function listRemoteAttendanceRequests(Request $request)
+    {
+        $user = $request->user();
+        $scope = $request->get('scope', 'all');
+        $isHR = $user->hasRole('super_admin') || $user->hasRole('solar_hr_admin');
+        $isMgr = HrSettingController::isApprovalManager($user);
+
+        $myEmp = HrEmployee::where('user_id', $user->id)->first();
+
+        if ($scope === 'my') {
+            if (!$myEmp) return response()->json(['data' => [], 'counts' => []]);
+            $query = HrRemoteAttendanceRequest::where('employee_id', $myEmp->id);
+        } else {
+            if (!$isHR && !$isMgr) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+            $query = HrRemoteAttendanceRequest::query();
+        }
+
+        $query->with([
+            'employee.department',
+            'employee.designation',
+            'managerReviewer:id,name,email',
+            'hrReviewer:id,name,email',
+            'attendance',
+        ])->orderByDesc('created_at');
+
+        $status = $request->get('status', 'all');
+        if ($status && $status !== 'all') {
+            if ($status === 'rejected') {
+                $query->whereIn('status', ['rejected', 'manager_rejected']);
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        if ($request->filled('request_type')) {
+            $query->where('request_type', $request->get('request_type'));
+        }
+
+        if ($request->filled('date')) {
+            $query->where('date', $request->get('date'));
+        }
+
+        if ($request->filled('month')) {
+            $query->where('date', 'like', $request->get('month') . '%');
+        }
+
+        $records = $query->get();
+
+        // Summary counts
+        $baseCountQuery = HrRemoteAttendanceRequest::query();
+        if ($scope === 'my' && $myEmp) {
+            $baseCountQuery->where('employee_id', $myEmp->id);
+        }
+
+        $pendingCount = (clone $baseCountQuery)->where('status', 'pending')->count();
+        $mgrApprovedCount = (clone $baseCountQuery)->where('status', 'manager_approved')->count();
+        $approvedCount = (clone $baseCountQuery)->where('status', 'approved')->count();
+        $rejectedCount = (clone $baseCountQuery)->whereIn('status', ['rejected', 'manager_rejected'])->count();
+
+        return response()->json([
+            'data'                   => $records,
+            'pending_count'          => $pendingCount,
+            'manager_approved_count' => $mgrApprovedCount,
+            'approved_count'         => $approvedCount,
+            'rejected_count'         => $rejectedCount,
+        ]);
+    }
+
+    /**
+     * Review remote attendance request (Stage 1: Manager; Stage 2: HR)
+     */
+    public function reviewRemoteAttendanceRequest(Request $request, $id)
+    {
+        $user = $request->user();
+        $isHR = $user->hasRole('super_admin') || $user->hasRole('solar_hr_admin');
+        $isMgr = HrSettingController::isApprovalManager($user);
+
+        if (!$isHR && !$isMgr) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:manager_approved,manager_rejected,approved,rejected',
+            'notes'  => 'nullable|string|max:500',
+        ]);
+
+        $status = $validated['status'];
+        $notes = $validated['notes'] ?? null;
+
+        $remoteReq = HrRemoteAttendanceRequest::with(['employee.user', 'attendance'])->findOrFail($id);
+        $emp = $remoteReq->employee;
+
+        // Stage 1: Manager Review (manager_approved, manager_rejected)
+        if (str_starts_with($status, 'manager_')) {
+            if (!$isMgr) {
+                return response()->json(['message' => 'Unauthorized. Approval Manager privileges required.'], 403);
+            }
+
+            if ($remoteReq->status !== 'pending') {
+                return response()->json(['message' => 'This request is not pending manager review.'], 422);
+            }
+
+            $remoteReq->update([
+                'status'              => $status,
+                'manager_approved_by' => $user->id,
+                'manager_approved_at' => Carbon::now(),
+                'manager_notes'       => $notes,
+            ]);
+
+            // Notify HR or Employee
+            try {
+                $actionLabel = $remoteReq->request_type === 'clock_in' ? 'Clock-In' : 'Clock-Out';
+                $dateStr = Carbon::parse($remoteReq->date)->format('d M');
+
+                if ($status === 'manager_approved') {
+                    $hrAdmins = User::where(function($q) {
+                        $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                          ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+                    })->get();
+
+                    Notification::send($hrAdmins, new HrNotification([
+                        'division'   => 'hr',
+                        'category'   => 'attendance',
+                        'severity'   => 'info',
+                        'title'      => "Remote {$actionLabel} Manager-Approved",
+                        'message'    => "{$emp->full_name}'s remote {$actionLabel} for {$dateStr} at {$remoteReq->location_name} was approved by {$user->name}. Awaiting HR finalization.",
+                        'link'       => '/solar/hr/admin/attendance',
+                        'source_id'  => $remoteReq->id,
+                    ]));
+                } else {
+                    if ($emp?->user) {
+                        $emp->user->notify(new HrNotification([
+                            'division'   => 'hr',
+                            'category'   => 'attendance',
+                            'severity'   => 'danger',
+                            'title'      => "Remote {$actionLabel} Rejected",
+                            'message'    => "Your remote {$actionLabel} for {$dateStr} was rejected by Manager." . ($notes ? " Note: {$notes}" : ''),
+                            'link'       => '/solar/hr/portal/attendance',
+                            'source_id'  => $remoteReq->id,
+                        ]));
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error('Remote attendance manager review notification error: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'message' => $status === 'manager_approved' 
+                    ? 'Remote attendance approved and forwarded to HR for finalization.'
+                    : 'Remote attendance rejected by manager.',
+                'data'    => $remoteReq->fresh(['managerReviewer', 'hrReviewer', 'employee']),
+            ]);
+        }
+
+        // Stage 2: HR Final Review (approved, rejected)
+        if (!$isHR) {
+            return response()->json(['message' => 'Unauthorized for HR finalization.'], 403);
+        }
+
+        // Allow super admin to approve directly; HR Admin requires manager_approved
+        if ($remoteReq->status !== 'manager_approved' && !$user->hasRole('super_admin')) {
+            return response()->json(['message' => 'Manager approval is required before HR finalization.'], 422);
+        }
+
+        if ($status === 'approved') {
+            // Officially write/update shift into hr_attendances table
+            $att = HrAttendance::firstOrNew([
+                'employee_id' => $remoteReq->employee_id,
+                'date'        => $remoteReq->date,
+            ]);
+
+            $fullLocation = $remoteReq->location_name . ($remoteReq->address ? ' (' . $remoteReq->address . ')' : '');
+
+            if ($remoteReq->request_type === 'clock_in') {
+                $att->clock_in_time      = $remoteReq->requested_time;
+                $att->clock_in_lat       = $remoteReq->latitude;
+                $att->clock_in_lng       = $remoteReq->longitude;
+                $att->clock_in_address   = $fullLocation;
+                $att->is_remote          = true;
+                $att->is_remote_clock_in = true;
+                $att->status             = $remoteReq->reason_category === 'work_from_home' ? 'wfh' : 'present';
+                $att->notes              = 'Remote Clock-In Approved: ' . $remoteReq->reason_notes;
+            } else { // clock_out
+                $att->clock_out_time      = $remoteReq->requested_time;
+                $att->clock_out_lat       = $remoteReq->latitude;
+                $att->clock_out_lng       = $remoteReq->longitude;
+                $att->clock_out_address   = $fullLocation;
+                $att->is_remote           = true;
+                $att->is_remote_clock_out = true;
+
+                if ($att->clock_in_time) {
+                    $hoursWorked = round(Carbon::parse($att->clock_in_time)->diffInMinutes(Carbon::parse($att->clock_out_time)) / 60, 2);
+                    $att->working_hours = $hoursWorked;
+                }
+
+                $appendNote = 'Remote Clock-Out Approved: ' . $remoteReq->reason_notes;
+                $att->notes = $att->notes ? ($att->notes . ' | ' . $appendNote) : $appendNote;
+            }
+
+            $att->is_manual_override = true;
+            $att->approved_by = $user->id;
+            $att->save();
+
+            $remoteReq->attendance_id = $att->id;
+        }
+
+        $remoteReq->update([
+            'status'         => $status,
+            'hr_approved_by' => $user->id,
+            'hr_approved_at' => Carbon::now(),
+            'hr_notes'       => $notes,
+        ]);
+
+        // Notify employee of final outcome
+        try {
+            if ($emp?->user) {
+                $actionLabel = $remoteReq->request_type === 'clock_in' ? 'Clock-In' : 'Clock-Out';
+                $dateStr = Carbon::parse($remoteReq->date)->format('d M');
+                $isApp = $status === 'approved';
+
+                $emp->user->notify(new HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'attendance',
+                    'severity'   => $isApp ? 'success' : 'danger',
+                    'title'      => $isApp ? "Remote {$actionLabel} Officially Approved" : "Remote {$actionLabel} Rejected by HR",
+                    'message'    => $isApp 
+                        ? "HR officially approved your remote {$actionLabel} for {$dateStr}."
+                        : "HR rejected your remote {$actionLabel} for {$dateStr}." . ($notes ? " Note: {$notes}" : ''),
+                    'link'       => '/solar/hr/portal/attendance',
+                    'source_id'  => $remoteReq->id,
+                ]));
+            }
+        } catch (\Throwable $e) {
+            Log::error('Remote attendance employee notification error: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => "Remote attendance request finalized as {$status} by HR.",
+            'data'    => $remoteReq->fresh(['attendance', 'managerReviewer', 'hrReviewer', 'employee']),
         ]);
     }
 }

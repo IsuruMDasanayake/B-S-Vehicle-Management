@@ -30,6 +30,9 @@ class HrAttendance extends Model
         'notes',
         'is_manual_override',
         'is_auto_clock_out',
+        'is_remote',
+        'is_remote_clock_in',
+        'is_remote_clock_out',
         'approved_by',
     ];
 
@@ -44,6 +47,9 @@ class HrAttendance extends Model
         'clock_out_lng' => 'decimal:8',
         'is_manual_override' => 'boolean',
         'is_auto_clock_out' => 'boolean',
+        'is_remote' => 'boolean',
+        'is_remote_clock_in' => 'boolean',
+        'is_remote_clock_out' => 'boolean',
     ];
 
     public function employee()
@@ -64,5 +70,10 @@ class HrAttendance extends Model
     public function regularization()
     {
         return $this->hasOne(HrAttendanceRegularization::class, 'attendance_id');
+    }
+
+    public function remoteRequests()
+    {
+        return $this->hasMany(HrRemoteAttendanceRequest::class, 'attendance_id');
     }
 }

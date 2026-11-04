@@ -184,6 +184,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('attendance/regularizations', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'listRegularizations']);
         Route::patch('attendance/regularizations/{id}', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'updateRegularization']);
 
+        // Remote Attendance (Clock In & Clock Out)
+        Route::get('attendance/remote-today', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myTodayRemoteRequests']);
+        Route::post('attendance/remote-request', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'requestRemoteAttendance']);
+        Route::get('attendance/remote-requests', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'listRemoteAttendanceRequests']);
+        Route::patch('attendance/remote-requests/{id}/review', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'reviewRemoteAttendanceRequest']);
+
         // Leaves
         Route::get('leaves/my-balance', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'myBalance']);
         Route::get('leaves/my-requests', [\App\Http\Controllers\Api\HR\HrLeaveController::class, 'myLeaves']);

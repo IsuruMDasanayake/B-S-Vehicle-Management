@@ -14,15 +14,8 @@ use Illuminate\Support\Facades\Storage;
 class HrSettingController extends Controller
 {
     /**
-     * Default approval managers (Hasintha & Eranda)
-     */
-    public static array $defaultApprovalManagerEmails = [
-        'hasintha@circlegroup.lk',
-        'eranda@circlegroup.lk',
-    ];
-
-    /**
      * Get persisted approval manager settings (from Setting table or local storage cache).
+     * No users are assigned by default; managers must be explicitly assigned via HR Settings.
      */
     public static function getApprovalManagerSettings(): array
     {
@@ -45,13 +38,9 @@ class HrSettingController extends Controller
             }
         } catch (\Throwable $e) {}
 
-        // Fallback default seed
-        $defaultUsers = User::whereIn('email', self::$defaultApprovalManagerEmails)->get();
-        $defaultIds = $defaultUsers->pluck('id')->map(fn($id) => (int) $id)->values()->all();
-
         return [
-            'manager_user_ids' => $defaultIds,
-            'manager_emails'   => self::$defaultApprovalManagerEmails,
+            'manager_user_ids' => [],
+            'manager_emails'   => [],
             'updated_at'       => null,
             'updated_by'       => null,
         ];
@@ -95,7 +84,7 @@ class HrSettingController extends Controller
      */
     public function getApprovalManagers(Request $request)
     {
-        if (!$this->authorizeSuperOrHrAdmin($request)) {
+        if (!$this->authorizeSuperAdminOnly($request)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -142,7 +131,7 @@ class HrSettingController extends Controller
      */
     public function saveApprovalManagers(Request $request)
     {
-        if (!$this->authorizeSuperOrHrAdmin($request)) {
+        if (!$this->authorizeSuperAdminOnly($request)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -187,6 +176,14 @@ class HrSettingController extends Controller
         ]);
     }
 
+    private function authorizeSuperAdminOnly(Request $request): bool
+    {
+        $user = $request->user();
+        if (!$user) return false;
+        return $user->role === 'super_admin'
+            || (method_exists($user, 'hasRole') && $user->hasRole('super_admin'));
+    }
+
     private function authorizeSuperOrHrAdmin(Request $request): bool
     {
         $user = $request->user();
@@ -202,7 +199,7 @@ class HrSettingController extends Controller
      */
     public function getMailReportSettings(Request $request, HrAttendanceLeaveReportService $service)
     {
-        if (!$this->authorizeSuperOrHrAdmin($request)) {
+        if (!$this->authorizeSuperAdminOnly($request)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -225,7 +222,7 @@ class HrSettingController extends Controller
      */
     public function saveMailReportSettings(Request $request, HrAttendanceLeaveReportService $service)
     {
-        if (!$this->authorizeSuperOrHrAdmin($request)) {
+        if (!$this->authorizeSuperAdminOnly($request)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -266,7 +263,7 @@ class HrSettingController extends Controller
      */
     public function sendMailReportNow(Request $request, HrAttendanceLeaveReportService $service)
     {
-        if (!$this->authorizeSuperOrHrAdmin($request)) {
+        if (!$this->authorizeSuperAdminOnly($request)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -362,7 +359,7 @@ class HrSettingController extends Controller
      */
     public function downloadMailReport(Request $request, HrAttendanceLeaveReportService $service)
     {
-        if (!$this->authorizeSuperOrHrAdmin($request)) {
+        if (!$this->authorizeSuperAdminOnly($request)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

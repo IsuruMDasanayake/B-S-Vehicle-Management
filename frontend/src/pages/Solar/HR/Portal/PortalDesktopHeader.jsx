@@ -36,13 +36,16 @@ export const PortalDesktopHeader = ({ employee }) => {
     let mounted = true;
     const fetchCounts = async () => {
       try {
-        const [leaveRes, attRes] = await Promise.all([
+        const [leaveRes, attRes, remoteRes] = await Promise.all([
           api.get('/hr/leaves/unapproved-counts'),
           api.get('/hr/attendance/regularizations', { params: { status: 'pending' } }),
+          api.get('/hr/attendance/remote-requests', { params: { status: 'pending' } }),
         ]);
         if (mounted) {
           setPendingApprovals(leaveRes.data?.pending || 0);
-          setPendingAttApprovals(attRes.data?.pending_count || 0);
+          const attReg = attRes.data?.pending_count || 0;
+          const remoteCount = remoteRes.data?.pending_count || 0;
+          setPendingAttApprovals(attReg + remoteCount);
         }
       } catch {
         // silent
@@ -52,10 +55,12 @@ export const PortalDesktopHeader = ({ employee }) => {
     const handleUpdate = () => fetchCounts();
     window.addEventListener('hr-leaves-updated', handleUpdate);
     window.addEventListener('hr-attendance-updated', handleUpdate);
+    window.addEventListener('hr-remote-attendance-updated', handleUpdate);
     return () => {
       mounted = false;
       window.removeEventListener('hr-leaves-updated', handleUpdate);
       window.removeEventListener('hr-attendance-updated', handleUpdate);
+      window.removeEventListener('hr-remote-attendance-updated', handleUpdate);
     };
   }, [isManager]);
 
