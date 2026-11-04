@@ -159,7 +159,7 @@ export const PerformanceTrendSparkline = ({
             </h4>
           </div>
           <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-            Score progression across official monthly MBO evaluations
+            Score progression across official monthly performance evaluations
           </p>
         </div>
 
