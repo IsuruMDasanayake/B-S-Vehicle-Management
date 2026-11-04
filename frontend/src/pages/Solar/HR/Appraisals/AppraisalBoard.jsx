@@ -51,6 +51,30 @@ export const AppraisalBoard = ({ isHrView = false }) => {
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
 
+  // Always calculate previous calendar month (YYYY-MM) for review/submission reminders
+  const lastMonth = useMemo(() => {
+    const d = new Date();
+    d.setDate(1); // prevent month overflow
+    d.setMonth(d.getMonth() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
+  const lastMonthLabel = useMemo(() => {
+    try {
+      return new Date(lastMonth + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    } catch {
+      return lastMonth;
+    }
+  }, [lastMonth]);
+
+  const currentMonthLabel = useMemo(() => {
+    try {
+      return new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    } catch {
+      return month;
+    }
+  }, [month]);
+
   // Fetch departments
   useEffect(() => {
     api.get('/hr/departments').then(r => setDepartments(r.data || [])).catch(() => {});
@@ -77,11 +101,12 @@ export const AppraisalBoard = ({ isHrView = false }) => {
     fetchBoard();
   }, [fetchBoard]);
 
-  // Handle Trigger Reminders
-  const handleTriggerReminders = async (type) => {
+  // Handle Trigger Reminders (evaluations/submissions always target last month)
+  const handleTriggerReminders = async (type, targetMonth = null) => {
     setSendingReminder(true);
     try {
-      const res = await api.post('/hr/appraisals/send-reminder', { type, month });
+      const monthToSend = targetMonth || (['appraiser', 'employee', 'manager'].includes(type) ? lastMonth : month);
+      const res = await api.post('/hr/appraisals/send-reminder', { type, month: monthToSend });
       toast.success(res.data?.message || 'Reminders dispatched successfully');
       setReminderModalOpen(false);
     } catch (err) {
@@ -462,7 +487,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
           <div style={{ background: '#fff', width: '100%', maxWidth: '460px', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <BellRing size={20} color="#f59e0b" />
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Dispatch MBO Reminders</h3>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Dispatch Performance Reminders</h3>
             </div>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
               Automated notifications normally dispatch on the 25th (for employees) and 1st (for Reporting Managers & HR). You can also trigger them on-demand:
@@ -472,7 +497,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               {/* Option 1: Remind Reporting Managers & HR about pending evaluations */}
               <button
                 type="button"
-                onClick={() => handleTriggerReminders('appraiser')}
+                onClick={() => handleTriggerReminders('appraiser', lastMonth)}
                 disabled={sendingReminder}
                 className="btn btn-sm"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: '#faf5ff', border: '1.5px solid #d8b4fe', borderRadius: '10px', textAlign: 'left' }}
@@ -482,7 +507,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                     Remind Reporting Managers & HR (Pending Evaluations)
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#7e22ce' }}>
-                    "HR Reminder: Team member appraisals for {month} are submitted and awaiting your final marks & sign-off."
+                    "HR Reminder: Team member appraisals for {lastMonthLabel} are submitted and awaiting your final marks & sign-off."
                   </div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#9333ea" />}
@@ -491,7 +516,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               {/* Option 2: Remind Reporting Managers & HR to assign objectives */}
               <button
                 type="button"
-                onClick={() => handleTriggerReminders('objectives')}
+                onClick={() => handleTriggerReminders('objectives', month)}
                 disabled={sendingReminder}
                 className="btn btn-sm"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: '10px', textAlign: 'left' }}
@@ -501,7 +526,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                     Remind Reporting Managers & HR (Assign Objectives)
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#0284c7' }}>
-                    "HR Reminder: Please assign monthly MBO objectives and weights for your team for {month}."
+                    "HR Reminder: Please assign monthly MBO objectives and weights for your team for {currentMonthLabel}."
                   </div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#0284c7" />}
@@ -510,14 +535,14 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               {/* Option 3: Remind All Employees */}
               <button
                 type="button"
-                onClick={() => handleTriggerReminders('employee')}
+                onClick={() => handleTriggerReminders('employee', lastMonth)}
                 disabled={sendingReminder}
                 className="btn btn-sm"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', textAlign: 'left' }}
               >
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--dark)' }}>Remind All Employees</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>"Please finalize & submit your monthly MBO self-evaluations for {month}."</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>"Please finalize & submit your monthly MBO self-evaluations for {lastMonthLabel}."</div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#0284c7" />}
               </button>
@@ -525,14 +550,14 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               {/* Option 4: Remind Line Managers & HR */}
               <button
                 type="button"
-                onClick={() => handleTriggerReminders('manager')}
+                onClick={() => handleTriggerReminders('manager', lastMonth)}
                 disabled={sendingReminder}
                 className="btn btn-sm"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', textAlign: 'left' }}
               >
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--dark)' }}>Remind Managers & HR Admins</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>"Team evaluations & deductions pending for previous month."</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>"Team evaluations & deductions pending for previous month ({lastMonthLabel})."</div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#8b5cf6" />}
               </button>
