@@ -526,7 +526,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                     Remind Reporting Managers & HR (Assign Objectives)
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#0284c7' }}>
-                    "HR Reminder: Please assign monthly MBO objectives and weights for your team for {currentMonthLabel}."
+                    "HR Reminder: Please assign monthly performance objectives and weights for your team for {currentMonthLabel}."
                   </div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#0284c7" />}
@@ -542,7 +542,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               >
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--dark)' }}>Remind All Employees</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>"Please finalize & submit your monthly MBO self-evaluations for {lastMonthLabel}."</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>"Please finalize & submit your monthly Performance self-evaluations for {lastMonthLabel}."</div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#0284c7" />}
               </button>

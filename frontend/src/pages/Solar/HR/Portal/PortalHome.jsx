@@ -786,7 +786,7 @@ const PortalHome = () => {
                   <Award size={20} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>MBO Performance Appraisals</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>Performance Appraisals</div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>View monthly targets, submit achievements & scorecards</div>
                 </div>
               </div>
