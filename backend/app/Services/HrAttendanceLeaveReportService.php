@@ -1142,7 +1142,7 @@ class HrAttendanceLeaveReportService
 
             $lateTxt = $day['late_minutes'] > 0 ? ('+' . $day['late_minutes'] . 'm') : '—';
             $earlyTxt = $day['early_minutes'] > 0 ? ('-' . $day['early_minutes'] . 'm') : '—';
-            $overtimeTxt = $day['overtime_hours'] > 0 ? ('+' . $day['overtime_hours'] . 'h') : '—';
+            // $overtimeTxt = $day['overtime_hours'] > 0 ? ('+' . $day['overtime_hours'] . 'h') : '—';
 
             $rowsHtml .= '<tr style="background:' . $rowBg . ';">'
                 . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:10px;font-weight:600;color:#0f172a;white-space:nowrap;">' . e($day['date']) . ' (' . e($day['day_name']) . ')</td>'
@@ -1151,7 +1151,7 @@ class HrAttendanceLeaveReportService
                 . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:10px;text-align:center;color:#0f172a;font-weight:600;">' . e($day['hours_formatted']) . '</td>'
                 . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:10px;text-align:center;color:' . ($day['late_minutes'] > 0 ? '#b45309' : '#64748b') . ';">' . e($lateTxt) . '</td>'
                 . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:10px;text-align:center;color:' . ($day['early_minutes'] > 0 ? '#b45309' : '#64748b') . ';">' . e($earlyTxt) . '</td>'
-                . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:10px;text-align:center;color:' . ($day['overtime_hours'] > 0 ? '#15803d' : '#64748b') . ';">' . e($overtimeTxt) . '</td>'
+                // . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:10px;text-align:center;color:' . ($day['overtime_hours'] > 0 ? '#15803d' : '#64748b') . ';">' . e($overtimeTxt) . '</td>' // OT column commented
                 . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:9.5px;text-align:center;"><span style="padding:2px 6px;border-radius:4px;font-size:9px;display:inline-block;' . $stStyle . '">' . e($day['status_label']) . '</span></td>'
                 . '<td style="padding:4px 6px;border-bottom:1px solid #e2e8f0;font-size:9.5px;color:#475569;max-width:180px;">' . e($day['remarks']) . '</td>'
                 . '</tr>';
@@ -1276,7 +1276,7 @@ class HrAttendanceLeaveReportService
           <th style="padding: 5px 6px; text-align: center; font-size: 9.5px;">Hours</th>
           <th style="padding: 5px 6px; text-align: center; font-size: 9.5px;">Late</th>
           <th style="padding: 5px 6px; text-align: center; font-size: 9.5px;">Early</th>
-          <th style="padding: 5px 6px; text-align: center; font-size: 9.5px;">OT</th>
+          <!-- <th style="padding: 5px 6px; text-align: center; font-size: 9.5px;">OT</th> -->
           <th style="padding: 5px 6px; text-align: center; font-size: 9.5px;">Status</th>
           <th style="padding: 5px 6px; text-align: left; font-size: 9.5px;">Leave Details / Remarks</th>
         </tr>
@@ -1370,7 +1370,7 @@ HTML;
             'Hours Formatted',
             'Late Minutes',
             'Early Departure Minutes',
-            'Overtime Hours',
+            // 'Overtime Hours', // OT column commented
             'Status',
             'Remarks / Leave Details',
         ]));
@@ -1387,7 +1387,7 @@ HTML;
                 $day['hours_formatted'],
                 $day['late_minutes'],
                 $day['early_minutes'],
-                $day['overtime_hours'],
+                // $day['overtime_hours'], // OT column commented
                 $day['status_label'],
                 $day['remarks'],
             ]));
