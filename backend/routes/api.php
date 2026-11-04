@@ -239,6 +239,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('settings/mail-reports/download', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'downloadMailReport']);
         Route::get('settings/employee-payroll-report/preview', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'previewIndividualPayrollReport']);
         Route::get('settings/employee-payroll-report/download', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'downloadIndividualPayrollReport']);
+
+        // Manual Approval Managers Assignment
+        Route::get('settings/approval-managers', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'getApprovalManagers']);
+        Route::put('settings/approval-managers', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'saveApprovalManagers']);
     });
 });
 

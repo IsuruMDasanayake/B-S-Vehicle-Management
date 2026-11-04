@@ -20,6 +20,7 @@ export const PortalDesktopHeader = ({ employee }) => {
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
   const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [pendingAttApprovals, setPendingAttApprovals] = useState(0);
 
   const isManager = isLeaveApprovalManager(user);
   const isHrAdmin = user?.role === 'solar_hr_admin' || user?.role === 'super_admin';
@@ -27,24 +28,46 @@ export const PortalDesktopHeader = ({ employee }) => {
   const userInitial = (employee?.full_name || user?.name || user?.email || 'U').charAt(0).toUpperCase();
 
   useEffect(() => {
-    if (!isManager) return;
+    if (!isManager) {
+      setPendingApprovals(0);
+      setPendingAttApprovals(0);
+      return;
+    }
     let mounted = true;
-    const fetchCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const res = await api.get('/hr/leaves/unapproved-counts');
-        if (mounted) setPendingApprovals(res.data?.pending || 0);
+        const [leaveRes, attRes] = await Promise.all([
+          api.get('/hr/leaves/unapproved-counts'),
+          api.get('/hr/attendance/regularizations', { params: { status: 'pending' } }),
+        ]);
+        if (mounted) {
+          setPendingApprovals(leaveRes.data?.pending || 0);
+          setPendingAttApprovals(attRes.data?.pending_count || 0);
+        }
       } catch {
         // silent
       }
     };
-    fetchCount();
-    const handleUpdate = () => fetchCount();
+    fetchCounts();
+    const handleUpdate = () => fetchCounts();
     window.addEventListener('hr-leaves-updated', handleUpdate);
+    window.addEventListener('hr-attendance-updated', handleUpdate);
     return () => {
       mounted = false;
       window.removeEventListener('hr-leaves-updated', handleUpdate);
+      window.removeEventListener('hr-attendance-updated', handleUpdate);
     };
   }, [isManager]);
+
+  useEffect(() => {
+    const handleManagerAssignmentChange = async () => {
+      try {
+        await useAuthStore.getState().fetchUser();
+      } catch {}
+    };
+    window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+    return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -94,6 +117,24 @@ export const PortalDesktopHeader = ({ employee }) => {
                 lineHeight: 1,
               }}>
                 {pendingApprovals > 99 ? '99+' : pendingApprovals}
+              </span>
+            )}
+            {to === 'attendance' && isManager && pendingAttApprovals > 0 && (
+              <span style={{
+                background: '#f59e0b',
+                color: '#fff',
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                minWidth: '16px',
+                height: '16px',
+                borderRadius: '999px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 4px',
+                lineHeight: 1,
+              }}>
+                {pendingAttApprovals > 99 ? '99+' : pendingAttApprovals}
               </span>
             )}
           </NavLink>

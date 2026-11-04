@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Mail, Save, Send, Users, CheckCircle2, FileText, FileSpreadsheet,
   Search, Plus, X, Clock, Download, Loader2, RefreshCw, Server, ChevronDown, ChevronUp,
-  UserCheck, Building2, Calendar
+  UserCheck, Building2, Calendar, ShieldCheck, Check, AlertTriangle, UserMinus, RotateCcw
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import useAuthStore from '../../../../store/authStore';
 import PayrollReportPanel from '../Attendance/PayrollReportPanel';
 
 export default function HRSettings({ embedded = false }) {
@@ -66,9 +67,95 @@ export default function HRSettings({ embedded = false }) {
     }
   }, []);
 
+  // ── Approval Managers State (Manual Assignment) ──────────────────────────────
+  const [managerSectionExpanded, setManagerSectionExpanded] = useState(true);
+  const [loadingManagers, setLoadingManagers] = useState(true);
+  const [savingManagers, setSavingManagers] = useState(false);
+  const [approvalManagerIds, setApprovalManagerIds] = useState([]);
+  const [availableManagerUsers, setAvailableManagerUsers] = useState([]);
+  const [managerSearch, setManagerSearch] = useState('');
+  const [managersUpdatedAt, setManagersUpdatedAt] = useState(null);
+
+  const fetchApprovalManagers = useCallback(async () => {
+    setLoadingManagers(true);
+    try {
+      const res = await api.get('/hr/settings/approval-managers');
+      const ids = Array.isArray(res.data?.manager_user_ids)
+        ? res.data.manager_user_ids.map(Number)
+        : [];
+      setApprovalManagerIds(ids);
+      setAvailableManagerUsers(res.data?.available_users || []);
+      setManagersUpdatedAt(res.data?.updated_at || null);
+    } catch {
+      toast.error('Failed to load approval manager settings');
+    } finally {
+      setLoadingManagers(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSettings();
-  }, [fetchSettings]);
+    fetchApprovalManagers();
+  }, [fetchSettings, fetchApprovalManagers]);
+
+  const toggleApprovalManager = (id) => {
+    const numId = Number(id);
+    setApprovalManagerIds(prev =>
+      prev.includes(numId) ? prev.filter(x => x !== numId) : [...prev, numId]
+    );
+  };
+
+  const handleSetDefaultManagers = () => {
+    const defaultEmails = ['hasintha@circlegroup.lk', 'eranda@circlegroup.lk'];
+    const matched = availableManagerUsers
+      .filter(u => u.email && defaultEmails.includes(u.email.toLowerCase().trim()))
+      .map(u => Number(u.id));
+    if (matched.length > 0) {
+      setApprovalManagerIds(matched);
+      toast.success('Selected default managers (Hasintha & Eranda)');
+    } else {
+      toast.error('Default manager accounts not found in users list');
+    }
+  };
+
+  const handleSaveApprovalManagers = async () => {
+    setSavingManagers(true);
+    try {
+      const res = await api.put('/hr/settings/approval-managers', {
+        manager_user_ids: approvalManagerIds,
+      });
+      toast.success(res.data?.message || 'Approval managers saved successfully');
+      setManagersUpdatedAt(res.data?.updated_at || new Date().toISOString());
+
+      // Refresh current user session profile to immediately apply approval permissions
+      try {
+        await useAuthStore.getState().fetchUser();
+      } catch {}
+
+      window.dispatchEvent(new Event('hr-approval-managers-updated'));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save approval managers');
+    } finally {
+      setSavingManagers(false);
+    }
+  };
+
+  const assignedManagers = useMemo(() => {
+    return availableManagerUsers.filter(u => approvalManagerIds.includes(Number(u.id)));
+  }, [availableManagerUsers, approvalManagerIds]);
+
+  const filteredManagerUsers = useMemo(() => {
+    const q = managerSearch.trim().toLowerCase();
+    if (!q) return availableManagerUsers;
+    return availableManagerUsers.filter(u =>
+      (u.name && u.name.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.role && u.role.toLowerCase().includes(q)) ||
+      (u.department_name && u.department_name.toLowerCase().includes(q)) ||
+      (u.designation_title && u.designation_title.toLowerCase().includes(q)) ||
+      (u.employee_code && u.employee_code.toLowerCase().includes(q))
+    );
+  }, [availableManagerUsers, managerSearch]);
 
   const toggleUser = (id) => {
     const numId = Number(id);
@@ -645,6 +732,370 @@ export default function HRSettings({ embedded = false }) {
                   title="3. Test &amp; Download Reports (Company &amp; Payroll)"
                   subtitle="Select report period, specific day or date range, and email or download (PDF + CSV), or download individual employee payroll timesheets."
                 /> */}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═════════════════════════════════════════════════════════════════════
+            BLOCK 2: APPROVAL MANAGERS (MANUAL ASSIGNMENT)
+        ═════════════════════════════════════════════════════════════════════ */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          {/* Header */}
+          <div
+            onClick={() => setManagerSectionExpanded(prev => !prev)}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              cursor: 'pointer',
+              paddingBottom: managerSectionExpanded ? '1rem' : 0,
+              marginBottom: managerSectionExpanded ? '1.25rem' : 0,
+              borderBottom: managerSectionExpanded ? '1px solid var(--surface-2)' : 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ background: 'rgba(139,92,246,0.12)', color: '#7c3aed', padding: '0.65rem', borderRadius: '12px', display: 'flex' }}>
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
+                  Approval Managers (Manual Assignment)
+                </h2>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                  Assign users authorized to approve Leave Requests &amp; Missing Attendance Clock-Out Adjustments. Approvals are strictly assigned manually (not automatic).
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{
+                background: approvalManagerIds.length > 0 ? 'rgba(139,92,246,0.15)' : 'rgba(239,68,68,0.12)',
+                color: approvalManagerIds.length > 0 ? '#7c3aed' : '#dc2626',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                padding: '0.25rem 0.65rem',
+                borderRadius: '999px',
+              }}>
+                {approvalManagerIds.length} Manager{approvalManagerIds.length === 1 ? '' : 's'} Assigned
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: '0.35rem', border: '1px solid var(--surface-2)', borderRadius: '8px', display: 'flex' }}
+                aria-label="Toggle Approval Managers Settings"
+              >
+                {managerSectionExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+            </div>
+          </div>
+
+          {managerSectionExpanded && (
+            <div>
+              {/* Notice Banner */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.65rem',
+                padding: '0.85rem 1rem',
+                background: 'rgba(139,92,246,0.08)',
+                border: '1px solid rgba(139,92,246,0.22)',
+                borderRadius: '10px',
+                marginBottom: '1.25rem',
+                fontSize: '0.82rem',
+                lineHeight: 1.45,
+              }}>
+                <ShieldCheck size={18} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong style={{ color: '#7c3aed' }}>Strict Manual Assignment Policy:</strong>{' '}
+                  Only users assigned below will receive approval capabilities in their Employee Portal (including the <strong>Leave Approvals</strong> tab and <strong>Team Clock-Out Adjustments</strong> tab). Approval rights are <strong>never assigned automatically</strong> based on job title or reporting line.
+                </div>
+              </div>
+
+              {/* Assigned Managers Pill Tag Strip */}
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--surface-2)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1.25rem',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <UserCheck size={16} style={{ color: '#7c3aed' }} />
+                    Active Assigned Managers ({assignedManagers.length})
+                  </div>
+                  {approvalManagerIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setApprovalManagerIds([])}
+                      className="btn btn-ghost"
+                      style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      <UserMinus size={13} /> Unassign All
+                    </button>
+                  )}
+                </div>
+
+                {assignedManagers.length === 0 ? (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                    No managers assigned. Click on any employee or user below to grant approval privileges.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {assignedManagers.map(mgr => (
+                      <div
+                        key={mgr.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          background: 'rgba(139,92,246,0.12)',
+                          border: '1px solid rgba(139,92,246,0.25)',
+                          borderRadius: '999px',
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.8rem',
+                          color: '#6d28d9',
+                        }}
+                      >
+                        <span style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: '#7c3aed',
+                          color: '#fff',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          {mgr.name?.charAt(0)?.toUpperCase() || 'M'}
+                        </span>
+                        <span style={{ fontWeight: 600 }}>{mgr.name}</span>
+                        {mgr.designation_title && mgr.designation_title !== '—' && (
+                          <span style={{ fontSize: '0.72rem', opacity: 0.85 }}>({mgr.designation_title})</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleApprovalManager(mgr.id);
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            color: '#6d28d9',
+                            marginLeft: '2px',
+                          }}
+                          title="Remove manager"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Candidates Selection Header & Search */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.85rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--surface)', border: '1px solid var(--surface-2)', borderRadius: '8px', padding: '0.4rem 0.65rem' }}>
+                  <Search size={14} style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search candidate by name, designation, department, email..."
+                    value={managerSearch}
+                    onChange={e => setManagerSearch(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '0.82rem', color: 'inherit' }}
+                  />
+                  {managerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setManagerSearch('')}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSetDefaultManagers}
+                  className="btn btn-ghost"
+                  style={{ border: '1px solid var(--surface-2)', fontSize: '0.74rem', padding: '0.4rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  title="Assign Hasintha & Eranda"
+                >
+                  <RotateCcw size={13} /> Default (Hasintha &amp; Eranda)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const filteredIds = filteredManagerUsers.map(u => Number(u.id));
+                    setApprovalManagerIds(prev => Array.from(new Set([...prev, ...filteredIds])));
+                  }}
+                  className="btn btn-ghost"
+                  style={{ border: '1px solid var(--surface-2)', fontSize: '0.74rem', padding: '0.4rem 0.65rem' }}
+                >
+                  Select Filtered ({filteredManagerUsers.length})
+                </button>
+              </div>
+
+              {/* Candidates User List */}
+              <div style={{
+                maxHeight: '400px',
+                overflowY: 'auto',
+                border: '1px solid var(--surface-2)',
+                borderRadius: '10px',
+                background: 'var(--surface)',
+                marginBottom: '1.25rem',
+              }}>
+                {loadingManagers ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '2rem', color: 'var(--text-muted)' }}>
+                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Loading users...
+                  </div>
+                ) : filteredManagerUsers.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    No users matching "{managerSearch}".
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {filteredManagerUsers.map((u, idx) => {
+                      const isAssigned = approvalManagerIds.includes(Number(u.id));
+                      return (
+                        <div
+                          key={u.id}
+                          onClick={() => toggleApprovalManager(u.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.65rem 1rem',
+                            borderBottom: idx === filteredManagerUsers.length - 1 ? 'none' : '1px solid var(--surface-2)',
+                            cursor: 'pointer',
+                            background: isAssigned ? 'rgba(139,92,246,0.06)' : 'transparent',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={isAssigned}
+                              onChange={() => toggleApprovalManager(u.id)}
+                              onClick={e => e.stopPropagation()}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#7c3aed' }}
+                            />
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: isAssigned ? '#7c3aed' : 'var(--surface-2)',
+                              color: isAssigned ? '#fff' : 'inherit',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                              {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.86rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                {u.name}
+                                {u.employee_code && (
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                                    ({u.employee_code})
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.1rem' }}>
+                                <span>{u.email}</span>
+                                {u.department_name && u.department_name !== '—' && (
+                                  <span>• Dept: {u.department_name}</span>
+                                )}
+                                {u.designation_title && u.designation_title !== '—' && (
+                                  <span>• Designation: <strong style={{ color: 'inherit' }}>{u.designation_title}</strong></span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {u.role && (
+                              <span style={{
+                                fontSize: '0.7rem',
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: '6px',
+                                background: u.role === 'super_admin' ? 'rgba(239,68,68,0.12)' : 'var(--surface-2)',
+                                color: u.role === 'super_admin' ? '#dc2626' : 'var(--text-muted)',
+                                fontWeight: 600,
+                              }}>
+                                {u.role}
+                              </span>
+                            )}
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '999px',
+                              background: isAssigned ? 'rgba(139,92,246,0.15)' : 'var(--surface-2)',
+                              color: isAssigned ? '#7c3aed' : 'var(--text-muted)',
+                            }}>
+                              {isAssigned ? '✓ Assigned Manager' : 'Assign'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Save Bar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                paddingTop: '0.5rem',
+              }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {managersUpdatedAt ? (
+                    <>Last updated: <strong>{new Date(managersUpdatedAt).toLocaleString()}</strong></>
+                  ) : (
+                    'Default seeded managers active until explicitly updated.'
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSaveApprovalManagers}
+                  disabled={savingManagers || loadingManagers}
+                  className="btn btn-primary"
+                  style={{
+                    background: '#7c3aed',
+                    borderColor: '#7c3aed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.65rem 1.4rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {savingManagers ? (
+                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <Save size={16} />
+                  )}
+                  {savingManagers ? 'Saving Managers...' : 'Save Approval Managers'}
+                </button>
               </div>
             </div>
           )}

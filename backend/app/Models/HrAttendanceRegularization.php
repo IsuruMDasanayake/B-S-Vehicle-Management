@@ -16,13 +16,17 @@ class HrAttendanceRegularization extends Model
         'employee_id',
         'requested_clock_out_time',
         'reason',
-        'status', // pending, approved, rejected
+        'status', // pending, manager_approved, manager_rejected, approved, rejected
+        'manager_approved_by',
+        'manager_approved_at',
+        'manager_notes',
         'reviewed_by',
         'admin_notes',
     ];
 
     protected $casts = [
         'requested_clock_out_time' => 'datetime',
+        'manager_approved_at'      => 'datetime',
     ];
 
     public function attendance()
@@ -38,5 +42,10 @@ class HrAttendanceRegularization extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function managerReviewer()
+    {
+        return $this->belongsTo(User::class, 'manager_approved_by');
     }
 }

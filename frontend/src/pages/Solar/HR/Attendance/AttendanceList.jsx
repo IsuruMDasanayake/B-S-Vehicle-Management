@@ -6,6 +6,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import useAuthStore from '../../../../store/authStore';
+import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import PayrollReportPanel from './PayrollReportPanel';
 
 const STATUS_MAP = {
@@ -36,6 +38,10 @@ const StatusBadge = ({ status }) => {
 
 const AttendanceList = () => {
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
+  const isSuperAdmin = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
+  const isHR = isSuperAdmin || user?.role === 'solar_hr_admin' || user?.roles?.includes('solar_hr_admin');
+  const isManager = isSuperAdmin || isLeaveApprovalManager(user);
 
   // Active view tab: 'daily' | 'adjustments'
   const [viewTab, setViewTab] = useState('daily');
@@ -57,8 +63,10 @@ const AttendanceList = () => {
   // Clock-out adjustments state
   const [regularizations, setRegularizations] = useState([]);
   const [pendingRegCount, setPendingRegCount] = useState(0);
-  const [regFilter, setRegFilter] = useState('pending'); // 'pending' | 'approved' | 'rejected' | 'all'
-  const [regModal, setRegModal] = useState({ open: false, item: null, action: 'approved', notes: '' });
+  const [mgrApprovedRegCount, setMgrApprovedRegCount] = useState(0);
+  const [approvedRegCount, setApprovedRegCount] = useState(0);
+  const [regFilter, setRegFilter] = useState('pending'); // 'pending' | 'manager_approved' | 'approved' | 'rejected' | 'all'
+  const [regModal, setRegModal] = useState({ open: false, item: null, action: 'manager_approved', notes: '' });
   const [regProcessing, setRegProcessing] = useState(false);
 
   const fetchDepts = useCallback(async () => {
@@ -71,6 +79,8 @@ const AttendanceList = () => {
       const res = await api.get('/hr/attendance/regularizations', { params: { status: regFilter } });
       setRegularizations(res.data.data || []);
       setPendingRegCount(res.data.pending_count || 0);
+      setMgrApprovedRegCount(res.data.manager_approved_count || 0);
+      setApprovedRegCount(res.data.approved_count || 0);
     } catch {
       // silent
     }
@@ -190,13 +200,21 @@ const AttendanceList = () => {
     if (!regModal.item) return;
     setRegProcessing(true);
     try {
-      await api.patch(`/hr/attendance/regularizations/${regModal.item.id}`, {
+      const res = await api.patch(`/hr/attendance/regularizations/${regModal.item.id}`, {
         status: regModal.action,
+        notes: regModal.notes,
         admin_notes: regModal.notes,
       });
-      toast.success(`Clock-out adjustment ${regModal.action}`);
-      setRegModal({ open: false, item: null, action: 'approved', notes: '' });
+      const actionLabels = {
+        manager_approved: 'approved by Manager and forwarded to HR',
+        manager_rejected: 'rejected by Manager',
+        approved: 'officially approved by HR',
+        rejected: 'rejected by HR',
+      };
+      toast.success(res.data?.message || `Clock-out adjustment ${actionLabels[regModal.action] || 'processed'}`);
+      setRegModal({ open: false, item: null, action: 'manager_approved', notes: '' });
       await fetchData();
+      window.dispatchEvent(new Event('hr-attendance-updated'));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to process adjustment');
     } finally {
@@ -268,7 +286,7 @@ const AttendanceList = () => {
           }}
         >
           Clock-Out Adjustments
-          {pendingRegCount > 0 && (
+          {(pendingRegCount + mgrApprovedRegCount) > 0 && (
             <span
               style={{
                 background: viewTab === 'adjustments' ? '#fff' : '#ef4444',
@@ -278,8 +296,9 @@ const AttendanceList = () => {
                 padding: '0.1rem 0.45rem',
                 borderRadius: '999px',
               }}
+              title={`${pendingRegCount} pending manager review, ${mgrApprovedRegCount} awaiting HR final approval`}
             >
-              {pendingRegCount}
+              {pendingRegCount + mgrApprovedRegCount}
             </span>
           )}
         </button>
@@ -457,10 +476,11 @@ const AttendanceList = () => {
             </div>
 
             {/* Filter buttons */}
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
               {[
-                { key: 'pending', label: `Pending (${pendingRegCount})` },
-                { key: 'approved', label: 'Approved' },
+                { key: 'pending', label: `Pending Manager (${pendingRegCount})` },
+                { key: 'manager_approved', label: `Awaiting HR (${mgrApprovedRegCount})` },
+                { key: 'approved', label: `Approved (${approvedRegCount})` },
                 { key: 'rejected', label: 'Rejected' },
                 { key: 'all', label: 'All' },
               ].map(f => (
@@ -488,7 +508,7 @@ const AttendanceList = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)' }}>
-                  {['EMPLOYEE', 'SHIFT DATE', 'RECORDED CLOCK-IN', 'RECORDED OUT', 'REQUESTED OUT', 'REASON', 'STATUS', 'ACTIONS'].map(h => (
+                  {['EMPLOYEE', 'SHIFT DATE', 'RECORDED IN', 'RECORDED OUT', 'REQUESTED OUT', 'REASON', 'APPROVAL WORKFLOW', 'ACTIONS'].map(h => (
                     <th key={h} style={{ padding: '0.7rem 1rem', textAlign: 'left', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>{h}</th>
                   ))}
                 </tr>
@@ -504,10 +524,21 @@ const AttendanceList = () => {
                   const att = item.attendance;
                   const emp = item.employee;
                   const isPending = item.status === 'pending';
+                  const isManagerApproved = item.status === 'manager_approved';
+                  const isApproved = item.status === 'approved';
+                  const isRejected = item.status === 'rejected' || item.status === 'manager_rejected';
+
+                  // Is current user the line manager for this employee?
+                  const isDirectLineManager = Boolean(user?.id && emp?.manager?.user_id === user.id);
+                  const canManagerReview = isSuperAdmin || isManager || isDirectLineManager;
+
                   const shiftDate = att?.date ? new Date(att.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
                   const clockIn = att?.clock_in_time ? new Date(att.clock_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
                   const recordedOut = att?.clock_out_time ? new Date(att.clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '— (Blank / Missing)';
                   const requestedOut = item.requested_clock_out_time ? new Date(item.requested_clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
+
+                  const mgrReviewerName = item.manager_reviewer?.name || (item.manager_approved_by ? 'Manager' : null);
+                  const hrReviewerName = item.reviewer?.name || (item.reviewed_by ? 'HR Admin' : null);
 
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid var(--surface-2)' }}>
@@ -529,71 +560,175 @@ const AttendanceList = () => {
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: 'var(--text-muted)', maxWidth: '220px' }}>
                         <div style={{ whiteSpace: 'normal', lineHeight: 1.35 }}>{item.reason}</div>
+                        {item.manager_notes && (
+                          <div style={{ fontSize: '0.7rem', color: '#0284c7', marginTop: '0.2rem', fontStyle: 'italic' }}>
+                            Mgr Note: {item.manager_notes}
+                          </div>
+                        )}
                         {item.admin_notes && (
-                          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.2rem', fontStyle: 'italic' }}>
-                            Admin: {item.admin_notes}
+                          <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: '0.2rem', fontStyle: 'italic' }}>
+                            HR Note: {item.admin_notes}
                           </div>
                         )}
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        <span
-                          style={{
-                            padding: '0.2rem 0.55rem',
-                            borderRadius: '999px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            background: item.status === 'approved' ? 'rgba(34,197,94,0.1)' : item.status === 'rejected' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-                            color: item.status === 'approved' ? '#16a34a' : item.status === 'rejected' ? '#dc2626' : '#d97706',
-                          }}
-                        >
-                          {item.status.toUpperCase()}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {/* Step 1: Line Manager / GM / Project Director */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--text-muted)', minWidth: '55px' }}>Manager:</span>
+                            {item.status === 'pending' ? (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#d97706' }}>
+                                Pending Review
+                              </span>
+                            ) : item.status === 'manager_rejected' ? (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#dc2626' }}>
+                                Rejected {mgrReviewerName ? `by ${mgrReviewerName}` : ''}
+                              </span>
+                            ) : (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 700, background: 'rgba(14,165,233,0.12)', color: '#0284c7' }}>
+                                Approved {mgrReviewerName ? `by ${mgrReviewerName}` : ''}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Step 2: HR Admin Sign-off */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--text-muted)', minWidth: '55px' }}>HR Admin:</span>
+                            {item.status === 'approved' ? (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 700, background: 'rgba(34,197,94,0.12)', color: '#16a34a' }}>
+                                Approved {hrReviewerName ? `by ${hrReviewerName}` : ''}
+                              </span>
+                            ) : item.status === 'rejected' ? (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#dc2626' }}>
+                                Rejected {hrReviewerName ? `by ${hrReviewerName}` : ''}
+                              </span>
+                            ) : item.status === 'manager_approved' ? (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#d97706' }}>
+                                Awaiting HR Sign-off
+                              </span>
+                            ) : item.status === 'manager_rejected' ? (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 600, background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                                Skipped (Manager Rejected)
+                              </span>
+                            ) : (
+                              <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 600, background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                                Waiting for Manager
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        {isPending ? (
-                          <div style={{ display: 'flex', gap: '0.35rem' }}>
-                            <button
-                              onClick={() => openRegModal(item, 'approved')}
-                              style={{
-                                background: '#22c55e',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '5px',
-                                padding: '0.25rem 0.55rem',
-                                fontSize: '0.72rem',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                              }}
-                              title="Approve adjustment"
-                            >
-                              <Check size={12} /> Approve
-                            </button>
-                            <button
-                              onClick={() => openRegModal(item, 'rejected')}
-                              style={{
-                                background: 'transparent',
-                                color: '#ef4444',
-                                border: '1px solid rgba(239,68,68,0.3)',
-                                borderRadius: '5px',
-                                padding: '0.25rem 0.55rem',
-                                fontSize: '0.72rem',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                              }}
-                              title="Reject adjustment"
-                            >
-                              <X size={12} /> Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                            Reviewed {item.reviewer ? `by ${item.reviewer.name}` : ''}
+                        {/* If pending manager review */}
+                        {isPending && (
+                          canManagerReview ? (
+                            <div style={{ display: 'flex', gap: '0.35rem' }}>
+                              <button
+                                onClick={() => openRegModal(item, 'manager_approved')}
+                                style={{
+                                  background: '#0284c7',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '5px',
+                                  padding: '0.25rem 0.55rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem',
+                                }}
+                                title="Approve as Manager (Forwards to HR)"
+                              >
+                                <Check size={12} /> Mgr Approve
+                              </button>
+                              <button
+                                onClick={() => openRegModal(item, 'manager_rejected')}
+                                style={{
+                                  background: 'transparent',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239,68,68,0.3)',
+                                  borderRadius: '5px',
+                                  padding: '0.25rem 0.55rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem',
+                                }}
+                                title="Reject as Manager"
+                              >
+                                <X size={12} /> Mgr Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', color: '#d97706', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Clock size={12} /> Awaiting Manager
+                            </span>
+                          )
+                        )}
+
+                        {/* If manager approved, awaiting HR final sign-off */}
+                        {isManagerApproved && (
+                          isHR ? (
+                            <div style={{ display: 'flex', gap: '0.35rem' }}>
+                              <button
+                                onClick={() => openRegModal(item, 'approved')}
+                                style={{
+                                  background: '#16a34a',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '5px',
+                                  padding: '0.25rem 0.55rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem',
+                                }}
+                                title="HR Final Approval (Applies departure time)"
+                              >
+                                <Check size={12} /> HR Approve
+                              </button>
+                              <button
+                                onClick={() => openRegModal(item, 'rejected')}
+                                style={{
+                                  background: 'transparent',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239,68,68,0.3)',
+                                  borderRadius: '5px',
+                                  padding: '0.25rem 0.55rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem',
+                                }}
+                                title="HR Reject"
+                              >
+                                <X size={12} /> HR Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Clock size={12} /> Awaiting HR
+                            </span>
+                          )
+                        )}
+
+                        {/* If already finalized */}
+                        {isApproved && (
+                          <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <CheckCircle size={13} /> Finalized
+                          </span>
+                        )}
+
+                        {isRejected && (
+                          <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <XCircle size={13} /> Rejected
                           </span>
                         )}
                       </td>
@@ -620,24 +755,61 @@ const AttendanceList = () => {
       {/* Regularization Action Modal */}
       {regModal.open && regModal.item && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem', backdropFilter: 'blur(2px)' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '440px', padding: '1.5rem', background: 'var(--white)', borderRadius: '12px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--dark)' }}>
-              {regModal.action === 'approved' ? 'Approve' : 'Reject'} Clock-Out Adjustment
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
-              Employee: <strong>{regModal.item.employee?.full_name}</strong> · Shift: {new Date(regModal.item.attendance?.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}<br />
-              Requested Departure: <strong>{new Date(regModal.item.requested_clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</strong>
+          <div className="card" style={{ width: '100%', maxWidth: '480px', padding: '1.5rem', background: 'var(--white)', borderRadius: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <Clock size={20} color={regModal.action.includes('rejected') ? '#ef4444' : regModal.action.startsWith('manager_') ? '#0284c7' : '#16a34a'} />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--dark)' }}>
+                {regModal.action === 'manager_approved' && 'Line Manager / Management Approval'}
+                {regModal.action === 'manager_rejected' && 'Manager Rejection'}
+                {regModal.action === 'approved' && 'HR Final Sign-Off & Approval'}
+                {regModal.action === 'rejected' && 'HR Rejection'}
+              </h3>
+            </div>
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: 1.4 }}>
+              {regModal.action.startsWith('manager_')
+                ? 'Step 1 of 2: Line Manager / General Manager / Project Director verification.'
+                : 'Step 2 of 2: Official HR sign-off. Approving will update the attendance log and working hours.'}
             </p>
+
+            {/* Request Summary Box */}
+            <div style={{ background: 'var(--surface)', padding: '0.85rem', borderRadius: '8px', marginBottom: '1.25rem', fontSize: '0.8rem', lineHeight: 1.5, border: '1px solid var(--surface-2)' }}>
+              <div><strong>Employee:</strong> {regModal.item.employee?.full_name} ({regModal.item.employee?.department?.name || 'Staff'})</div>
+              <div><strong>Shift Date:</strong> {new Date(regModal.item.attendance?.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+              <div><strong>Recorded Clock-In:</strong> {regModal.item.attendance?.clock_in_time ? new Date(regModal.item.attendance.clock_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}</div>
+              <div><strong>Requested Clock-Out:</strong> <span style={{ color: '#0284c7', fontWeight: 700 }}>{new Date(regModal.item.requested_clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span></div>
+              <div style={{ marginTop: '0.35rem', color: 'var(--text-muted)' }}><strong>Reason:</strong> {regModal.item.reason}</div>
+
+              {/* If HR stage, show manager's prior approval */}
+              {!regModal.action.startsWith('manager_') && regModal.item.manager_approved_by && (
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--surface-2)', color: '#0284c7' }}>
+                  <strong>Manager Verified:</strong> {regModal.item.manager_reviewer?.name || 'Line Manager'}
+                  {regModal.item.manager_notes && (
+                    <div style={{ fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                      "{regModal.item.manager_notes}"
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <form onSubmit={handleRegActionSubmit}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem', color: 'var(--dark)' }}>
-                  Admin Remarks (Optional)
+                  {regModal.action.startsWith('manager_') ? 'Manager Remarks (Optional)' : 'HR Remarks (Optional)'}
                 </label>
                 <textarea
                   rows={3}
                   className="form-control"
-                  placeholder={regModal.action === 'approved' ? 'e.g. Verified with site manager...' : 'e.g. Departure time does not match gate logs...'}
+                  placeholder={
+                    regModal.action === 'manager_approved'
+                      ? 'e.g. Verified work on site until 8:30 PM...'
+                      : regModal.action === 'manager_rejected'
+                      ? 'e.g. Departure time does not match job completion...'
+                      : regModal.action === 'approved'
+                      ? 'e.g. Approved and timesheet updated.'
+                      : 'e.g. Rejected as per policy...'
+                  }
                   value={regModal.notes}
                   onChange={e => setRegModal(prev => ({ ...prev, notes: e.target.value }))}
                   style={{ width: '100%', padding: '0.6rem', fontSize: '0.82rem' }}
@@ -649,21 +821,39 @@ const AttendanceList = () => {
                   type="button"
                   className="btn btn-ghost"
                   style={{ border: '1px solid var(--surface-2)' }}
-                  onClick={() => setRegModal({ open: false, item: null, action: 'approved', notes: '' })}
+                  onClick={() => setRegModal({ open: false, item: null, action: 'manager_approved', notes: '' })}
                   disabled={regProcessing}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn"
                   style={{
-                    background: regModal.action === 'approved' ? '#22c55e' : '#ef4444',
-                    borderColor: regModal.action === 'approved' ? '#22c55e' : '#ef4444',
+                    background: regModal.action.includes('rejected')
+                      ? '#ef4444'
+                      : regModal.action === 'manager_approved'
+                      ? '#0284c7'
+                      : '#16a34a',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 600,
                   }}
                   disabled={regProcessing}
                 >
-                  {regProcessing ? 'Processing...' : `Confirm ${regModal.action === 'approved' ? 'Approval' : 'Rejection'}`}
+                  {regProcessing ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Loader2 size={14} className="animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    regModal.action === 'manager_approved'
+                      ? 'Confirm Manager Approval'
+                      : regModal.action === 'manager_rejected'
+                      ? 'Confirm Manager Rejection'
+                      : regModal.action === 'approved'
+                      ? 'Confirm HR Final Approval'
+                      : 'Confirm HR Rejection'
+                  )}
                 </button>
               </div>
             </form>
