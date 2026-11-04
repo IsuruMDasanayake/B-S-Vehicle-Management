@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, X, Clock, Loader2, AlertCircle, Calendar } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Check, X, Clock, Loader2, AlertCircle, Calendar,
+  Globe, MapPin, ExternalLink, Image as ImageIcon, CheckCircle2, Search
+} from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../../../store/authStore';
@@ -27,11 +30,24 @@ const formatHours = (decimal) => {
   return `${h}h ${m > 0 ? m + 'm' : '00m'}`;
 };
 
+const REASON_LABELS = {
+  client_site_visit: 'Client Site Visit',
+  field_installation: 'Field Installation',
+  work_from_home: 'Work From Home (WFH)',
+  transit_duty: 'Transit / Field Duty',
+  meeting: 'External Meeting',
+  other: 'Other Assignment',
+};
+
 const PortalAttendance = () => {
   const user = useAuthStore(s => s.user);
   const isManager = isLeaveApprovalManager(user) || user?.role === 'super_admin' || user?.role === 'solar_hr_admin';
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (isManager && searchParams.get('tab') === 'approvals') ? 'approvals' : 'my';
+  const initialTab = (isManager && searchParams.get('tab') === 'remote-approvals')
+    ? 'remote-approvals'
+    : (isManager && searchParams.get('tab') === 'approvals')
+      ? 'approvals'
+      : 'my';
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // ── Manager Team Adjustments State ──
@@ -41,6 +57,67 @@ const PortalAttendance = () => {
   const [teamFilter, setTeamFilter] = useState('pending'); // 'pending' | 'all'
   const [managerActionModal, setManagerActionModal] = useState({ open: false, item: null, action: 'manager_approved', notes: '' });
   const [managerActionSubmitting, setManagerActionSubmitting] = useState(false);
+
+  // ── Manager Team Remote Attendance State ──
+  const [teamRemoteRequests, setTeamRemoteRequests] = useState([]);
+  const [teamRemoteLoading, setTeamRemoteLoading] = useState(false);
+  const [teamRemotePendingCount, setTeamRemotePendingCount] = useState(0);
+  const [teamRemoteCounts, setTeamRemoteCounts] = useState({ pending: 0, manager_approved: 0, approved: 0, rejected: 0, total: 0 });
+  const [teamRemoteFilter, setTeamRemoteFilter] = useState('pending'); // 'pending' | 'manager_approved' | 'approved' | 'rejected' | 'all'
+  const [teamRemoteSearch, setTeamRemoteSearch] = useState('');
+  const [remoteActionModal, setRemoteActionModal] = useState({ open: false, item: null, action: 'manager_approved', notes: '' });
+  const [remoteActionSubmitting, setRemoteActionSubmitting] = useState(false);
+  const [previewPhotoModal, setPreviewPhotoModal] = useState({ open: false, url: '', title: '' });
+
+  const fetchTeamRemoteRequests = useCallback(async () => {
+    if (!isManager) return;
+    setTeamRemoteLoading(true);
+    try {
+      const res = await api.get('/hr/attendance/remote-requests', { params: { status: teamRemoteFilter } });
+      setTeamRemoteRequests(res.data.data || []);
+      setTeamRemotePendingCount(res.data.pending_count || 0);
+      setTeamRemoteCounts(res.data.counts || { pending: 0, manager_approved: 0, approved: 0, rejected: 0, total: 0 });
+    } catch {
+      // silent
+    } finally {
+      setTeamRemoteLoading(false);
+    }
+  }, [isManager, teamRemoteFilter]);
+
+  useEffect(() => {
+    if (isManager) {
+      fetchTeamRemoteRequests();
+    }
+  }, [isManager, fetchTeamRemoteRequests]);
+
+  useEffect(() => {
+    if (!isManager) return;
+    const handleRemoteUpdate = () => {
+      fetchTeamRemoteRequests();
+    };
+    window.addEventListener('hr-remote-attendance-updated', handleRemoteUpdate);
+    return () => window.removeEventListener('hr-remote-attendance-updated', handleRemoteUpdate);
+  }, [isManager, fetchTeamRemoteRequests]);
+
+  const handleRemoteActionSubmit = async (e) => {
+    e.preventDefault();
+    if (!remoteActionModal.item) return;
+    setRemoteActionSubmitting(true);
+    try {
+      const res = await api.patch(`/hr/attendance/remote-requests/${remoteActionModal.item.id}/review`, {
+        status: remoteActionModal.action,
+        manager_notes: remoteActionModal.notes,
+      });
+      toast.success(res.data?.message || 'Remote request updated successfully');
+      setRemoteActionModal({ open: false, item: null, action: 'manager_approved', notes: '' });
+      await fetchTeamRemoteRequests();
+      window.dispatchEvent(new Event('hr-remote-attendance-updated'));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update remote request');
+    } finally {
+      setRemoteActionSubmitting(false);
+    }
+  };
 
   const fetchTeamAdjustments = useCallback(async () => {
     if (!isManager) return;
@@ -238,6 +315,39 @@ const PortalAttendance = () => {
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('remote-approvals')}
+            style={{
+              background: activeTab === 'remote-approvals' ? '#059669' : 'transparent',
+              color: activeTab === 'remote-approvals' ? '#fff' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.45rem 1rem',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <Globe size={15} /> Team Remote
+            {teamRemotePendingCount > 0 && (
+              <span
+                style={{
+                  background: activeTab === 'remote-approvals' ? '#fff' : '#059669',
+                  color: activeTab === 'remote-approvals' ? '#059669' : '#fff',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '999px',
+                }}
+              >
+                {teamRemotePendingCount}
+              </span>
+            )}
+          </button>
         </div>
       )}
 
@@ -410,6 +520,339 @@ const PortalAttendance = () => {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'remote-approvals' ? (
+        /* ── View 3: Manager Team Remote Attendance ── */
+        <div style={{ width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h1 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Globe size={22} color="#059669" />
+                Team Remote Attendance
+              </h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>
+                Review field visits, client surveys, and work-from-home requests with GPS coordinates &amp; photo evidence.
+              </p>
+            </div>
+
+            {/* Status Filter Chips */}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {[
+                { key: 'pending',          label: `Pending Review (${teamRemoteCounts.pending || 0})` },
+                { key: 'manager_approved', label: `Manager Approved (${teamRemoteCounts.manager_approved || 0})` },
+                { key: 'approved',         label: `HR Final (${teamRemoteCounts.approved || 0})` },
+                { key: 'rejected',         label: `Rejected (${teamRemoteCounts.rejected || 0})` },
+                { key: 'all',              label: `All (${teamRemoteCounts.total || 0})` },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setTeamRemoteFilter(f.key)}
+                  style={{
+                    background: teamRemoteFilter === f.key ? '#059669' : 'var(--surface-2)',
+                    color: teamRemoteFilter === f.key ? '#fff' : 'var(--text-muted)',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '0.3rem 0.8rem',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search Box */}
+          <div style={{ marginBottom: '1rem', position: 'relative', maxWidth: '320px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search by employee, location, site..."
+              value={teamRemoteSearch}
+              onChange={e => setTeamRemoteSearch(e.target.value)}
+              className="form-control"
+              style={{ paddingLeft: '2.2rem', fontSize: '0.8rem', height: '34px' }}
+            />
+          </div>
+
+          {/* Requests Content List */}
+          {teamRemoteLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '3rem 0' }}>
+              <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: '#059669' }} />
+            </div>
+          ) : teamRemoteRequests.length === 0 ? (
+            <div className="card" style={{ padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <Globe size={40} style={{ margin: '0 auto 0.75rem', opacity: 0.35, color: '#059669' }} />
+              <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>No remote attendance requests found</div>
+              <p style={{ fontSize: '0.78rem', margin: '0.25rem 0 0' }}>
+                {teamRemoteFilter === 'pending'
+                  ? 'Great job! No field or remote attendance requests awaiting your review.'
+                  : `No requests found for "${teamRemoteFilter}" status.`}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {teamRemoteRequests
+                .filter(item => {
+                  if (!teamRemoteSearch.trim()) return true;
+                  const q = teamRemoteSearch.toLowerCase();
+                  return (
+                    item.employee?.full_name?.toLowerCase().includes(q) ||
+                    item.employee?.employee_id?.toLowerCase().includes(q) ||
+                    item.location_name?.toLowerCase().includes(q) ||
+                    item.address?.toLowerCase().includes(q) ||
+                    item.reason_notes?.toLowerCase().includes(q)
+                  );
+                })
+                .map(item => {
+                  const reqDate = new Date(item.requested_time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                  const reqTime = new Date(item.requested_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                  const isClockIn = item.request_type === 'clock_in';
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="card"
+                      style={{
+                        padding: '1.15rem',
+                        borderLeft: `4px solid ${
+                          item.status === 'approved' ? '#22c55e' :
+                          item.status === 'manager_approved' ? '#0284c7' :
+                          item.status === 'rejected' ? '#ef4444' : '#f59e0b'
+                        }`,
+                        background: 'var(--white)',
+                        borderRadius: '10px',
+                      }}
+                    >
+                      {/* Top Bar: Employee & Request Type */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{
+                            width: '38px', height: '38px', borderRadius: '50%',
+                            background: isClockIn ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                            color: isClockIn ? '#059669' : '#d97706',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 700, fontSize: '0.9rem', flexShrink: 0,
+                          }}>
+                            {item.employee?.full_name?.charAt(0) || 'E'}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--dark)' }}>
+                              {item.employee?.full_name || 'Employee'}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              {item.employee?.designation?.title || item.employee?.department?.name || 'Solar Team'} · {item.employee?.employee_id}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            padding: '0.25rem 0.65rem',
+                            borderRadius: '999px',
+                            background: isClockIn ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
+                            color: isClockIn ? '#059669' : '#d97706',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                          }}>
+                            <Globe size={13} /> {isClockIn ? 'Remote Clock-In' : 'Remote Clock-Out'}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            {reqDate} at {reqTime}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Middle Grid: Location, Map Pin, Reason, and Optional Photo */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                        gap: '0.85rem',
+                        padding: '0.85rem',
+                        background: 'var(--surface)',
+                        borderRadius: '8px',
+                        marginBottom: '0.85rem',
+                        fontSize: '0.8rem',
+                      }}>
+                        {/* Location Details */}
+                        <div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>
+                            Location &amp; Coordinates
+                          </div>
+                          <div style={{ fontWeight: 700, color: 'var(--dark)', marginBottom: '0.2rem' }}>
+                            {item.location_name}
+                          </div>
+                          {item.address && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                              {item.address}
+                            </div>
+                          )}
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                            <span>GPS: {Number(item.latitude).toFixed(5)}, {Number(item.longitude).toFixed(5)}</span>
+                            {item.accuracy_meters && (
+                              <span style={{ color: '#059669', fontWeight: 600 }}>(±{Math.round(item.accuracy_meters)}m)</span>
+                            )}
+                          </div>
+                          <a
+                            href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              color: '#0284c7',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              textDecoration: 'none',
+                              padding: '0.2rem 0.5rem',
+                              background: 'rgba(2,132,199,0.08)',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            <MapPin size={13} /> View on Google Maps <ExternalLink size={11} />
+                          </a>
+                        </div>
+
+                        {/* Reason / Assignment */}
+                        <div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>
+                            Duty Purpose &amp; Summary
+                          </div>
+                          <span style={{
+                            display: 'inline-block',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '4px',
+                            background: 'rgba(99,102,241,0.1)',
+                            color: '#4f46e5',
+                            marginBottom: '0.35rem',
+                          }}>
+                            {REASON_LABELS[item.reason_category] || item.reason_category}
+                          </span>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--dark)', lineHeight: 1.4 }}>
+                            {item.reason_notes}
+                          </div>
+                        </div>
+
+                        {/* Evidence Photo (if attached) */}
+                        {item.evidence_photo_url && (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>
+                              Photo Evidence
+                            </div>
+                            <div
+                              onClick={() => setPreviewPhotoModal({ open: true, url: item.evidence_photo_url, title: `${item.employee?.full_name} · ${item.location_name}` })}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.35rem 0.6rem',
+                                borderRadius: '6px',
+                                border: '1px solid var(--surface-2)',
+                                background: 'var(--white)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <img
+                                src={item.evidence_photo_url}
+                                alt="Evidence"
+                                style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+                              />
+                              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#0284c7' }}>
+                                View Photo <ExternalLink size={11} style={{ display: 'inline' }} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom Status / Review Actions */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
+                        <div>
+                          {item.status === 'pending' && (
+                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '0.25rem 0.6rem', borderRadius: '4px' }}>
+                              Stage 1: Pending Line Manager Review
+                            </span>
+                          )}
+                          {item.status === 'manager_approved' && (
+                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0.25rem 0.6rem', borderRadius: '4px' }}>
+                              Manager Approved ({item.manager_reviewer?.name || 'Line Manager'}) · Awaiting HR Sign-Off
+                            </span>
+                          )}
+                          {item.status === 'approved' && (
+                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '0.25rem 0.6rem', borderRadius: '4px' }}>
+                              ✓ Final Approved by HR ({item.hr_reviewer?.name || 'HR Admin'}) · Shift Recorded
+                            </span>
+                          )}
+                          {item.status === 'rejected' && (
+                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#b91c1c', background: '#fee2e2', padding: '0.25rem 0.6rem', borderRadius: '4px' }}>
+                              ✕ Rejected ({item.manager_reviewer?.name || item.hr_reviewer?.name || 'Reviewer'})
+                            </span>
+                          )}
+                          {(item.manager_review_notes || item.hr_review_notes || item.rejection_reason) && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                              Notes: {item.manager_review_notes || item.hr_review_notes || item.rejection_reason}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons for Pending Requests */}
+                        {item.status === 'pending' && (
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => setRemoteActionModal({ open: true, item, action: 'manager_rejected', notes: '' })}
+                              style={{
+                                background: 'transparent',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239,68,68,0.3)',
+                                borderRadius: '6px',
+                                padding: '0.35rem 0.85rem',
+                                fontSize: '0.76rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                              }}
+                            >
+                              <X size={13} /> Mgr Reject
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRemoteActionModal({ open: true, item, action: 'manager_approved', notes: '' })}
+                              style={{
+                                background: '#059669',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.35rem 0.85rem',
+                                fontSize: '0.76rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                              }}
+                            >
+                              <Check size={13} /> Mgr Approve (Stage 1)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>
@@ -708,6 +1151,112 @@ const PortalAttendance = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manager Review Modal (for Remote Attendance) */}
+      {remoteActionModal.open && remoteActionModal.item && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem',
+          backdropFilter: 'blur(2px)',
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '460px', padding: '1.5rem', background: 'var(--white)', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--dark)' }}>
+              {remoteActionModal.action === 'manager_approved' ? 'Manager Approval (Stage 1)' : 'Manager Rejection'}
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
+              For <strong>{remoteActionModal.item.employee?.full_name}</strong> · Remote {remoteActionModal.item.request_type === 'clock_in' ? 'Clock-In' : 'Clock-Out'} at <strong>{remoteActionModal.item.location_name}</strong>.
+              {remoteActionModal.action === 'manager_approved' ? ' Once approved by manager, this request will be forwarded to HR Admin for final shift creation.' : ' Please state why this remote attendance request is being rejected.'}
+            </p>
+
+            <form onSubmit={handleRemoteActionSubmit}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem', color: 'var(--dark)' }}>
+                  Manager Remarks / Notes {remoteActionModal.action === 'manager_rejected' && <span style={{ color: '#ef4444' }}>*</span>}
+                </label>
+                <textarea
+                  required={remoteActionModal.action === 'manager_rejected'}
+                  rows={3}
+                  className="form-control"
+                  placeholder={remoteActionModal.action === 'manager_approved' ? 'e.g. Verified field assignment with installation team...' : 'e.g. Employee was scheduled at head office, not field site...'}
+                  value={remoteActionModal.notes}
+                  onChange={e => setRemoteActionModal(prev => ({ ...prev, notes: e.target.value }))}
+                  style={{ width: '100%', padding: '0.6rem', fontSize: '0.82rem', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setRemoteActionModal({ open: false, item: null, action: 'manager_approved', notes: '' })}
+                  className="btn btn-ghost"
+                  style={{ border: '1px solid var(--surface-2)', padding: '0.5rem 1rem' }}
+                  disabled={remoteActionSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn"
+                  style={{
+                    background: remoteActionModal.action === 'manager_approved' ? '#059669' : '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '0.5rem 1.25rem',
+                    fontWeight: 600,
+                  }}
+                  disabled={remoteActionSubmitting}
+                >
+                  {remoteActionSubmitting ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Loader2 size={13} className="animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    remoteActionModal.action === 'manager_approved' ? 'Confirm Manager Approval' : 'Confirm Rejection'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Photo Preview Modal */}
+      {previewPhotoModal.open && (
+        <div
+          onClick={() => setPreviewPhotoModal({ open: false, url: '', title: '' })}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300, padding: '1.5rem',
+            cursor: 'zoom-out',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '85vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+              background: '#1e293b', borderRadius: '12px', overflow: 'hidden', cursor: 'default',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{previewPhotoModal.title || 'Evidence Photo'}</span>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoModal({ open: false, url: '', title: '' })}
+                style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: '0.2rem' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ padding: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'auto' }}>
+              <img
+                src={previewPhotoModal.url}
+                alt="Evidence"
+                style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: '6px' }}
+              />
+            </div>
           </div>
         </div>
       )}

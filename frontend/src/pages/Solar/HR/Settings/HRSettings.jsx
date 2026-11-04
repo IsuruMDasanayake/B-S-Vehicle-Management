@@ -270,7 +270,7 @@ export default function HRSettings({ embedded = false }) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '45vh', color: 'var(--text-muted)' }}>
         <Loader2 size={26} style={{ animation: 'spin 1s linear infinite', marginRight: '0.6rem' }} />
-        Loading HR Mail Report Settings...
+        Loading HR Settings...
       </div>
     );
   }
@@ -280,7 +280,7 @@ export default function HRSettings({ embedded = false }) {
       {!embedded && (
         <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>
               HR System Settings
             </h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.88rem' }}>
@@ -766,15 +766,15 @@ export default function HRSettings({ embedded = false }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ background: 'rgba(139,92,246,0.12)', color: '#7c3aed', padding: '0.65rem', borderRadius: '12px', display: 'flex' }}>
+              <div style={{ background: 'rgba(139,92,246,0.12)', color: '#ed3a3aff', padding: '0.65rem', borderRadius: '12px', display: 'flex' }}>
                 <ShieldCheck size={22} />
               </div>
               <div>
                 <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
-                  Approval Managers (Manual Assignment)
+                  Approval Managers
                 </h2>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                  Assign users authorized to approve Leave Requests &amp; Missing Attendance Clock-Out Adjustments. Approvals are strictly assigned manually (not automatic).
+                  Assign users authorized to approve Leave Requests &amp; Missing Attendance Clock-Out Adjustments. Approvals are strictly assigned manually.
                 </div>
               </div>
             </div>
@@ -816,10 +816,10 @@ export default function HRSettings({ embedded = false }) {
                 fontSize: '0.82rem',
                 lineHeight: 1.45,
               }}>
-                <ShieldCheck size={18} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '2px' }} />
+                <ShieldCheck size={18} style={{ color: '#ed3a3aff', flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <strong style={{ color: '#7c3aed' }}>Strict Manual Assignment Policy:</strong>{' '}
-                  Only users assigned below will receive approval capabilities in their Employee Portal (including the <strong>Leave Approvals</strong> tab and <strong>Team Clock-Out Adjustments</strong> tab). Approval rights are <strong>never assigned automatically</strong> based on job title or reporting line.
+                  <strong style={{ color: '#ed3a3aff' }}>Strict Manual Assignment Policy:</strong>{' '}
+                  Only users assigned below will receive approval capabilities in their Employee Portal (including the <strong>Leave Approvals</strong> tab, <strong>Team Clock-Out Adjustments</strong> tab and <strong>Remote Login</strong> tab). Approval rights are <strong>never assigned automatically</strong> based on job title or reporting line.
                 </div>
               </div>
 
