@@ -23,7 +23,7 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
     try {
       const [leaveRes, attRes] = await Promise.allSettled([
         api.get('/hr/leaves/unapproved-counts'),
-        api.get('/hr/attendance/regularizations', { params: { status: 'pending' } }),
+        api.get('/hr/attendance/regularizations', { params: { status: 'all' } }),
       ]);
 
       if (leaveRes.status === 'fulfilled' && leaveRes.value.data) {
@@ -35,7 +35,11 @@ export const HRSidebar = ({ isMobileOpen, closeMobileOpen }) => {
       }
 
       if (attRes.status === 'fulfilled' && attRes.value.data) {
-        setAttendanceCount(attRes.value.data.pending_count ?? 0);
+        if (isSuperAdmin && user?.role !== 'solar_hr_admin' && !user?.roles?.includes('solar_hr_admin')) {
+          setAttendanceCount((attRes.value.data.pending_count ?? 0) + (attRes.value.data.manager_approved_count ?? 0));
+        } else {
+          setAttendanceCount(attRes.value.data.manager_approved_count ?? 0);
+        }
       }
     } catch {
       // silent

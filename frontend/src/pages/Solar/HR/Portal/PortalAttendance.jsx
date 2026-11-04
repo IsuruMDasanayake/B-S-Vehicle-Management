@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Check, X, Clock, Loader2, AlertCircle, Calendar } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import useAuthStore from '../../../../store/authStore';
+import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 
 const STATUS_CELL = {
   present:  { label: 'P',   color: '#fff', bg: '#22c55e',           title: 'Present' },
@@ -25,6 +28,72 @@ const formatHours = (decimal) => {
 };
 
 const PortalAttendance = () => {
+  const user = useAuthStore(s => s.user);
+  const isManager = isLeaveApprovalManager(user) || user?.role === 'super_admin' || user?.role === 'solar_hr_admin';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (isManager && searchParams.get('tab') === 'approvals') ? 'approvals' : 'my';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // ── Manager Team Adjustments State ──
+  const [teamAdjustments, setTeamAdjustments] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamPendingCount, setTeamPendingCount] = useState(0);
+  const [teamFilter, setTeamFilter] = useState('pending'); // 'pending' | 'all'
+  const [managerActionModal, setManagerActionModal] = useState({ open: false, item: null, action: 'manager_approved', notes: '' });
+  const [managerActionSubmitting, setManagerActionSubmitting] = useState(false);
+
+  const fetchTeamAdjustments = useCallback(async () => {
+    if (!isManager) return;
+    setTeamLoading(true);
+    try {
+      const res = await api.get('/hr/attendance/regularizations', { params: { status: teamFilter } });
+      setTeamAdjustments(res.data.data || []);
+      setTeamPendingCount(res.data.pending_count || 0);
+    } catch {
+      // silent
+    } finally {
+      setTeamLoading(false);
+    }
+  }, [isManager, teamFilter]);
+
+  useEffect(() => {
+    if (isManager) {
+      fetchTeamAdjustments();
+    }
+  }, [isManager, fetchTeamAdjustments]);
+
+  // Sync user profile when approval managers are updated in HR settings
+  useEffect(() => {
+    const handleManagerAssignmentChange = async () => {
+      try {
+        await useAuthStore.getState().fetchUser();
+      } catch {}
+    };
+    window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+    return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+  }, []);
+
+  const handleManagerActionSubmit = async (e) => {
+    e.preventDefault();
+    if (!managerActionModal.item) return;
+    setManagerActionSubmitting(true);
+    try {
+      const res = await api.patch(`/hr/attendance/regularizations/${managerActionModal.item.id}`, {
+        status: managerActionModal.action,
+        notes: managerActionModal.notes,
+        admin_notes: managerActionModal.notes,
+      });
+      toast.success(res.data?.message || (managerActionModal.action === 'manager_approved' ? 'Adjustment approved and forwarded to HR' : 'Adjustment rejected'));
+      setManagerActionModal({ open: false, item: null, action: 'manager_approved', notes: '' });
+      await fetchTeamAdjustments();
+      window.dispatchEvent(new Event('hr-attendance-updated'));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update adjustment');
+    } finally {
+      setManagerActionSubmitting(false);
+    }
+  };
+
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -78,7 +147,7 @@ const PortalAttendance = () => {
         requested_clock_out_time: targetDateTime,
         reason: regForm.reason,
       });
-      toast.success('Missing attendance clock-out time submitted for HR approval');
+      toast.success('Missing attendance clock-out time submitted for Manager & HR review');
       setRegModalOpen(false);
       setSelectedReg(null);
       await fetchHistory();
@@ -117,6 +186,236 @@ const PortalAttendance = () => {
 
   return (
     <div style={{ width: '100%' }}>
+      {/* View Tabs for Managers */}
+      {isManager && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--surface-2)', paddingBottom: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('my')}
+            style={{
+              background: activeTab === 'my' ? 'var(--primary, #0284c7)' : 'transparent',
+              color: activeTab === 'my' ? '#fff' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.45rem 1rem',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            My Attendance
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('approvals')}
+            style={{
+              background: activeTab === 'approvals' ? 'var(--primary, #0284c7)' : 'transparent',
+              color: activeTab === 'approvals' ? '#fff' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.45rem 1rem',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            Team Adjustments
+            {teamPendingCount > 0 && (
+              <span
+                style={{
+                  background: activeTab === 'approvals' ? '#fff' : '#ef4444',
+                  color: activeTab === 'approvals' ? '#0284c7' : '#fff',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '999px',
+                }}
+              >
+                {teamPendingCount}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'approvals' ? (
+        /* ── View 2: Manager Team Clock-Out Approvals ── */
+        <div style={{ width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h1 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>Team Clock-Out Adjustments</h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>
+                Review and approve team departure times before forwarding to HR for finalization.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              {[
+                { key: 'pending', label: `Pending Review (${teamPendingCount})` },
+                { key: 'all', label: 'All Requests' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setTeamFilter(f.key)}
+                  style={{
+                    background: teamFilter === f.key ? '#0284c7' : 'var(--surface-2)',
+                    color: teamFilter === f.key ? '#fff' : 'var(--text-muted)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {teamLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+              <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
+              <div>Loading team adjustment requests...</div>
+            </div>
+          ) : teamAdjustments.length === 0 ? (
+            <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No adjustment requests found for this filter.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {teamAdjustments.map(item => {
+                const att = item.attendance;
+                const emp = item.employee;
+                const isPending = item.status === 'pending';
+                const shiftDate = att?.date ? new Date(att.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+                const clockIn = att?.clock_in_time ? new Date(att.clock_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
+                const requestedOut = item.requested_clock_out_time ? new Date(item.requested_clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
+
+                return (
+                  <div
+                    key={item.id}
+                    className="card"
+                    style={{
+                      padding: '1.15rem',
+                      background: 'var(--white)',
+                      borderRadius: '12px',
+                      border: '1px solid var(--surface-2)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--dark)' }}>
+                          {emp?.full_name}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          {emp?.department?.name || 'Staff'} · {emp?.employee_id}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                          Shift: {shiftDate}
+                        </span>
+                        <span
+                          style={{
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '999px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            background: item.status === 'approved' ? 'rgba(34,197,94,0.1)' : item.status === 'manager_approved' ? 'rgba(14,165,233,0.12)' : item.status.includes('rejected') ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.12)',
+                            color: item.status === 'approved' ? '#16a34a' : item.status === 'manager_approved' ? '#0284c7' : item.status.includes('rejected') ? '#dc2626' : '#d97706',
+                          }}
+                        >
+                          {item.status === 'pending' && 'PENDING MGR'}
+                          {item.status === 'manager_approved' && 'MGR APPROVED · PENDING HR'}
+                          {item.status === 'manager_rejected' && 'MGR REJECTED'}
+                          {item.status === 'approved' && 'HR APPROVED'}
+                          {item.status === 'rejected' && 'HR REJECTED'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Details Box */}
+                    <div style={{ background: 'var(--surface)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.78rem', marginBottom: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Recorded In</span>
+                        <strong>{clockIn}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Recorded Out</span>
+                        <span style={{ color: '#d97706' }}>Blank (Missing)</span>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Requested Out</span>
+                        <strong style={{ color: '#0284c7' }}>{requestedOut}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.4 }}>
+                      <strong style={{ color: 'var(--dark)' }}>Reason:</strong> {item.reason}
+                    </div>
+
+                    {item.manager_notes && (
+                      <div style={{ fontSize: '0.72rem', color: '#0284c7', background: 'rgba(14,165,233,0.06)', padding: '0.4rem 0.6rem', borderRadius: '6px', marginBottom: '0.75rem', fontStyle: 'italic' }}>
+                        Mgr Note: {item.manager_notes}
+                      </div>
+                    )}
+
+                    {isPending && (
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', borderTop: '1px solid var(--surface-2)', paddingTop: '0.75rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => setManagerActionModal({ open: true, item, action: 'manager_rejected', notes: '' })}
+                          style={{
+                            background: 'transparent',
+                            color: '#ef4444',
+                            border: '1px solid rgba(239,68,68,0.3)',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.85rem',
+                            fontSize: '0.76rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                          }}
+                        >
+                          <X size={13} /> Mgr Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setManagerActionModal({ open: true, item, action: 'manager_approved', notes: '' })}
+                          style={{
+                            background: '#0284c7',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.85rem',
+                            fontSize: '0.76rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                          }}
+                        >
+                          <Check size={13} /> Mgr Approve
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ── View 1: My Personal Attendance ── */
+        <>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.25rem' }}>My Attendance</h1>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '1.25rem' }}>Monthly overview</p>
 
@@ -335,7 +634,77 @@ const PortalAttendance = () => {
                   style={{ background: '#f59e0b', borderColor: '#f59e0b', padding: '0.5rem 1.25rem', fontWeight: 600 }}
                   disabled={regSubmitting}
                 >
-                  {regSubmitting ? 'Submitting...' : 'Submit to HR'}
+                  {regSubmitting ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Manager Action Modal (for Team Adjustments) */}
+      {managerActionModal.open && managerActionModal.item && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem',
+          backdropFilter: 'blur(2px)',
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '440px', padding: '1.5rem', background: 'var(--white)', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--dark)' }}>
+              {managerActionModal.action === 'manager_approved' ? 'Manager Approval' : 'Manager Rejection'}
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: 1.4 }}>
+              Employee: <strong>{managerActionModal.item.employee?.full_name}</strong> · Shift: {new Date(managerActionModal.item.attendance?.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}<br />
+              Requested Departure: <strong style={{ color: '#0284c7' }}>{new Date(managerActionModal.item.requested_clock_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</strong><br />
+              Reason: <em>"{managerActionModal.item.reason}"</em>
+            </p>
+
+            <form onSubmit={handleManagerActionSubmit}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem', color: 'var(--dark)' }}>
+                  Manager Remarks (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  className="form-control"
+                  placeholder={managerActionModal.action === 'manager_approved' ? 'e.g. Verified site work with project team...' : 'e.g. Clock-out time does not match log...'}
+                  value={managerActionModal.notes}
+                  onChange={e => setManagerActionModal(prev => ({ ...prev, notes: e.target.value }))}
+                  style={{ width: '100%', padding: '0.6rem', fontSize: '0.82rem', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setManagerActionModal({ open: false, item: null, action: 'manager_approved', notes: '' })}
+                  className="btn btn-ghost"
+                  style={{ border: '1px solid var(--surface-2)', padding: '0.5rem 1rem' }}
+                  disabled={managerActionSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn"
+                  style={{
+                    background: managerActionModal.action === 'manager_approved' ? '#0284c7' : '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '0.5rem 1.25rem',
+                    fontWeight: 600,
+                  }}
+                  disabled={managerActionSubmitting}
+                >
+                  {managerActionSubmitting ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Loader2 size={13} className="animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    managerActionModal.action === 'manager_approved' ? 'Confirm Approval' : 'Confirm Rejection'
+                  )}
                 </button>
               </div>
             </form>

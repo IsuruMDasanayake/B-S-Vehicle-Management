@@ -19,33 +19,54 @@ const PortalNav = () => {
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
   const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [pendingAttApprovals, setPendingAttApprovals] = useState(0);
 
   const isManager = isLeaveApprovalManager(user);
 
   useEffect(() => {
-    if (!isManager) return;
+    if (!isManager) {
+      setPendingApprovals(0);
+      setPendingAttApprovals(0);
+      return;
+    }
 
     let mounted = true;
-    const fetchCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const res = await api.get('/hr/leaves/unapproved-counts');
+        const [leaveRes, attRes] = await Promise.all([
+          api.get('/hr/leaves/unapproved-counts'),
+          api.get('/hr/attendance/regularizations', { params: { status: 'pending' } }),
+        ]);
         if (mounted) {
-          setPendingApprovals(res.data?.pending || 0);
+          setPendingApprovals(leaveRes.data?.pending || 0);
+          setPendingAttApprovals(attRes.data?.pending_count || 0);
         }
       } catch {
         // silent
       }
     };
 
-    fetchCount();
+    fetchCounts();
 
-    const handleUpdate = () => fetchCount();
+    const handleUpdate = () => fetchCounts();
     window.addEventListener('hr-leaves-updated', handleUpdate);
+    window.addEventListener('hr-attendance-updated', handleUpdate);
     return () => {
       mounted = false;
       window.removeEventListener('hr-leaves-updated', handleUpdate);
+      window.removeEventListener('hr-attendance-updated', handleUpdate);
     };
   }, [isManager]);
+
+  useEffect(() => {
+    const handleManagerAssignmentChange = async () => {
+      try {
+        await useAuthStore.getState().fetchUser();
+      } catch {}
+    };
+    window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+    return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -101,6 +122,28 @@ const PortalNav = () => {
                     border: '1.5px solid #fff',
                   }}>
                     {pendingApprovals > 99 ? '99+' : pendingApprovals}
+                  </span>
+                )}
+                {to === 'attendance' && isManager && pendingAttApprovals > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-7px',
+                    background: '#f59e0b',
+                    color: '#fff',
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    minWidth: '15px',
+                    height: '15px',
+                    borderRadius: '999px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 3px',
+                    lineHeight: 1,
+                    border: '1.5px solid #fff',
+                  }}>
+                    {pendingAttApprovals > 99 ? '99+' : pendingAttApprovals}
                   </span>
                 )}
               </div>

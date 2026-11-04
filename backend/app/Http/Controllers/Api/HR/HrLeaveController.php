@@ -10,15 +10,9 @@ use Illuminate\Support\Carbon;
 
 class HrLeaveController extends Controller
 {
-    public static array $approvalManagerEmails = [
-        'hasintha@circlegroup.lk',
-        'eranda@circlegroup.lk',
-    ];
-
     public static function isLeaveApprovalManager(?object $user): bool
     {
-        if (!$user || empty($user->email)) return false;
-        return in_array(strtolower(trim($user->email)), self::$approvalManagerEmails, true);
+        return HrSettingController::isApprovalManager($user);
     }
 
     // ── Employee: Get my leave balance ─────────────────────────────────────────
@@ -208,10 +202,15 @@ class HrLeaveController extends Controller
         ]);
 
         try {
-            $adminUsers = \App\Models\User::where(function($q) {
+            $mgrSettings = HrSettingController::getApprovalManagerSettings();
+            $mgrIds = $mgrSettings['manager_user_ids'] ?? [];
+            $mgrEmails = $mgrSettings['manager_emails'] ?? [];
+
+            $adminUsers = \App\Models\User::where(function($q) use ($mgrIds, $mgrEmails) {
                 $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
                   ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']))
-                  ->orWhereIn('email', self::$approvalManagerEmails);
+                  ->orWhereIn('id', $mgrIds)
+                  ->orWhereIn('email', $mgrEmails);
             })->get();
 
             foreach ($adminUsers as $adminUser) {

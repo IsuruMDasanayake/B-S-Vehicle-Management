@@ -158,6 +158,17 @@ const PortalLeave = () => {
     fetchData();
   }, [fetchData]);
 
+  // Sync user profile when approval managers are updated in HR settings
+  useEffect(() => {
+    const handleManagerAssignmentChange = async () => {
+      try {
+        await useAuthStore.getState().fetchUser();
+      } catch {}
+    };
+    window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+    return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+  }, []);
+
   // Switch tabs
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey);

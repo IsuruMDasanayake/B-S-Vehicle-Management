@@ -23,6 +23,21 @@ class HrAttendanceController extends Controller
     const SHIFT_END    = '17:30:00'; // Official end (5:30 PM)
     const HALF_DAY_HRS = 4.5;        // Below this = half day
 
+    // ── Management Approvers (General Manager & Project Director / CEO) ───────
+    public static array $managementApproverEmails = [
+        'hasintha@circlegroup.lk',
+        'eranda@circlegroup.lk',
+    ];
+
+    /**
+     * Check if user is authorized as an adjustment manager.
+     * Rule: Only users explicitly assigned in HR Settings (or Super Admin) have approval authority.
+     */
+    public static function isAdjustmentManager(?object $user, ?HrEmployee $targetEmployee = null): bool
+    {
+        return HrSettingController::isApprovalManager($user);
+    }
+
     // ── Haversine distance (meters) ────────────────────────────────────────────
     private function getDistance($lat1, $lon1, $lat2, $lon2): float
     {
@@ -785,39 +800,69 @@ class HrAttendanceController extends Controller
         );
 
         try {
-            $adminUsers = User::where(function($q) {
-                $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
-                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
-            })->get();
-
             $dateFormatted = Carbon::parse($att->date)->format('d M');
             $timeFormatted = $requestedTime->copy()->timezone('Asia/Colombo')->format('h:i A');
 
-            Notification::send($adminUsers, new HrNotification([
-                'division'   => 'hr',
-                'category'   => 'attendance',
-                'severity'   => 'warning',
-                'title'      => 'Missing Attendance Time Request',
-                'message'    => "{$employee->full_name} submitted a clock-out time ({$timeFormatted}) for missing attendance on {$dateFormatted}.",
-                'link'       => '/solar/hr/admin/attendance',
-                'source_id'  => $regularization->id,
-            ]));
+            // Resolve manually assigned approval managers from HR Settings
+            $mgrSettings = HrSettingController::getApprovalManagerSettings();
+            $mgrIds = $mgrSettings['manager_user_ids'] ?? [];
+            $mgrEmails = $mgrSettings['manager_emails'] ?? [];
+
+            $approverUsers = User::where(function($q) use ($mgrIds, $mgrEmails) {
+                $q->whereIn('id', $mgrIds)
+                  ->orWhereIn('email', $mgrEmails);
+            })->get();
+
+            // Dispatch notification to assigned Approval Managers
+            foreach ($approverUsers as $mgr) {
+                $mgr->notify(new HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'attendance',
+                    'severity'   => 'warning',
+                    'title'      => 'Missing Attendance Adjustment Request',
+                    'message'    => "{$employee->full_name} submitted clock-out time ({$timeFormatted}) for {$dateFormatted}. Awaiting Manager review.",
+                    'link'       => '/solar/hr/portal/attendance?tab=approvals',
+                    'source_id'  => $regularization->id,
+                ]));
+            }
+
+            // Inform HR Admins that a request has arrived
+            $hrAdmins = User::where(function($q) {
+                $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                  ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+            })->whereNotIn('id', $approverUsers->pluck('id'))->get();
+
+            if ($hrAdmins->isNotEmpty()) {
+                Notification::send($hrAdmins, new HrNotification([
+                    'division'   => 'hr',
+                    'category'   => 'attendance',
+                    'severity'   => 'info',
+                    'title'      => 'Missing Attendance Adjustment Request',
+                    'message'    => "{$employee->full_name} submitted clock-out time ({$timeFormatted}) for {$dateFormatted}. (Pending Manager Review)",
+                    'link'       => '/solar/hr/admin/attendance',
+                    'source_id'  => $regularization->id,
+                ]));
+            }
         } catch (\Throwable $e) {
             Log::error('Regularization notification error: ' . $e->getMessage());
         }
 
         return response()->json([
-            'message' => 'Missing attendance clock-out time request submitted to HR.',
+            'message' => 'Missing attendance clock-out time request submitted for Line Manager / Management review.',
             'data'    => $regularization->load('attendance'),
         ], 201);
     }
 
     /**
-     * HR Admin: List regularization requests
+     * HR Admin / Manager: List regularization requests
      */
     public function listRegularizations(Request $request)
     {
-        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+        $user = $request->user();
+        $isHR = $user->hasRole('super_admin') || $user->hasRole('solar_hr_admin');
+        $isMgr = self::isAdjustmentManager($user);
+
+        if (!$isHR && !$isMgr) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -825,49 +870,165 @@ class HrAttendanceController extends Controller
 
         $query = HrAttendanceRegularization::with([
             'employee.department',
+            'employee.manager.user',
             'attendance.clockInLocation',
             'reviewer',
+            'managerReviewer',
         ])->orderByDesc('created_at');
 
         if ($status && $status !== 'all') {
-            $query->where('status', $status);
+            if ($status === 'pending') {
+                $query->where('status', 'pending');
+            } elseif ($status === 'manager_approved') {
+                $query->where('status', 'manager_approved');
+            } elseif ($status === 'approved') {
+                $query->where('status', 'approved');
+            } elseif ($status === 'rejected') {
+                $query->whereIn('status', ['rejected', 'manager_rejected']);
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         $records = $query->get();
-        $pendingCount = HrAttendanceRegularization::where('status', 'pending')->count();
+
+        // Calculate counts
+        $baseCountQuery = HrAttendanceRegularization::query();
+
+        $pendingCount = (clone $baseCountQuery)->where('status', 'pending')->count();
+        $mgrApprovedCount = (clone $baseCountQuery)->where('status', 'manager_approved')->count();
+        $approvedCount = (clone $baseCountQuery)->where('status', 'approved')->count();
+        $rejectedCount = (clone $baseCountQuery)->whereIn('status', ['rejected', 'manager_rejected'])->count();
 
         return response()->json([
-            'data'          => $records,
-            'pending_count' => $pendingCount,
+            'data'                   => $records,
+            'pending_count'          => $pendingCount,
+            'manager_approved_count' => $mgrApprovedCount,
+            'approved_count'         => $approvedCount,
+            'rejected_count'         => $rejectedCount,
         ]);
     }
 
     /**
-     * HR Admin: Approve or reject clock-out adjustment
+     * Approve or reject clock-out adjustment:
+     * Stage 1: Line Manager / General Manager / Project Director (status: manager_approved / manager_rejected)
+     * Stage 2: HR Admin (status: approved / rejected)
      */
     public function updateRegularization(Request $request, $id)
     {
-        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+        $user = $request->user();
+        $isHR = $user->hasRole('super_admin') || $user->hasRole('solar_hr_admin');
+        $isMgr = self::isAdjustmentManager($user);
+
+        if (!$isHR && !$isMgr) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $this->ensureStatusColumnSupportsMissing();
 
         $validated = $request->validate([
-            'status'      => 'required|in:approved,rejected',
+            'status'      => 'required|in:manager_approved,manager_rejected,approved,rejected',
+            'notes'       => 'nullable|string|max:500',
             'admin_notes' => 'nullable|string|max:500',
         ]);
 
-        $reg = HrAttendanceRegularization::with(['attendance', 'employee.user'])->findOrFail($id);
+        $notes = $validated['notes'] ?? $validated['admin_notes'] ?? null;
+        $status = $validated['status'];
 
-        if ($reg->status !== 'pending') {
-            return response()->json(['message' => 'This request has already been reviewed.'], 422);
-        }
-
+        $reg = HrAttendanceRegularization::with(['attendance', 'employee.user', 'employee.manager'])->findOrFail($id);
         $att = $reg->attendance;
         $emp = $reg->employee;
 
-        if ($validated['status'] === 'approved') {
+        // ── Stage 1: Line Manager / General Manager / Project Director Review ──
+        if (str_starts_with($status, 'manager_')) {
+            if (!self::isAdjustmentManager($user, $emp)) {
+                return response()->json([
+                    'message' => 'Unauthorized. Line Manager, General Manager, or Project Director approval required.'
+                ], 403);
+            }
+
+            if ($reg->status !== 'pending') {
+                return response()->json([
+                    'message' => 'This request is not pending manager review.'
+                ], 422);
+            }
+
+            $reg->update([
+                'status'              => $status,
+                'manager_approved_by' => $user->id,
+                'manager_approved_at' => Carbon::now(),
+                'manager_notes'       => $notes,
+            ]);
+
+            try {
+                $dateStr = Carbon::parse($att->date)->format('d M');
+                if ($status === 'manager_approved') {
+                    // Notify HR Admins that manager approved and awaiting HR final sign-off
+                    $hrAdmins = User::where(function($q) {
+                        $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                          ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+                    })->where('id', '!=', $user->id)->get();
+
+                    Notification::send($hrAdmins, new HrNotification([
+                        'division'   => 'hr',
+                        'category'   => 'attendance',
+                        'severity'   => 'info',
+                        'title'      => 'Adjustment Approved by Manager',
+                        'message'    => "Manager approved clock-out adjustment for {$emp?->full_name} ({$dateStr}). Awaiting HR final approval.",
+                        'link'       => '/solar/hr/admin/attendance',
+                        'source_id'  => $reg->id,
+                    ]));
+
+                    // Notify employee
+                    if ($emp?->user) {
+                        $emp->user->notify(new HrNotification([
+                            'division'   => 'hr',
+                            'category'   => 'attendance',
+                            'severity'   => 'info',
+                            'title'      => 'Missing Attendance Manager-Approved',
+                            'message'    => "Your clock-out adjustment for {$dateStr} was approved by Manager and forwarded to HR for final sign-off.",
+                            'link'       => '/solar/hr/portal/home',
+                            'source_id'  => $reg->id,
+                        ]));
+                    }
+                } else {
+                    // Manager rejected
+                    if ($emp?->user) {
+                        $emp->user->notify(new HrNotification([
+                            'division'   => 'hr',
+                            'category'   => 'attendance',
+                            'severity'   => 'danger',
+                            'title'      => 'Missing Attendance Request Rejected',
+                            'message'    => "Your clock-out adjustment request for {$dateStr} was rejected by Manager." . ($notes ? " Note: {$notes}" : ''),
+                            'link'       => '/solar/hr/portal/home',
+                            'source_id'  => $reg->id,
+                        ]));
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error('Regularization manager notification error: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'message' => $status === 'manager_approved' 
+                    ? 'Adjustment approved by Manager and forwarded to HR.'
+                    : 'Adjustment rejected by Manager.',
+                'data'    => $reg->load(['attendance', 'reviewer', 'managerReviewer']),
+            ]);
+        }
+
+        // ── Stage 2: HR Final Approval (approved / rejected) ──
+        if (!$isHR) {
+            return response()->json(['message' => 'Unauthorized for HR finalization.'], 403);
+        }
+
+        if ($reg->status !== 'manager_approved') {
+            return response()->json([
+                'message' => 'Line Manager / General Manager / Project Director approval is required before HR can finalize this request.',
+            ], 422);
+        }
+
+        if ($status === 'approved') {
             $newClockOut = Carbon::parse($reg->requested_clock_out_time);
             $clockIn = Carbon::parse($att->clock_in_time);
             $hoursWorked = round($clockIn->diffInMinutes($newClockOut) / 60, 2);
@@ -877,39 +1038,39 @@ class HrAttendanceController extends Controller
             $earlyDepart = $localClockOut->lessThan($shiftEnd);
 
             $baseStatus = $this->deriveStatus($clockIn, Carbon::parse($att->date)->toDateString());
-            $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $baseStatus;
+            $attStatus = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $baseStatus;
 
             $att->update([
                 'clock_out_time'     => $newClockOut,
                 'working_hours'      => $hoursWorked,
                 'early_departure'    => $earlyDepart && $hoursWorked >= self::HALF_DAY_HRS,
-                'status'             => $status,
+                'status'             => $attStatus,
                 'is_manual_override' => true,
                 'is_auto_clock_out'  => false,
-                'approved_by'        => $request->user()->id,
+                'approved_by'        => $user->id,
                 'notes'              => 'Regularized by HR: ' . $reg->reason,
             ]);
         }
 
         $reg->update([
-            'status'      => $validated['status'],
-            'reviewed_by' => $request->user()->id,
-            'admin_notes' => $validated['admin_notes'] ?? null,
+            'status'      => $status,
+            'reviewed_by' => $user->id,
+            'admin_notes' => $notes,
         ]);
 
-        // Notify employee
+        // Notify employee of final outcome
         try {
             if ($emp?->user) {
                 $dateStr = Carbon::parse($att->date)->format('d M');
-                $isApp = $validated['status'] === 'approved';
+                $isApp = $status === 'approved';
                 $emp->user->notify(new HrNotification([
                     'division'   => 'hr',
                     'category'   => 'attendance',
                     'severity'   => $isApp ? 'success' : 'danger',
-                    'title'      => $isApp ? 'Missing Attendance Approved' : 'Missing Attendance Request Rejected',
+                    'title'      => $isApp ? 'Missing Attendance Officially Approved' : 'Missing Attendance Request Rejected',
                     'message'    => $isApp 
-                        ? "HR approved your clock-out time for {$dateStr}."
-                        : "HR rejected your clock-out time request for {$dateStr}." . ($validated['admin_notes'] ? " Note: {$validated['admin_notes']}" : ''),
+                        ? "HR officially approved your clock-out time for {$dateStr}."
+                        : "HR rejected your clock-out time request for {$dateStr}." . ($notes ? " Note: {$notes}" : ''),
                     'link'       => '/solar/hr/portal/home',
                     'source_id'  => $reg->id,
                 ]));
@@ -919,8 +1080,8 @@ class HrAttendanceController extends Controller
         }
 
         return response()->json([
-            'message' => "Request has been {$validated['status']}.",
-            'data'    => $reg->load(['attendance', 'reviewer']),
+            'message' => "Request has been finalized as {$status} by HR.",
+            'data'    => $reg->load(['attendance', 'reviewer', 'managerReviewer']),
         ]);
     }
 }

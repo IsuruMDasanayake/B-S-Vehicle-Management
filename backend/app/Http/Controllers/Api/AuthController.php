@@ -43,6 +43,7 @@ class AuthController extends Controller
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
                 'force_password_change' => (bool) $user->force_password_change,
+                'is_approval_manager' => \App\Http\Controllers\Api\HR\HrSettingController::isApprovalManager($user),
             ]
         ]);
     }
@@ -65,6 +66,7 @@ class AuthController extends Controller
                 'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : ['driver'],
                 'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
                 'force_password_change' => isset($user->force_password_change) ? (bool) $user->force_password_change : false,
+                'is_approval_manager' => \App\Http\Controllers\Api\HR\HrSettingController::isApprovalManager($user),
             ]
         ]);
     }

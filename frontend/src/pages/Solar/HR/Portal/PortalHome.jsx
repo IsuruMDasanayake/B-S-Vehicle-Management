@@ -59,6 +59,7 @@ const PortalHome = () => {
   const [clocking, setClocking] = useState(false);
   const [now, setNow] = useState(new Date());
   const [pendingLeaveApprovals, setPendingLeaveApprovals] = useState(0);
+  const [pendingAttApprovals, setPendingAttApprovals] = useState(0);
   
   // Location alert state
   const [locations, setLocations] = useState([]);
@@ -128,11 +129,15 @@ const PortalHome = () => {
       }, { present: 0, missing: 0, absent: 0, late: 0, halfDay: 0 });
       setMonthStats(stats);
 
-      // Check pending leave approvals for executive manager
+      // Check pending leave and attendance approvals for executive manager
       if (isManager) {
         try {
-          const unapprovedRes = await api.get('/hr/leaves/unapproved-counts');
+          const [unapprovedRes, attRegRes] = await Promise.all([
+            api.get('/hr/leaves/unapproved-counts'),
+            api.get('/hr/attendance/regularizations', { params: { status: 'pending' } }),
+          ]);
           setPendingLeaveApprovals(unapprovedRes.data?.pending || 0);
+          setPendingAttApprovals(attRegRes.data?.pending_count || 0);
         } catch {
           // silent
         }
@@ -147,20 +152,41 @@ const PortalHome = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Listen to leave updates for real-time manager count
+  // Listen to leave and attendance updates for real-time manager count
   useEffect(() => {
     if (!isManager) return;
     const handleUpdate = async () => {
       try {
-        const res = await api.get('/hr/leaves/unapproved-counts');
-        setPendingLeaveApprovals(res.data?.pending || 0);
+        const [unapprovedRes, attRegRes] = await Promise.all([
+          api.get('/hr/leaves/unapproved-counts'),
+          api.get('/hr/attendance/regularizations', { params: { status: 'pending' } }),
+        ]);
+        setPendingLeaveApprovals(unapprovedRes.data?.pending || 0);
+        setPendingAttApprovals(attRegRes.data?.pending_count || 0);
       } catch {
         // silent
       }
     };
     window.addEventListener('hr-leaves-updated', handleUpdate);
-    return () => window.removeEventListener('hr-leaves-updated', handleUpdate);
+    window.addEventListener('hr-attendance-updated', handleUpdate);
+    window.addEventListener('hr-approval-managers-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('hr-leaves-updated', handleUpdate);
+      window.removeEventListener('hr-attendance-updated', handleUpdate);
+      window.removeEventListener('hr-approval-managers-updated', handleUpdate);
+    };
   }, [isManager]);
+
+  // Sync user profile when approval manager assignments change in settings
+  useEffect(() => {
+    const handleManagerAssignmentChange = async () => {
+      try {
+        await useAuthStore.getState().fetchUser();
+      } catch {}
+    };
+    window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+    return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+  }, []);
 
   const handleEnablePush = async () => {
     setPushLoading(true);
@@ -207,7 +233,7 @@ const PortalHome = () => {
         reason: regForm.reason,
       });
 
-      toast.success('Time adjustment request submitted to HR.');
+      toast.success('Time adjustment request submitted for Manager & HR approval.');
       setRegModalOpen(false);
       await fetchData();
     } catch (err) {
@@ -406,6 +432,62 @@ const PortalHome = () => {
               </div>
               <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                 Employee requests waiting for Manager Approval
+              </p>
+            </div>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            color: '#0284c7',
+            flexShrink: 0,
+          }}>
+            <span>Review</span>
+            <ChevronRight size={16} />
+          </div>
+        </div>
+      )}
+
+      {/* Clock-Out Adjustments Approval Alert for Managers */}
+      {isManager && pendingAttApprovals > 0 && (
+        <div
+          className="card"
+          onClick={() => navigate('/solar/hr/portal/attendance?tab=approvals')}
+          style={{
+            padding: '1rem 1.15rem',
+            marginBottom: '1.25rem',
+            background: 'linear-gradient(135deg, rgba(2,132,199,0.08) 0%, rgba(14,165,233,0.04) 100%)',
+            border: '1px solid rgba(2,132,199,0.25)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'rgba(2,132,199,0.15)',
+              color: '#0284c7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Clock size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>
+                {pendingAttApprovals} Clock-Out Adjustment{pendingAttApprovals > 1 ? 's' : ''} Awaiting Approval
+              </div>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                Missing attendance submissions waiting for Line Manager / Management sign-off
               </p>
             </div>
           </div>
@@ -911,7 +993,7 @@ const PortalHome = () => {
                   style={{ background: '#f59e0b', borderColor: '#f59e0b', padding: '0.5rem 1.25rem', fontWeight: 600 }}
                   disabled={regSubmitting}
                 >
-                  {regSubmitting ? 'Submitting...' : 'Submit to HR'}
+                  {regSubmitting ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
             </form>

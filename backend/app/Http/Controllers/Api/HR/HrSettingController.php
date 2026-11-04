@@ -3,11 +3,190 @@
 namespace App\Http\Controllers\Api\HR;
 
 use App\Http\Controllers\Controller;
+use App\Models\HrEmployee;
+use App\Models\Setting;
+use App\Models\User;
 use App\Services\HrAttendanceLeaveReportService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class HrSettingController extends Controller
 {
+    /**
+     * Default approval managers (Hasintha & Eranda)
+     */
+    public static array $defaultApprovalManagerEmails = [
+        'hasintha@circlegroup.lk',
+        'eranda@circlegroup.lk',
+    ];
+
+    /**
+     * Get persisted approval manager settings (from Setting table or local storage cache).
+     */
+    public static function getApprovalManagerSettings(): array
+    {
+        try {
+            $dbSetting = Setting::where('key', 'hr_approval_managers')->first();
+            if ($dbSetting && !empty($dbSetting->value)) {
+                $data = is_array($dbSetting->value) ? $dbSetting->value : json_decode($dbSetting->value, true);
+                if (is_array($data) && isset($data['manager_user_ids'])) {
+                    return $data;
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        try {
+            if (Storage::disk('local')->exists('hr_approval_managers.json')) {
+                $raw = json_decode(Storage::disk('local')->get('hr_approval_managers.json'), true);
+                if (is_array($raw) && isset($raw['manager_user_ids'])) {
+                    return $raw;
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        // Fallback default seed
+        $defaultUsers = User::whereIn('email', self::$defaultApprovalManagerEmails)->get();
+        $defaultIds = $defaultUsers->pluck('id')->map(fn($id) => (int) $id)->values()->all();
+
+        return [
+            'manager_user_ids' => $defaultIds,
+            'manager_emails'   => self::$defaultApprovalManagerEmails,
+            'updated_at'       => null,
+            'updated_by'       => null,
+        ];
+    }
+
+    /**
+     * Strict check whether a given user has manager approval privileges.
+     * Rule: Only users explicitly assigned in HR Settings (or Super Admin) have approval authority.
+     * No automatic title/reporting line assignment.
+     */
+    public static function isApprovalManager(?object $user): bool
+    {
+        if (!$user) return false;
+
+        // Super Admin always has full override
+        if ((method_exists($user, 'hasRole') && $user->hasRole('super_admin')) || ($user->role ?? null) === 'super_admin') {
+            return true;
+        }
+
+        $settings = self::getApprovalManagerSettings();
+
+        // 1. Check User ID match
+        $managerIds = array_map('intval', $settings['manager_user_ids'] ?? []);
+        if (!empty($user->id) && in_array((int) $user->id, $managerIds, true)) {
+            return true;
+        }
+
+        // 2. Check User Email match
+        $managerEmails = array_map(fn($e) => strtolower(trim((string) $e)), $settings['manager_emails'] ?? []);
+        $userEmail = strtolower(trim($user->email ?? ''));
+        if (!empty($userEmail) && in_array($userEmail, $managerEmails, true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * GET /api/hr/settings/approval-managers
+     * Fetch list of assignable users and currently assigned manager IDs.
+     */
+    public function getApprovalManagers(Request $request)
+    {
+        if (!$this->authorizeSuperOrHrAdmin($request)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $settings = self::getApprovalManagerSettings();
+        $managerIds = array_map('intval', $settings['manager_user_ids'] ?? []);
+
+        // Load all active users
+        $users = User::select('id', 'name', 'email', 'role', 'status')
+            ->where('status', '!=', 'inactive')
+            ->orderBy('name')
+            ->get();
+
+        // Load HR employees with department & designation
+        $employees = HrEmployee::with(['department:id,name', 'designation:id,title'])
+            ->get()
+            ->keyBy('user_id');
+
+        $available = $users->map(function ($u) use ($employees, $managerIds) {
+            $emp = $employees->get($u->id);
+            $isAssigned = in_array((int) $u->id, $managerIds, true);
+
+            return [
+                'id'                => (int) $u->id,
+                'name'              => $emp?->full_name ?: $u->name,
+                'email'             => $u->email,
+                'role'              => $u->role,
+                'department_name'   => $emp?->department?->name ?? '—',
+                'designation_title' => $emp?->designation?->title ?? '—',
+                'employee_code'     => $emp?->employee_id ?? null,
+                'is_assigned'       => $isAssigned,
+            ];
+        });
+
+        return response()->json([
+            'manager_user_ids' => $managerIds,
+            'available_users'  => $available,
+            'updated_at'       => $settings['updated_at'] ?? null,
+        ]);
+    }
+
+    /**
+     * PUT /api/hr/settings/approval-managers
+     * Save manual approval manager assignments.
+     */
+    public function saveApprovalManagers(Request $request)
+    {
+        if (!$this->authorizeSuperOrHrAdmin($request)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'manager_user_ids'   => 'nullable|array',
+            'manager_user_ids.*' => 'integer',
+        ]);
+
+        $rawIds = $validated['manager_user_ids'] ?? [];
+        $cleanIds = array_values(array_unique(array_filter(array_map('intval', $rawIds), fn($id) => $id > 0)));
+
+        $users = User::whereIn('id', $cleanIds)->get();
+        $validIds = $users->pluck('id')->map(fn($id) => (int) $id)->values()->all();
+        $validEmails = $users->pluck('email')
+            ->filter()
+            ->map(fn($e) => strtolower(trim($e)))
+            ->unique()
+            ->values()
+            ->all();
+
+        $payload = [
+            'manager_user_ids' => $validIds,
+            'manager_emails'   => $validEmails,
+            'updated_at'       => Carbon::now('Asia/Colombo')->toIso8601String(),
+            'updated_by'       => $request->user()?->id,
+        ];
+
+        Setting::updateOrCreate(
+            ['key' => 'hr_approval_managers'],
+            ['value' => json_encode($payload)]
+        );
+
+        try {
+            Storage::disk('local')->put('hr_approval_managers.json', json_encode($payload, JSON_PRETTY_PRINT));
+        } catch (\Throwable $e) {}
+
+        return response()->json([
+            'message'          => 'Approval managers saved successfully.',
+            'manager_user_ids' => $validIds,
+            'manager_emails'   => $validEmails,
+            'updated_at'       => $payload['updated_at'],
+        ]);
+    }
+
     private function authorizeSuperOrHrAdmin(Request $request): bool
     {
         $user = $request->user();
