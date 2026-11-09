@@ -16,12 +16,13 @@ import {
 } from '../../../../utils/pushNotifications';
 
 const STATUS_COLORS = {
-  present:  { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'Present' },
-  late:     { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Late' },
-  missing:  { color: '#e11d48', bg: 'rgba(225,29,72,0.12)',  label: 'Missing Attendance' },
-  absent:   { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'Absent' },
-  half_day: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', label: 'Half Day' },
-  leave:    { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'Leave (LV)' },
+  present:     { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'Present' },
+  late:        { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Late' },
+  short_leave: { color: '#0891b2', bg: 'rgba(6,182,212,0.12)',  label: 'Short Leave (SL)' },
+  missing:     { color: '#e11d48', bg: 'rgba(225,29,72,0.12)',  label: 'Missing Attendance' },
+  absent:      { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'Absent' },
+  half_day:    { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', label: 'Half Day' },
+  leave:       { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'Leave (LV)' },
 };
 
 const formatTime = (isoStr) => {
@@ -141,13 +142,14 @@ const PortalHome = () => {
       // Calculate month stats
       const records = histRes.data || [];
       const stats = records.reduce((a, r) => {
-        if (r.status === 'present' || r.status === 'late') a.present++;
+        if (r.status === 'present' || r.status === 'late' || r.status === 'short_leave') a.present++;
+        if (r.status === 'short_leave') a.shortLeave++;
         if (r.status === 'missing') a.missing++;
         if (r.status === 'absent') a.absent++;
         if (r.status === 'late') a.late++;
         if (r.status === 'half_day') a.halfDay++;
         return a;
-      }, { present: 0, missing: 0, absent: 0, late: 0, halfDay: 0 });
+      }, { present: 0, missing: 0, absent: 0, late: 0, halfDay: 0, shortLeave: 0 });
       setMonthStats(stats);
 
       // Check pending leave, attendance, and remote approvals for executive manager
@@ -1272,13 +1274,14 @@ const PortalHome = () => {
                   View All <ChevronRight size={14} />
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.4rem' }}>
                 {[
-                  { label: 'Present', val: monthStats.present, color: '#22c55e' },
-                  { label: 'Late',    val: monthStats.late,    color: '#f59e0b' },
-                  { label: 'Missing', val: monthStats.missing, color: '#e11d48' },
-                  { label: 'Absent',  val: monthStats.absent,  color: '#ef4444' },
-                  { label: 'Half',    val: monthStats.halfDay, color: '#8b5cf6' },
+                  { label: 'Present',  val: monthStats.present,    color: '#22c55e' },
+                  { label: 'Late',     val: monthStats.late,       color: '#f59e0b' },
+                  { label: 'Short Lv', val: monthStats.shortLeave, color: '#0891b2' },
+                  { label: 'Missing',  val: monthStats.missing,    color: '#e11d48' },
+                  { label: 'Absent',   val: monthStats.absent,     color: '#ef4444' },
+                  { label: 'Half',     val: monthStats.halfDay,    color: '#8b5cf6' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center', padding: '0.6rem 0.25rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
                     <div style={{ fontSize: '1.2rem', fontWeight: 700, color: s.color }}>{s.val}</div>

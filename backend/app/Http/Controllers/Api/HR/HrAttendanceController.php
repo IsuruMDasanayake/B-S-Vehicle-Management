@@ -430,7 +430,7 @@ class HrAttendanceController extends Controller
             'date'           => 'required|date',
             'clock_in_time'  => 'nullable|date',
             'clock_out_time' => 'nullable|date',
-            'status'         => 'required|in:present,absent,late,half_day,leave,missing',
+            'status'         => 'required|in:present,absent,late,half_day,leave,missing,short_leave',
             'notes'          => 'nullable|string',
         ]);
 
@@ -466,7 +466,7 @@ class HrAttendanceController extends Controller
         $validated = $request->validate([
             'clock_in_time'  => 'nullable|date',
             'clock_out_time' => 'nullable|date',
-            'status'         => 'required|in:present,absent,late,half_day,leave,missing',
+            'status'         => 'required|in:present,absent,late,half_day,leave,missing,short_leave',
             'notes'          => 'nullable|string',
         ]);
 
@@ -597,7 +597,7 @@ class HrAttendanceController extends Controller
                 }
             }
 
-            $attended = $att->whereIn('status', ['present', 'late'])->count();
+            $attended = $att->whereIn('status', ['present', 'late', 'short_leave'])->count();
             return [
                 'employee_id'          => $emp->employee_id,
                 'name'                 => $emp->full_name,
@@ -605,6 +605,7 @@ class HrAttendanceController extends Controller
                 'working_days'         => $workingDays,
                 'present'              => $att->where('status', 'present')->count(),
                 'late'                 => $att->where('status', 'late')->count(),
+                'short_leave'          => $att->where('status', 'short_leave')->count(),
                 'half_day'             => $att->where('status', 'half_day')->count(),
                 'missing'              => $att->where('status', 'missing')->count(),
                 'leave'                => $leaveDaysCount + $att->where('status', 'leave')->count(),

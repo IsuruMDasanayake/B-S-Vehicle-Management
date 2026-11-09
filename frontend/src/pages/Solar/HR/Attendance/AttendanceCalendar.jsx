@@ -6,14 +6,15 @@ import toast from 'react-hot-toast';
 
 // Status display: P / A / L / M / H / LV
 const STATUS_CELL = {
-  present:  { label: 'P',   color: '#fff',    bg: '#22c55e',           title: 'Present' },
-  late:     { label: 'L',   color: '#fff',    bg: '#f59e0b',           title: 'Late' },
-  missing:  { label: 'M',   color: '#fff',    bg: '#e11d48',           title: 'Missing Attendance' },
-  absent:   { label: 'A',   color: '#fff',    bg: '#ef4444',           title: 'Absent' },
-  half_day: { label: 'H',   color: '#fff',    bg: '#8b5cf6',           title: 'Half Day' },
-  leave:    { label: 'LV',  color: '#fff',    bg: '#3b82f6',           title: 'Leave' },
-  weekend:  { label: '—',   color: '#6b7280', bg: 'var(--surface-2)', title: 'Weekend' },
-  holiday:  { label: 'PH',  color: '#fff',    bg: '#ec4899',           title: 'Holiday / Poya' },
+  present:     { label: 'P',   color: '#fff',    bg: '#22c55e',           title: 'Present' },
+  late:        { label: 'L',   color: '#fff',    bg: '#f59e0b',           title: 'Late' },
+  short_leave: { label: 'SL',  color: '#fff',    bg: '#0891b2',           title: 'Short Leave' },
+  missing:     { label: 'M',   color: '#fff',    bg: '#e11d48',           title: 'Missing Attendance' },
+  absent:      { label: 'A',   color: '#fff',    bg: '#ef4444',           title: 'Absent' },
+  half_day:    { label: 'H',   color: '#fff',    bg: '#8b5cf6',           title: 'Half Day' },
+  leave:       { label: 'LV',  color: '#fff',    bg: '#3b82f6',           title: 'Leave' },
+  weekend:     { label: '—',   color: '#6b7280', bg: 'var(--surface-2)', title: 'Weekend' },
+  holiday:     { label: 'PH',  color: '#fff',    bg: '#ec4899',           title: 'Holiday / Poya' },
 };
 
 const isWeekend = (dateStr) => {
@@ -69,7 +70,7 @@ const AttendanceCalendar = () => {
   const getSummary = (empId) => {
     const rec = attendanceMap[empId] || {};
     const todayStr = new Date().toISOString().split('T')[0];
-    const counts = { present: 0, late: 0, missing: 0, absent: 0, half_day: 0, leave: 0 };
+    const counts = { present: 0, late: 0, short_leave: 0, missing: 0, absent: 0, half_day: 0, leave: 0 };
     dayNums.forEach(d => {
       const dateStr = `${monthStr}-${String(d).padStart(2, '0')}`;
       if (isWeekend(dateStr)) return;
@@ -142,6 +143,7 @@ const AttendanceCalendar = () => {
                 })}
                 <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>P</th>
                 <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>L</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>SL</th>
                 <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>M</th>
                 <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>LV</th>
                 <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', background: 'var(--surface)', borderBottom: '1px solid var(--surface-2)', fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '54px' }}>A</th>
@@ -178,8 +180,9 @@ const AttendanceCalendar = () => {
                         </td>
                       );
                     })}
-                    <td style={{ textAlign: 'center', fontWeight: 600, color: '#22c55e', padding: '0.5rem 0.75rem' }}>{summary.present + summary.late}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 600, color: '#22c55e', padding: '0.5rem 0.75rem' }}>{summary.present + summary.late + summary.short_leave}</td>
                     <td style={{ textAlign: 'center', fontWeight: 600, color: '#f59e0b', padding: '0.5rem 0.75rem' }}>{summary.late}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 600, color: '#0891b2', padding: '0.5rem 0.75rem' }}>{summary.short_leave}</td>
                     <td style={{ textAlign: 'center', fontWeight: 600, color: '#e11d48', padding: '0.5rem 0.75rem' }}>{summary.missing}</td>
                     <td style={{ textAlign: 'center', fontWeight: 600, color: '#3b82f6', padding: '0.5rem 0.75rem' }}>{summary.leave}</td>
                     <td style={{ textAlign: 'center', fontWeight: 600, color: '#ef4444', padding: '0.5rem 0.75rem' }}>{summary.absent}</td>
