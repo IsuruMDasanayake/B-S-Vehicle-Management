@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
-  BellRing, BellOff, X, CalendarDays, Award, Video, Camera, Upload, ExternalLink, ShieldCheck, Globe, RefreshCw
+  BellRing, BellOff, X, CalendarDays, Award, Video, Camera, Upload, ExternalLink, ShieldCheck, Globe, RefreshCw, FileText
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
@@ -1289,11 +1289,81 @@ const PortalHome = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Attendance Deficiencies Alert Strip */}
+              {(monthStats.late > 0 || monthStats.missing > 0 || monthStats.absent > 0) && (
+                <div style={{
+                  marginTop: '0.85rem',
+                  padding: '0.65rem 0.8rem',
+                  borderRadius: '8px',
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap',
+                }}>
+                  <div style={{ fontSize: '0.74rem', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <AlertCircle size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
+                    <span>
+                      <strong>Deficiencies:</strong> {[
+                        monthStats.late > 0 && `${monthStats.late} late`,
+                        monthStats.missing > 0 && `${monthStats.missing} missing clock-out`,
+                        monthStats.absent > 0 && `${monthStats.absent} absent`,
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/solar/hr/portal/attendance?view=deficiencies')}
+                    style={{
+                      background: '#dc2626',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.28rem 0.65rem',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Review Deficiencies →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {/* Quick Navigation Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+            <button
+              onClick={() => navigate('/solar/hr/portal/attendance?view=report')}
+              className="card"
+              style={{
+                padding: '1rem',
+                border: '1px solid #bae6fd',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                transition: 'transform 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(2,132,199,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', flexShrink: 0 }}>
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>Attendance Report &amp; Timesheet</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Download monthly timesheet (PDF/CSV) &amp; inspect deficiencies</div>
+                </div>
+              </div>
+              <ChevronRight size={18} style={{ color: 'var(--text-muted)' }} />
+            </button>
+
             <button
               onClick={() => navigate('/solar/hr/portal/appraisals')}
               className="card"

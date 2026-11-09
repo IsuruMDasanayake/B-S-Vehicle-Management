@@ -1043,6 +1043,15 @@ class HrAttendanceLeaveReportService
                 'status'           => $status,
                 'status_label'     => $statusLabel,
                 'remarks'          => implode('; ', $remarks) ?: '—',
+                'attendance_id'    => $att?->id,
+                'has_attendance'   => (bool) $att,
+                'regularization'   => $att?->regularization ? [
+                    'id'                       => $att->regularization->id,
+                    'status'                   => $att->regularization->status,
+                    'requested_clock_out_time' => $att->regularization->requested_clock_out_time,
+                    'reason'                   => $att->regularization->reason,
+                    'admin_notes'              => $att->regularization->admin_notes,
+                ] : null,
             ];
         }
 
