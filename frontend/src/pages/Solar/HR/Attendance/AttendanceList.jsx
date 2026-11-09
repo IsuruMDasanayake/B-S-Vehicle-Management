@@ -12,12 +12,13 @@ import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import PayrollReportPanel from './PayrollReportPanel';
 
 const STATUS_MAP = {
-  present:  { label: 'Present',            color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
-  late:     { label: 'Late',               color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-  missing:  { label: 'Missing Attendance', color: '#e11d48', bg: 'rgba(225,29,72,0.12)' },
-  absent:   { label: 'Absent',             color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-  half_day: { label: 'Half Day',           color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
-  leave:    { label: 'Leave',              color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  present:     { label: 'Present',            color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
+  late:        { label: 'Late',               color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  missing:     { label: 'Missing Attendance', color: '#e11d48', bg: 'rgba(225,29,72,0.12)' },
+  absent:      { label: 'Absent',             color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+  half_day:    { label: 'Half Day',           color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+  leave:       { label: 'Leave',              color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  short_leave: { label: 'Short Leave',        color: '#0891b2', bg: 'rgba(6,182,212,0.12)' },
 };
 
 const REASON_LABELS = {
@@ -35,6 +36,14 @@ const StatusBadge = ({ status }) => {
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>
         <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: '#3b82f6', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 800 }}>LV</span>
         Leave
+      </span>
+    );
+  }
+  if (status === 'short_leave') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(6,182,212,0.12)', color: '#0891b2' }}>
+        <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: '#0891b2', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 800 }}>SL</span>
+        Short Leave
       </span>
     );
   }
@@ -151,7 +160,7 @@ const AttendanceList = () => {
     acc[status] = (acc[status] || 0) + 1;
     acc.total++;
     return acc;
-  }, { total: 0, present: 0, late: 0, missing: 0, absent: 0, half_day: 0, leave: 0 });
+  }, { total: 0, present: 0, late: 0, short_leave: 0, missing: 0, absent: 0, half_day: 0, leave: 0 });
 
   const toLocalISO = (utcStr) => {
     if (!utcStr) return '';
@@ -470,13 +479,14 @@ const AttendanceList = () => {
           {/* Summary bar */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
             {[
-              { key: 'total',    label: 'Total',    val: totals.total,    color: '#3b82f6',  bg: 'rgba(59,130,246,0.1)' },
-              { key: 'present',  label: 'Present',  val: totals.present,  color: '#22c55e',  bg: 'rgba(34,197,94,0.1)' },
-              { key: 'late',     label: 'Late',     val: totals.late,     color: '#f59e0b',  bg: 'rgba(245,158,11,0.1)' },
-              { key: 'missing',  label: 'Missing',  val: totals.missing,  color: '#e11d48',  bg: 'rgba(225,29,72,0.12)' },
-              { key: 'leave',    label: 'Leave (LV)', val: totals.leave,  color: '#3b82f6',  bg: 'rgba(59,130,246,0.12)' },
-              { key: 'absent',   label: 'Absent',   val: totals.absent,   color: '#ef4444',  bg: 'rgba(239,68,68,0.1)' },
-              { key: 'half_day', label: 'Half Day', val: totals.half_day, color: '#8b5cf6',  bg: 'rgba(139,92,246,0.1)' },
+              { key: 'total',       label: 'Total',            val: totals.total,       color: '#3b82f6',  bg: 'rgba(59,130,246,0.1)' },
+              { key: 'present',     label: 'Present',          val: totals.present,     color: '#22c55e',  bg: 'rgba(34,197,94,0.1)' },
+              { key: 'late',        label: 'Late',             val: totals.late,        color: '#f59e0b',  bg: 'rgba(245,158,11,0.1)' },
+              { key: 'short_leave', label: 'Short Leave (SL)', val: totals.short_leave, color: '#0891b2',  bg: 'rgba(6,182,212,0.12)' },
+              { key: 'missing',     label: 'Missing',          val: totals.missing,     color: '#e11d48',  bg: 'rgba(225,29,72,0.12)' },
+              { key: 'leave',       label: 'Leave (LV)',       val: totals.leave,       color: '#3b82f6',  bg: 'rgba(59,130,246,0.12)' },
+              { key: 'absent',      label: 'Absent',           val: totals.absent,      color: '#ef4444',  bg: 'rgba(239,68,68,0.1)' },
+              { key: 'half_day',    label: 'Half Day',         val: totals.half_day,    color: '#8b5cf6',  bg: 'rgba(139,92,246,0.1)' },
             ].map(s => (
               <div key={s.key} className="card" style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '100px', flex: '1 1 100px' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, fontWeight: 700, fontSize: '1rem' }}>{s.val}</div>

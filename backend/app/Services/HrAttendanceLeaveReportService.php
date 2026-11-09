@@ -882,6 +882,7 @@ class HrAttendanceLeaveReportService
             'weekend_days'             => 0,
             'present'                  => 0,
             'late'                     => 0,
+            'short_leave'              => 0,
             'missing'                  => 0,
             'half_day'                 => 0,
             'leave'                    => 0,
@@ -969,6 +970,9 @@ class HrAttendanceLeaveReportService
                 } elseif ($status === 'half_day') {
                     $statusLabel = 'Half Day';
                     $totals['half_day']++;
+                } elseif ($status === 'short_leave') {
+                    $statusLabel = 'Short Leave';
+                    $totals['short_leave']++;
                 } elseif ($status === 'present') {
                     $statusLabel = 'Present';
                     $totals['present']++;
@@ -979,6 +983,9 @@ class HrAttendanceLeaveReportService
                     $statusLabel = ucfirst($status ?: 'Present');
                     $totals['present']++;
                 }
+            } elseif ($att && $status === 'short_leave') {
+                $statusLabel = 'Short Leave';
+                $totals['short_leave']++;
             } elseif ($isWeekend) {
                 $status = 'weekend';
                 $statusLabel = 'Weekend';
@@ -1049,11 +1056,11 @@ class HrAttendanceLeaveReportService
                     + $totals['leave_breakdown']['other'];
         $noPayLeaves = $totals['leave_breakdown']['nopay'];
 
-        $payableDays = $totals['present'] + $totals['late'] + ($totals['half_day'] * 0.5) + $paidLeaves;
+        $payableDays = $totals['present'] + $totals['late'] + $totals['short_leave'] + ($totals['half_day'] * 0.5) + $paidLeaves;
         $unpaidDeductionDays = $totals['absent'] + ($totals['half_day'] * 0.5) + $noPayLeaves + $totals['missing'];
 
         $standardRequiredHours = $totals['working_days'] * 8.5;
-        $effectiveElapsedWorkingDays = max(1, $totals['present'] + $totals['late'] + $totals['half_day'] + $totals['leave'] + $totals['absent'] + $totals['missing']);
+        $effectiveElapsedWorkingDays = max(1, $totals['present'] + $totals['late'] + $totals['short_leave'] + $totals['half_day'] + $totals['leave'] + $totals['absent'] + $totals['missing']);
         $attendanceRate = round(($payableDays / $effectiveElapsedWorkingDays) * 100, 1);
 
         $payrollSummary = [
@@ -1062,6 +1069,7 @@ class HrAttendanceLeaveReportService
             'weekend_days'                => $totals['weekend_days'],
             'days_present'                => $totals['present'],
             'days_late'                   => $totals['late'],
+            'days_short_leave'            => $totals['short_leave'],
             'days_missing'                => $totals['missing'],
             'days_half_day'               => $totals['half_day'],
             'days_leave'                  => $totals['leave'],
@@ -1121,14 +1129,15 @@ class HrAttendanceLeaveReportService
         $genAt   = e($d['generated_at']);
 
         $badgeStyle = [
-            'present'  => 'background:#dcfce7;color:#15803d;',
-            'late'     => 'background:#fef3c7;color:#b45309;',
-            'missing'  => 'background:#ffe4e6;color:#e11d48;font-weight:700;',
-            'half_day' => 'background:#f3e8ff;color:#7c3aed;',
-            'leave'    => 'background:#dbeafe;color:#1d4ed8;',
-            'absent'   => 'background:#fee2e2;color:#b91c1c;font-weight:700;',
-            'weekend'  => 'background:#f1f5f9;color:#64748b;',
-            'scheduled'=> 'background:#f8fafc;color:#94a3b8;',
+            'present'     => 'background:#dcfce7;color:#15803d;',
+            'late'        => 'background:#fef3c7;color:#b45309;',
+            'short_leave' => 'background:#cffafe;color:#0e7490;',
+            'missing'     => 'background:#ffe4e6;color:#e11d48;font-weight:700;',
+            'half_day'    => 'background:#f3e8ff;color:#7c3aed;',
+            'leave'       => 'background:#dbeafe;color:#1d4ed8;',
+            'absent'      => 'background:#fee2e2;color:#b91c1c;font-weight:700;',
+            'weekend'     => 'background:#f1f5f9;color:#64748b;',
+            'scheduled'   => 'background:#f8fafc;color:#94a3b8;',
         ];
 
         $rowsHtml = '';

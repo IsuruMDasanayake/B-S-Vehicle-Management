@@ -10,13 +10,14 @@ import useAuthStore from '../../../../store/authStore';
 import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 
 const STATUS_CELL = {
-  present:  { label: 'P',   color: '#fff', bg: '#22c55e',           title: 'Present' },
-  late:     { label: 'L',   color: '#fff', bg: '#f59e0b',           title: 'Late' },
-  missing:  { label: 'M',   color: '#fff', bg: '#e11d48',           title: 'Missing Attendance' },
-  absent:   { label: 'A',   color: '#fff', bg: '#ef4444',           title: 'Absent' },
-  half_day: { label: 'H',   color: '#fff', bg: '#8b5cf6',           title: 'Half Day' },
-  leave:    { label: 'LV',  color: '#fff', bg: '#3b82f6',           title: 'Leave' },
-  weekend:  { label: '—',   color: '#9ca3af', bg: 'var(--surface)', title: 'Weekend' },
+  present:     { label: 'P',   color: '#fff', bg: '#22c55e',           title: 'Present' },
+  late:        { label: 'L',   color: '#fff', bg: '#f59e0b',           title: 'Late' },
+  short_leave: { label: 'SL',  color: '#fff', bg: '#0891b2',           title: 'Short Leave' },
+  missing:     { label: 'M',   color: '#fff', bg: '#e11d48',           title: 'Missing Attendance' },
+  absent:      { label: 'A',   color: '#fff', bg: '#ef4444',           title: 'Absent' },
+  half_day:    { label: 'H',   color: '#fff', bg: '#8b5cf6',           title: 'Half Day' },
+  leave:       { label: 'LV',  color: '#fff', bg: '#3b82f6',           title: 'Leave' },
+  weekend:     { label: '—',   color: '#9ca3af', bg: 'var(--surface)', title: 'Weekend' },
 };
 
 const isWeekend = (d) => { const day = new Date(d).getDay(); return day === 0 || day === 6; };
@@ -874,14 +875,15 @@ const PortalAttendance = () => {
       </div>
 
       {/* Stats strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.4rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(75px, 1fr))', gap: '0.4rem', marginBottom: '1.25rem' }}>
         {[
-          { key: 'present', label: 'Present', color: '#22c55e' },
-          { key: 'late',    label: 'Late',    color: '#f59e0b' },
-          { key: 'missing', label: 'Missing', color: '#e11d48' },
-          { key: 'absent',  label: 'Absent',  color: '#ef4444' },
-          { key: 'half_day',label: 'Half Day',color: '#8b5cf6' },
-          { key: 'leave',   label: 'Leave',   color: '#3b82f6' },
+          { key: 'present',     label: 'Present',         color: '#22c55e' },
+          { key: 'late',        label: 'Late',            color: '#f59e0b' },
+          { key: 'short_leave', label: 'Short Leave (SL)',color: '#0891b2' },
+          { key: 'missing',     label: 'Missing',         color: '#e11d48' },
+          { key: 'absent',      label: 'Absent',          color: '#ef4444' },
+          { key: 'half_day',    label: 'Half Day',        color: '#8b5cf6' },
+          { key: 'leave',       label: 'Leave',           color: '#3b82f6' },
         ].map(s => (
           <div key={s.key} className="card" style={{ padding: '0.55rem 0.25rem', textAlign: 'center' }}>
             <div style={{ fontSize: '1.25rem', fontWeight: 700, color: s.color }}>{stats[s.key] || 0}</div>
