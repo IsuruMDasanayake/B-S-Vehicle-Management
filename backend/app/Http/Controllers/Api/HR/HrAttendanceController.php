@@ -11,6 +11,7 @@ use App\Models\HrLocation;
 use App\Models\HrRemoteAttendanceRequest;
 use App\Models\User;
 use App\Notifications\HrNotification;
+use App\Services\HrAttendanceLeaveReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -363,6 +364,79 @@ class HrAttendanceController extends Controller
         return response()->json(
             $this->mergeApprovedLeavesIntoHistory((int) $employeeId, $month, $attendances)
         );
+    }
+
+    /**
+     * Get authenticated employee's attendance report & deficiency breakdown for a given month.
+     */
+    public function myReport(Request $request, HrAttendanceLeaveReportService $service)
+    {
+        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        if (!$employee) {
+            return response()->json(['message' => 'Employee profile not linked to user account.'], 404);
+        }
+
+        $this->autoClosePastAttendances($employee->id);
+
+        $month = $request->get('month', Carbon::now('Asia/Colombo')->format('Y-m'));
+        $reportData = $service->buildIndividualEmployeePayrollReport($employee->id, $month);
+
+        $days = $reportData['days'] ?? [];
+        $deficiencies = [
+            'late_arrivals' => array_values(array_filter($days, fn($d) => ($d['late_minutes'] ?? 0) > 0)),
+            'missing_clock_outs' => array_values(array_filter($days, fn($d) => ($d['status'] ?? '') === 'missing')),
+            'unauthorized_absences' => array_values(array_filter($days, fn($d) => ($d['status'] ?? '') === 'absent')),
+            'early_departures' => array_values(array_filter($days, fn($d) => ($d['early_minutes'] ?? 0) > 0)),
+            'half_days' => array_values(array_filter($days, fn($d) => ($d['status'] ?? '') === 'half_day')),
+            'nopay_leaves' => ($reportData['summary']['nopay_leave_days'] ?? 0),
+        ];
+
+        $deficiencies['total_deficiency_events'] = count($deficiencies['late_arrivals'])
+            + count($deficiencies['missing_clock_outs'])
+            + count($deficiencies['unauthorized_absences'])
+            + count($deficiencies['early_departures'])
+            + count($deficiencies['half_days']);
+
+        $reportData['deficiencies'] = $deficiencies;
+
+        return response()->json($reportData);
+    }
+
+    /**
+     * Download authenticated employee's attendance report as PDF or CSV.
+     */
+    public function downloadMyReport(Request $request, HrAttendanceLeaveReportService $service)
+    {
+        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        if (!$employee) {
+            return response()->json(['message' => 'Employee profile not linked to user account.'], 404);
+        }
+
+        $this->autoClosePastAttendances($employee->id);
+
+        $month  = $request->get('month', Carbon::now('Asia/Colombo')->format('Y-m'));
+        $format = in_array($request->get('format'), ['pdf', 'csv'], true) ? $request->get('format') : 'pdf';
+
+        $reportData = $service->buildIndividualEmployeePayrollReport($employee->id, $month);
+
+        $emp = $reportData['employee'];
+        $cleanName = preg_replace('/[^A-Za-z0-9_-]/', '_', $emp['name']);
+        $cleanEpf  = preg_replace('/[^A-Za-z0-9_-]/', '_', $emp['epf_no'] ?: $emp['employee_id']);
+        $baseName  = sprintf('attendance_timesheet_%s_%s_%s', $cleanEpf, $cleanName, $reportData['month']);
+
+        if ($format === 'csv') {
+            $csv = $service->buildIndividualEmployeeCsv($reportData);
+            return response($csv, 200, [
+                'Content-Type'        => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $baseName . '.csv"',
+            ]);
+        }
+
+        $pdf = $service->buildIndividualEmployeePdf($reportData);
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $baseName . '.pdf"',
+        ]);
     }
 
     // ── HR Admin: Daily View ───────────────────────────────────────────────────

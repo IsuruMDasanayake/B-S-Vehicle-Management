@@ -172,6 +172,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('attendance', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'store']);
         Route::get('attendance/today', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myToday']);
         Route::get('attendance/my-history', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myHistory']);
+        Route::get('attendance/my-report', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'myReport']);
+        Route::get('attendance/my-report/download', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'downloadMyReport']);
         Route::get('attendance/employee/{id}/history', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'employeeHistory']);
         Route::get('attendance/report', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'report']);
         Route::post('attendance/send-report-email', [\App\Http\Controllers\Api\HR\HrAttendanceController::class, 'sendReportEmail']);

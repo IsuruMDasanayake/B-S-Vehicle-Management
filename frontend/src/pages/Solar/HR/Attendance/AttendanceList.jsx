@@ -14,11 +14,11 @@ import PayrollReportPanel from './PayrollReportPanel';
 const STATUS_MAP = {
   present:     { label: 'Present',            color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
   late:        { label: 'Late',               color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-  missing:     { label: 'Missing Attendance', color: '#e11d48', bg: 'rgba(225,29,72,0.12)' },
-  absent:      { label: 'Absent',             color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+  short_leave: { label: 'Short Leave',        color: '#0891b2', bg: 'rgba(6,182,212,0.12)' },
   half_day:    { label: 'Half Day',           color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
   leave:       { label: 'Leave',              color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  short_leave: { label: 'Short Leave',        color: '#0891b2', bg: 'rgba(6,182,212,0.12)' },
+  absent:      { label: 'Absent',             color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+  missing:     { label: 'Missing Attendance', color: '#e11d48', bg: 'rgba(225,29,72,0.12)' },
 };
 
 const REASON_LABELS = {
