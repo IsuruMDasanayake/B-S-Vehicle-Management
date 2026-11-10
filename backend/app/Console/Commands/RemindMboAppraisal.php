@@ -26,7 +26,8 @@ class RemindMboAppraisal extends Command
     protected $description = 'Send monthly MBO performance appraisal reminders to employees (on 25th) or Reporting Managers & HR (on 1st)';
 
     /**
-     * Collect all Reporting Managers (employees who have active subordinates) and HR Admins.
+     * Collect all Reporting Managers (employees who have active subordinates),
+     * Approval Managers (Hasintha = GM/PD, Eranda = CEO, from HR Settings), and HR Admins.
      */
     protected function getAppraiserUsers()
     {
@@ -42,9 +43,19 @@ class RemindMboAppraisal extends Command
             ->map(fn($e) => $e->user ?? (!empty($e->company_email) ? User::where('email', $e->company_email)->first() : null))
             ->filter();
 
+        // Approval Managers (Hasintha, Eranda, etc. assigned via HR Settings)
+        $approvalSettings = \App\Http\Controllers\Api\HR\HrSettingController::getApprovalManagerSettings();
+        $managerIds = array_map('intval', $approvalSettings['manager_user_ids'] ?? []);
+        $managerEmails = array_map(fn($e) => strtolower(trim((string) $e)), $approvalSettings['manager_emails'] ?? []);
+        $approvalUsers = User::where(function($q) use ($managerIds, $managerEmails) {
+            if (!empty($managerIds)) $q->whereIn('id', $managerIds);
+            if (!empty($managerEmails)) $q->orWhereIn('email', $managerEmails);
+            $q->orWhereIn('email', \App\Http\Controllers\Api\HR\HrAppraisalController::$directorEmails);
+        })->get();
+
         $hrUsers = User::whereIn('role', ['solar_hr_admin', 'super_admin'])->get();
 
-        return $managerUsers->concat($hrUsers)->unique('id');
+        return $managerUsers->concat($approvalUsers)->concat($hrUsers)->unique('id');
     }
 
     public function handle(): int

@@ -540,18 +540,34 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
         </div>
 
         <div>
-          <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>Appraiser (Reporting Manager / HR)</span>
+          <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>
+            Appraiser (Reporting Manager &amp; Approval Managers)
+          </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#8b5cf6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem' }}>
-              {(appraiser?.full_name || employee?.manager?.full_name)?.charAt(0) || 'A'}
+              {(data?.evaluator?.full_name || appraiser?.full_name || employee?.manager?.full_name)?.charAt(0) || 'A'}
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>
-                {appraiser?.full_name || employee?.manager?.full_name || 'Reporting Manager / HR'}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {appraiser?.designation || employee?.manager?.designation || 'Reporting Manager / HR'}
-              </div>
+              {data?.evaluator ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>{data.evaluator.full_name}</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '4px', background: '#dbeafe', color: '#1d4ed8' }}>EVALUATOR</span>
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    {data.evaluator.designation || 'Appraiser'} {employee?.manager?.full_name && employee.manager.full_name !== data.evaluator.full_name ? `· Line Mgr: ${employee.manager.full_name}` : ''}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>
+                    {employee?.manager?.full_name || 'Reporting Manager'} &amp; Approval Managers
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: 500 }}>
+                    Appraisers: {employee?.manager?.full_name ? `${employee.manager.full_name} · ` : ''}Hasintha Rathnayaka, Eranda Kumara
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -951,7 +967,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                 Appraiser
               </td>
               <td style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, color: '#0f172a' }}>
-                {appraiser?.full_name || employee?.manager?.full_name || 'Reporting Manager / HR'}
+                {data?.evaluator?.full_name || appraiser?.full_name || (employee?.manager?.full_name ? `${employee.manager.full_name} / Approval Managers` : 'Reporting Manager & Approval Managers')}
               </td>
               <td style={{ padding: '0.65rem 0.65rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
                 Total

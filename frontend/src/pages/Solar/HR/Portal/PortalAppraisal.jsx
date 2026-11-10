@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Award, Users, Calendar } from 'lucide-react';
 import useAuthStore from '../../../../store/authStore';
+import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import AppraisalSheet from '../Appraisals/AppraisalSheet';
 import AppraisalBoard from '../Appraisals/AppraisalBoard';
 import api from '../../../../services/api';
@@ -9,16 +10,17 @@ import api from '../../../../services/api';
 const PortalAppraisal = () => {
   const user = useAuthStore(s => s.user);
   const isHrOrSuper = user?.role === 'solar_hr_admin' || user?.role === 'super_admin';
+  const isApprovalManager = isLeaveApprovalManager(user);
   const [isReportingManager, setIsReportingManager] = useState(false);
-  const isAppraiser = isHrOrSuper || isReportingManager;
+  const isAppraiser = isHrOrSuper || isApprovalManager || isReportingManager;
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Active tab: 'my' or 'team' (for Reporting Managers & HR)
+  // Active tab: 'my' or 'team' (for Reporting Managers, Approval Managers & HR)
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam && ['my', 'team'].includes(tabParam)) return tabParam;
-    return isHrOrSuper ? 'team' : 'my';
+    return (isHrOrSuper || isApprovalManager) ? 'team' : 'my';
   });
 
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -28,14 +30,18 @@ const PortalAppraisal = () => {
 
   const [historyMonths, setHistoryMonths] = useState([]);
 
-  // Check if current employee is a Reporting Manager (has subordinates) and fetch past months
+  // Check if current employee is a Reporting Manager (has subordinates) or Approval Manager
   useEffect(() => {
+    if (isApprovalManager && !searchParams.get('tab')) {
+      setActiveTab('team');
+    }
+
     api.get('/hr/employees/me')
       .then(res => {
         const subCount = Number(res.data?.subordinates_count || 0);
         if (subCount > 0) {
           setIsReportingManager(true);
-          if (!searchParams.get('tab')) {
+          if (!searchParams.get('tab') && !isApprovalManager) {
             setActiveTab('team');
           }
         }
@@ -45,7 +51,7 @@ const PortalAppraisal = () => {
     api.get('/hr/appraisals/my')
       .then(res => setHistoryMonths(res.data || []))
       .catch(() => {});
-  }, [searchParams]);
+  }, [searchParams, isApprovalManager]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
