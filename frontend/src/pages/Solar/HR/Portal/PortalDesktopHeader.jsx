@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Clock, CalendarDays, Award, User, LogOut, Shield, ExternalLink, Video } from 'lucide-react';
+import { Home, Clock, CalendarDays, Award, User, LogOut, Shield, ExternalLink, Video, Bell } from 'lucide-react';
 import useAuthStore from '../../../../store/authStore';
 import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import api from '../../../../services/api';
@@ -12,7 +12,7 @@ const navItems = [
   { to: 'leaves',       icon: CalendarDays, label: 'Leave' },
   { to: 'appraisals',   icon: Award,        label: 'Performance' },
   { to: 'training',     icon: Video,        label: 'Training' },
-  // { to: 'profile',      icon: User,         label: 'My Profile' },
+  { to: 'announcements',icon: Bell,         label: 'Notifications' },
 ];
 
 export const PortalDesktopHeader = ({ employee }) => {
@@ -21,6 +21,7 @@ export const PortalDesktopHeader = ({ employee }) => {
   const navigate = useNavigate();
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [pendingAttApprovals, setPendingAttApprovals] = useState(0);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   const isManager = isLeaveApprovalManager(user);
   const isHrAdmin = user?.role === 'solar_hr_admin' || user?.role === 'super_admin';
@@ -72,6 +73,27 @@ export const PortalDesktopHeader = ({ employee }) => {
     };
     window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
     return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchNotifCount = async () => {
+      try {
+        const res = await api.get('/notifications', { params: { division: 'hr', unread_only: 1 } });
+        if (mounted && res.data) {
+          setUnreadNotifCount(res.data.unread_count || 0);
+        }
+      } catch {}
+    };
+    fetchNotifCount();
+    const interval = setInterval(fetchNotifCount, 30000);
+    const handleUpdate = () => fetchNotifCount();
+    window.addEventListener('hr-notifications-updated', handleUpdate);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      window.removeEventListener('hr-notifications-updated', handleUpdate);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -140,6 +162,24 @@ export const PortalDesktopHeader = ({ employee }) => {
                 lineHeight: 1,
               }}>
                 {pendingAttApprovals > 99 ? '99+' : pendingAttApprovals}
+              </span>
+            )}
+            {to === 'announcements' && unreadNotifCount > 0 && (
+              <span style={{
+                background: '#ef4444',
+                color: '#fff',
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                minWidth: '16px',
+                height: '16px',
+                borderRadius: '999px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 4px',
+                lineHeight: 1,
+              }}>
+                {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
               </span>
             )}
           </NavLink>
