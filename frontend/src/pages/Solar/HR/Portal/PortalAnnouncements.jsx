@@ -408,7 +408,7 @@ const PortalAnnouncements = () => {
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{
+            {/* <div style={{
               width: '40px',
               height: '40px',
               borderRadius: '10px',
@@ -420,9 +420,9 @@ const PortalAnnouncements = () => {
               boxShadow: '0 4px 10px rgba(2, 132, 199, 0.25)',
             }}>
               <BellRing size={22} />
-            </div>
+            </div> */}
             <div>
-              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
                 Notifications &amp; HR Updates
               </h1>
               <p style={{ color: '#64748b', fontSize: '0.84rem', margin: '0.2rem 0 0' }}>
@@ -485,7 +485,7 @@ const PortalAnnouncements = () => {
       </div>
 
       {/* ── Native Web Push Pop-Up Notifications Panel ── */}
-      <div style={{
+      {/* <div style={{
         background: pushStatus.isSubscribed
           ? 'linear-gradient(to right, #f0fdf4, #ffffff)'
           : pushStatus.permission === 'denied'
@@ -563,7 +563,7 @@ const PortalAnnouncements = () => {
             </div>
           </div>
 
-          {/* Action buttons */}
+          
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
             {pushStatus.isSubscribed ? (
               <>
@@ -658,7 +658,7 @@ const PortalAnnouncements = () => {
             <span>{pushFeedback.text}</span>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* ── Search & Filter Navigation Bar ── */}
       <div style={{
