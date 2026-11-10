@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Clock, CalendarDays, User, Megaphone, LogOut, Award, Video, Bell } from 'lucide-react';
+import { Home, Clock, CalendarDays, User, Megaphone, LogOut, Award, Video } from 'lucide-react';
 import useAuthStore from '../../../../store/authStore';
 import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
 import api from '../../../../services/api';
@@ -11,7 +11,6 @@ const navItems = [
   { to: 'leaves',       icon: CalendarDays, label: 'Leave' },
   { to: 'appraisals',   icon: Award,        label: 'Performance' },
   { to: 'training',     icon: Video,        label: 'Training' },
-  { to: 'announcements',icon: Bell,         label: 'Updates' },
 ];
 
 const PortalNav = () => {
@@ -20,7 +19,6 @@ const PortalNav = () => {
   const navigate = useNavigate();
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [pendingAttApprovals, setPendingAttApprovals] = useState(0);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   const isManager = isLeaveApprovalManager(user);
 
@@ -72,27 +70,6 @@ const PortalNav = () => {
     };
     window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
     return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    const fetchNotifCount = async () => {
-      try {
-        const res = await api.get('/notifications', { params: { division: 'hr', unread_only: 1 } });
-        if (mounted && res.data) {
-          setUnreadNotifCount(res.data.unread_count || 0);
-        }
-      } catch {}
-    };
-    fetchNotifCount();
-    const interval = setInterval(fetchNotifCount, 30000);
-    const handleUpdate = () => fetchNotifCount();
-    window.addEventListener('hr-notifications-updated', handleUpdate);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-      window.removeEventListener('hr-notifications-updated', handleUpdate);
-    };
   }, []);
 
   const handleLogout = async () => {
@@ -171,28 +148,6 @@ const PortalNav = () => {
                     border: '1.5px solid #fff',
                   }}>
                     {pendingAttApprovals > 99 ? '99+' : pendingAttApprovals}
-                  </span>
-                )}
-                {to === 'announcements' && unreadNotifCount > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    right: '-7px',
-                    background: '#ef4444',
-                    color: '#fff',
-                    fontSize: '0.62rem',
-                    fontWeight: 700,
-                    minWidth: '15px',
-                    height: '15px',
-                    borderRadius: '999px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 3px',
-                    lineHeight: 1,
-                    border: '1.5px solid #fff',
-                  }}>
-                    {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
                   </span>
                 )}
               </div>
