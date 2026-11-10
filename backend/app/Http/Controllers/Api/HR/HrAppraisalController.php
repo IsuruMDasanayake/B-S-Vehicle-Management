@@ -56,12 +56,22 @@ class HrAppraisalController extends Controller
             || (method_exists($user, 'hasRole') && $user->hasRole('super_admin'));
     }
 
+    /**
+     * Check if user is an Approval Manager (Hasintha = GM/PD, Eranda = CEO, or assigned via HR Settings).
+     */
+    public static function isApprovalManager(?object $user): bool
+    {
+        if (!$user) return false;
+        if (self::isSuperAdmin($user)) return true;
+        if (HrSettingController::isApprovalManager($user)) return true;
+        return in_array(strtolower(trim($user->email ?? '')), self::$directorEmails, true);
+    }
+
     /** Legacy helper kept for compatibility */
     public static function isProjectDirector(?object $user): bool
     {
         if (!$user || empty($user->email)) return false;
-        return in_array(strtolower(trim($user->email)), self::$directorEmails, true)
-            || self::isSuperAdmin($user);
+        return self::isApprovalManager($user);
     }
 
     private static function isHr(?object $user): bool
@@ -97,7 +107,9 @@ class HrAppraisalController extends Controller
 
     /**
      * Dynamic Appraiser check for a target employee:
-     * Appraiser is the employee's Reporting Manager ($employee->manager_id === $me->id) OR HR / Super Admin.
+     * Appraiser is the employee's Reporting Manager ($employee->manager_id === $me->id),
+     * Approval Managers (Hasintha & Eranda, etc. from HR Settings),
+     * or HR / Super Admin.
      */
     private function isAppraiserFor(Request $request, HrEmployee $employee): bool
     {
@@ -110,14 +122,23 @@ class HrAppraisalController extends Controller
 
         $me = $this->resolveEmployee($request);
         $isSelf = $me && (int) $me->id === (int) $employee->id;
+        // An employee cannot appraise themselves
+        if ($isSelf) {
+            return false;
+        }
 
-        // Reporting Manager of this employee
-        if ($me && $employee->manager_id && (int) $employee->manager_id === (int) $me->id && !$isSelf) {
+        // 1. Employee's direct Reporting Manager
+        if ($me && $employee->manager_id && (int) $employee->manager_id === (int) $me->id) {
             return true;
         }
 
-        // HR Admin also has Appraiser privileges (except on their own sheet)
-        if (self::isHr($user) && !$isSelf) {
+        // 2. Approval Managers (Hasintha, Eranda, etc.)
+        if (self::isApprovalManager($user)) {
+            return true;
+        }
+
+        // 3. HR Admin privileges
+        if (self::isHr($user)) {
             return true;
         }
 
@@ -128,11 +149,18 @@ class HrAppraisalController extends Controller
     private function canView(Request $request, int $employeeId): bool
     {
         $user = $request->user();
-        if (self::isHr($user)) return true;
+        if (!$user) return false;
+        if (self::isSuperAdmin($user) || self::isHr($user)) return true;
 
         $me = $this->resolveEmployee($request);
+        if ($me && (int) $me->id === (int) $employeeId) return true;
+
+        // Approval Managers (Hasintha, Eranda, etc.) can view all employee appraisals
+        if (self::isApprovalManager($user)) {
+            return true;
+        }
+
         if (!$me) return false;
-        if ((int) $me->id === (int) $employeeId) return true;
 
         $target = HrEmployee::find($employeeId);
         if ($target && (int) $target->manager_id === (int) $me->id) {
@@ -154,7 +182,7 @@ class HrAppraisalController extends Controller
         ];
     }
 
-    /** Default appraiser profile (Employee's Reporting Manager, or HR fallback) when none recorded yet. */
+    /** Default appraiser profile (Employee's Reporting Manager, or Approval Manager, or HR fallback) when none recorded yet. */
     private function defaultAppraiser(?HrEmployee $employee = null): ?HrEmployee
     {
         if ($employee && $employee->manager_id) {
@@ -167,9 +195,52 @@ class HrAppraisalController extends Controller
             }
         }
 
+        $approvalSettings = HrSettingController::getApprovalManagerSettings();
+        $mgrUserIds = array_map('intval', $approvalSettings['manager_user_ids'] ?? []);
+        if (!empty($mgrUserIds)) {
+            $apprEmp = HrEmployee::with('designation')
+                ->whereIn('user_id', $mgrUserIds)
+                ->first();
+            if ($apprEmp) return $apprEmp;
+        }
+
         return HrEmployee::with('designation')
             ->whereHas('user', fn($q) => $q->whereIn('role', ['solar_hr_admin', 'super_admin']))
             ->first();
+    }
+
+    /** Helper to load active Approval Managers (Hasintha, Eranda, etc.) as employee objects */
+    private function getApprovalManagersList(): array
+    {
+        $approvalSettings = HrSettingController::getApprovalManagerSettings();
+        $mgrUserIds = array_map('intval', $approvalSettings['manager_user_ids'] ?? []);
+        $mgrEmails = array_map(fn($e) => strtolower(trim((string) $e)), $approvalSettings['manager_emails'] ?? []);
+
+        $users = User::where(function($q) use ($mgrUserIds, $mgrEmails) {
+            if (!empty($mgrUserIds)) $q->whereIn('id', $mgrUserIds);
+            if (!empty($mgrEmails)) $q->orWhereIn('email', $mgrEmails);
+            $q->orWhereIn('email', self::$directorEmails);
+        })->get();
+
+        $userIds = $users->pluck('id')->filter()->all();
+        $userEmails = $users->pluck('email')->filter()->map(fn($e) => strtolower(trim($e)))->all();
+
+        $employees = HrEmployee::with('designation')
+            ->where(function($q) use ($userIds, $userEmails) {
+                if (!empty($userIds)) $q->whereIn('user_id', $userIds);
+                if (!empty($userEmails)) {
+                    $q->orWhereIn('company_email', $userEmails)
+                      ->orWhereIn('personal_email', $userEmails);
+                }
+            })
+            ->where('status', '!=', 'inactive')
+            ->get();
+
+        return $employees->map(fn($e) => [
+            'id'          => $e->id,
+            'full_name'   => $e->full_name,
+            'designation' => $e->designation?->title,
+        ])->values()->all();
     }
 
     /** Role permissions for a given sheet (null = not yet created). */
@@ -212,7 +283,9 @@ class HrAppraisalController extends Controller
             $sheet->loadCount('revisions');
         }
 
-        $appraiser = $sheet?->evaluator ?? $this->defaultAppraiser($employee);
+        $evaluator = $sheet?->evaluator;
+        $appraiser = $evaluator ?? $this->defaultAppraiser($employee);
+        $approvalManagersList = $this->getApprovalManagersList();
 
         $payload = [
             'employee' => [
@@ -230,11 +303,17 @@ class HrAppraisalController extends Controller
                     'designation' => $employee->manager->designation?->title,
                 ] : null,
             ],
+            'evaluator' => $evaluator ? [
+                'id'          => $evaluator->id,
+                'full_name'   => $evaluator->full_name,
+                'designation' => $evaluator->designation?->title,
+            ] : null,
             'appraiser' => $appraiser ? [
                 'id'          => $appraiser->id,
                 'full_name'   => $appraiser->full_name,
                 'designation' => $appraiser->designation?->title,
             ] : null,
+            'approval_managers' => $approvalManagersList,
             'sheet'       => $sheet,
             'permissions' => $this->permissionsFor($request, $sheet, $employee),
         ];
@@ -288,12 +367,29 @@ class HrAppraisalController extends Controller
             }
         }
 
-        // 2. HR Admins & Super Admins
-        $hrUsers = User::whereIn('role', ['solar_hr_admin', 'super_admin'])->get();
+        // 2. Approval Managers (Hasintha, Eranda, etc. from HR Settings)
+        $approvalSettings = HrSettingController::getApprovalManagerSettings();
+        $managerIds = array_map('intval', $approvalSettings['manager_user_ids'] ?? []);
+        $managerEmails = array_map(fn($e) => strtolower(trim((string) $e)), $approvalSettings['manager_emails'] ?? []);
+
+        $approvalUsers = User::where(function($q) use ($managerIds, $managerEmails) {
+            if (!empty($managerIds)) $q->whereIn('id', $managerIds);
+            if (!empty($managerEmails)) $q->orWhereIn('email', $managerEmails);
+            $q->orWhereIn('email', self::$directorEmails);
+        })->get();
+        $recipients = $recipients->concat($approvalUsers);
+
+        // 3. HR Admins & Super Admins
+        $hrUsers = User::whereIn('role', ['solar_hr_admin', 'super_admin'])
+            ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['solar_hr_admin', 'super_admin']))
+            ->get();
         $recipients = $recipients->concat($hrUsers)->unique('id');
 
+        // Do not notify employee themselves if they happen to be an approval manager / HR
+        $recipients = $recipients->filter(fn($u) => (int) $u->id !== (int) $employee->user_id);
+
         foreach ($recipients as $u) {
-            $link = in_array($u->role, ['solar_hr_admin', 'super_admin'], true)
+            $link = (in_array($u->role, ['solar_hr_admin', 'super_admin'], true) || (method_exists($u, 'hasRole') && $u->hasRole('super_admin')))
                 ? "/solar/hr/admin/appraisals"
                 : "/solar/hr/portal/appraisals?tab=team";
             $this->notify($u, $title, $message, $link, $sourceId);
@@ -345,15 +441,16 @@ class HrAppraisalController extends Controller
         );
     }
 
-    /** GET appraisals/board?month=&search=&department_id= — Reporting Manager / HR overview of employees */
+    /** GET appraisals/board?month=&search=&department_id= — Reporting Manager / Approval Managers / HR overview of employees */
     public function board(Request $request)
     {
         $user = $request->user();
         $me = $this->resolveEmployee($request);
         $isHr = self::isHr($user);
+        $isApprovalMgr = self::isApprovalManager($user);
         $isManager = $this->isReportingManager($me);
 
-        if (!$isHr && !$isManager) {
+        if (!$isHr && !$isApprovalMgr && !$isManager) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -363,8 +460,8 @@ class HrAppraisalController extends Controller
             ->where('status', 'active')
             ->orderBy('full_name');
 
-        // Reporting Managers (who are not HR/Super Admin) only see employees who report to them
-        if (!$isHr && $me) {
+        // Line Managers who are NOT HR and NOT Approval Managers only see employees who report to them
+        if (!$isHr && !$isApprovalMgr && $me) {
             $empQuery->where('manager_id', $me->id);
         }
 
@@ -384,9 +481,11 @@ class HrAppraisalController extends Controller
             ->get()
             ->keyBy('employee_id');
 
+        $approvalManagersList = $this->getApprovalManagersList();
+
         $summary = ['total' => $employees->count(), 'not_assigned' => 0, 'open' => 0, 'submitted' => 0, 'finalized' => 0, 'hr_pending' => 0];
 
-        $rows = $employees->map(function ($emp) use ($sheets, &$summary) {
+        $rows = $employees->map(function ($emp) use ($sheets, &$summary, $approvalManagersList) {
             $sheet = $sheets->get($emp->id);
             $objCount = $sheet ? $sheet->objectives->count() : 0;
 
@@ -399,7 +498,8 @@ class HrAppraisalController extends Controller
                 }
             }
 
-            $appraiser = $sheet?->evaluator ?? $emp->manager;
+            $evaluator = $sheet?->evaluator;
+            $appraiser = $evaluator ?? $emp->manager;
 
             return [
                 'employee' => [
@@ -416,11 +516,17 @@ class HrAppraisalController extends Controller
                         'full_name'   => $emp->manager->full_name,
                         'designation' => $emp->manager->designation?->title,
                     ] : null,
+                    'evaluator'   => $evaluator ? [
+                        'id'          => $evaluator->id,
+                        'full_name'   => $evaluator->full_name,
+                        'designation' => $evaluator->designation?->title,
+                    ] : null,
                     'appraiser'   => $appraiser ? [
                         'id'          => $appraiser->id,
                         'full_name'   => $appraiser->full_name,
                         'designation' => $appraiser->designation?->title,
                     ] : null,
+                    'approval_managers' => $approvalManagersList,
                 ],
                 'sheet' => $sheet ? [
                     'id'               => $sheet->id,
@@ -440,7 +546,12 @@ class HrAppraisalController extends Controller
             ];
         })->values();
 
-        return response()->json(['month' => $month, 'summary' => $summary, 'rows' => $rows]);
+        return response()->json([
+            'month'             => $month,
+            'summary'           => $summary,
+            'rows'              => $rows,
+            'approval_managers' => $approvalManagersList,
+        ]);
     }
 
     /** GET appraisals/{id} — full sheet (printable scorecard) */
@@ -968,7 +1079,8 @@ class HrAppraisalController extends Controller
     {
         $user = $request->user();
         $me = $this->resolveEmployee($request);
-        if (!self::isHr($user) && !$this->isReportingManager($me)) {
+        $isApprovalManager = self::isApprovalManager($user);
+        if (!self::isHr($user) && !$isApprovalManager && !$this->isReportingManager($me)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -988,7 +1100,7 @@ class HrAppraisalController extends Controller
         ]);
     }
 
-    /** POST appraisals/{id}/remind-appraiser — HR sends targeted reminder to the employee's Reporting Manager / Appraiser */
+    /** POST appraisals/{id}/remind-appraiser — HR sends targeted reminder to the employee's Reporting Manager & Approval Managers */
     public function remindAppraiserForSheet(Request $request, int $id)
     {
         $user = $request->user();
@@ -1001,26 +1113,47 @@ class HrAppraisalController extends Controller
         $month = $sheet->period_month;
         $monthName = Carbon::parse($month . '-01')->format('F Y');
 
-        $appraiserEmp = $sheet->employee?->manager ?? $sheet->evaluator;
-        $targetUser = $this->userForEmployee($appraiserEmp);
+        $recipients = collect();
 
+        // 1. Sheet Evaluator or Direct Reporting Manager
+        $appraiserEmp = $sheet->evaluator ?? $sheet->employee?->manager;
+        $targetUser = $this->userForEmployee($appraiserEmp);
         if ($targetUser) {
-            $this->notify(
-                $targetUser,
-                "🎯 HR Reminder: Evaluation Pending for {$empName}",
-                "HR Reminder: {$empName} has submitted their MBO sheet for {$monthName}. Please review achievements and assign marks.",
-                "/solar/hr/portal/appraisals?tab=team&employee_id={$sheet->employee_id}",
-                "mbo-nudge-{$sheet->id}-" . time(),
-                'warning'
-            );
-            $appraiserName = $appraiserEmp?->full_name ?? $targetUser->name;
+            $recipients->push($targetUser);
+        }
+
+        // 2. Approval Managers (Hasintha, Eranda, etc.)
+        $approvalSettings = HrSettingController::getApprovalManagerSettings();
+        $managerIds = array_map('intval', $approvalSettings['manager_user_ids'] ?? []);
+        $managerEmails = array_map(fn($e) => strtolower(trim((string) $e)), $approvalSettings['manager_emails'] ?? []);
+        $approvalUsers = User::where(function($q) use ($managerIds, $managerEmails) {
+            if (!empty($managerIds)) $q->whereIn('id', $managerIds);
+            if (!empty($managerEmails)) $q->orWhereIn('email', $managerEmails);
+            $q->orWhereIn('email', self::$directorEmails);
+        })->get();
+        $recipients = $recipients->concat($approvalUsers)->unique('id');
+
+        // Do not notify the employee themselves
+        $recipients = $recipients->filter(fn($u) => (int) $u->id !== (int) $sheet->employee?->user_id);
+
+        if ($recipients->isNotEmpty()) {
+            foreach ($recipients as $u) {
+                $this->notify(
+                    $u,
+                    "🎯 HR Reminder: Evaluation Pending for {$empName}",
+                    "HR Reminder: {$empName} has submitted their MBO sheet for {$monthName}. Please review achievements and assign marks.",
+                    "/solar/hr/portal/appraisals?tab=team&employee_id={$sheet->employee_id}",
+                    "mbo-nudge-{$sheet->id}-" . time(),
+                    'warning'
+                );
+            }
             return response()->json([
-                'message' => "Reminder notification sent to {$appraiserName} (Reporting Manager) for {$empName}.",
+                'message' => "Reminder notification sent to Appraisers (Reporting Manager & Approval Managers) for {$empName}.",
             ]);
         }
 
         return response()->json([
-            'message' => "No Reporting Manager account found for {$empName}. Please assign a Reporting Manager in Employee Profile.",
+            'message' => "No Appraiser accounts found for {$empName}.",
         ], 422);
     }
 }

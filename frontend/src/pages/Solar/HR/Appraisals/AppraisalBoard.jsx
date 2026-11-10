@@ -120,7 +120,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
   const handleRemindAppraiser = async (sheetId, empName, managerName) => {
     try {
       const res = await api.post(`/hr/appraisals/${sheetId}/remind-appraiser`);
-      toast.success(res.data?.message || `Reminder sent to ${managerName || 'Reporting Manager'} for ${empName}`);
+      toast.success(res.data?.message || `Reminder sent to Appraisers for ${empName}`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send reminder');
     }
@@ -317,7 +317,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--surface-2)', color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Employee</th>
-                  <th style={{ padding: '0.75rem 0.75rem', textAlign: 'left' }}>Reporting Manager / Appraiser</th>
+                  <th style={{ padding: '0.75rem 0.75rem', textAlign: 'left' }}>Reporting Manager & Appraisers</th>
                   <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Objectives</th>
                   <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Status</th>
                   <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Marks</th>
@@ -356,17 +356,35 @@ export const AppraisalBoard = ({ isHrView = false }) => {
                         </div>
                       </td>
 
-                      {/* Reporting Manager / Appraiser */}
+                      {/* Reporting Manager & Appraisers */}
                       <td style={{ padding: '0.75rem 0.75rem' }}>
-                        {managerName ? (
+                        {emp.evaluator ? (
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#1e293b' }}>{managerName}</div>
-                            {managerTitle && (
-                              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{managerTitle}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#0f172a' }}>{emp.evaluator.full_name}</span>
+                              <span style={{ fontSize: '0.6rem', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1' }}>EVALUATOR</span>
+                            </div>
+                            {emp.manager && emp.manager.id !== emp.evaluator.id ? (
+                              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Line Mgr: {emp.manager.full_name}</div>
+                            ) : (
+                              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{emp.evaluator.designation || 'Appraiser'}</div>
                             )}
                           </div>
+                        ) : emp.manager ? (
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#1e293b' }}>
+                              {emp.manager.full_name}
+                              <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 500, marginLeft: '0.3rem' }}>(Line Mgr)</span>
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 600 }}>
+                              &amp; Approval Managers
+                            </div>
+                          </div>
                         ) : (
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>HR / Unassigned</span>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#0284c7' }}>Approval Managers</div>
+                            <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Hasintha / Eranda (HR)</div>
+                          </div>
                         )}
                       </td>
 
@@ -494,7 +512,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
-              {/* Option 1: Remind Reporting Managers & HR about pending evaluations */}
+              {/* Option 1: Remind Appraisers (Reporting & Approval Managers) about pending evaluations */}
               <button
                 type="button"
                 onClick={() => handleTriggerReminders('appraiser', lastMonth)}
@@ -504,16 +522,16 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               >
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#6b21a8' }}>
-                    Remind Reporting Managers & HR (Pending Evaluations)
+                    Remind Appraisers (Reporting &amp; Approval Managers) — Pending Evaluations
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#7e22ce' }}>
-                    "HR Reminder: Team member appraisals for {lastMonthLabel} are submitted and awaiting your final marks & sign-off."
+                    "HR Reminder: Team member appraisals for {lastMonthLabel} are submitted and awaiting your final marks &amp; sign-off."
                   </div>
                 </div>
                 {sendingReminder ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} color="#9333ea" />}
               </button>
 
-              {/* Option 2: Remind Reporting Managers & HR to assign objectives */}
+              {/* Option 2: Remind Appraisers (Reporting & Approval Managers) to assign objectives */}
               <button
                 type="button"
                 onClick={() => handleTriggerReminders('objectives', month)}
@@ -523,7 +541,7 @@ export const AppraisalBoard = ({ isHrView = false }) => {
               >
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0369a1' }}>
-                    Remind Reporting Managers & HR (Assign Objectives)
+                    Remind Appraisers (Reporting &amp; Approval Managers) — Assign Objectives
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#0284c7' }}>
                     "HR Reminder: Please assign monthly performance objectives and weights for your team for {currentMonthLabel}."
