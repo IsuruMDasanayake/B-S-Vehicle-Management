@@ -125,36 +125,15 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
         };
       });
 
-      // If appraiser opening an unassigned sheet, prep default engineering goals & subtasks from company template
+      // If appraiser opening an unassigned sheet, prep 3 blank objective rows with default weights (40%, 30%, 30%)
       if (objs.length === 0 && d.permissions?.is_appraiser) {
         setObjectives([
           {
             id: null,
-            title: 'Goal 1 – TX Line Engineering Design & Technical Compliance',
-            description: 'Ensure TX line designs, engineering calculations, technical specifications and supporting documentation are accurate, compliant and ready for approval.',
+            title: '',
+            description: '',
             subtasks: [
-              { id: 'st-0-1', code: '1.1', title: 'Review TX line design drawings, calculations and documents for completeness, accuracy, compliance and authority submission readiness.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-0-2', code: '1.2', title: 'Verify pole structural designs, loading calculations, foundation designs, geotechnical suitability and conductor compatibility. Obtain CE-certified documents from QQ.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-0-3', code: '1.3', title: 'Review ACCC conductors, insulators, fittings, clamps, joints, vibration controls, stringing equipment and technical data from QQ.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-0-4', code: '1.4', title: 'Verify TX line route alignment, survey coordinates, pole locations, longitudinal profiles and route drawings against actual site conditions.', target: '100%', deadline: '', achievement: '', status: 'not_started' }
-            ],
-            weight: 30,
-            deadline: '',
-            achievement: '',
-            status: 'not_started',
-            actual_marks: '',
-          },
-          {
-            id: null,
-            title: 'Goal 2 – Regulatory Approvals, Wayleave & Stakeholder Coordination',
-            description: 'Facilitate statutory approvals, land access permissions and stakeholder coordination to support uninterrupted TX line construction.',
-            subtasks: [
-              { id: 'st-1-1', code: '2.1', title: 'Prepare the TX line A2 Approval List with certified technical documentation and submit it to Vajira for bonded-facility storage.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-1-2', code: '2.2', title: 'Coordinate authorities, affected landowners and stakeholders regarding wayleave and right-of-way approvals.', target: '70%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-1-3', code: '2.3', title: 'Prepare a pole-location-wise wayleave tracker covering landowners, access status, objections, approvals, compensation and outstanding matters.', target: '50%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-1-4', code: '2.4', title: 'Assess worst-case wayleave scenarios, landowner objections and access restrictions, and prepare preliminary compensation and mitigation proposals.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-1-5', code: '2.5', title: 'Identify required crossing approvals and clearances for roads, canals, watercourses, power lines and other infrastructure.', target: '30%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-1-6', code: '2.6', title: 'Follow up Mahaweli Authority approvals relating to TX works and documentation submitted by Vajira.', target: '100%', deadline: '', achievement: '', status: 'not_started' }
+              { id: 'st-0-1', code: '1.1', title: '', target: '100%', deadline: '', achievement: '', status: 'not_started' }
             ],
             weight: 40,
             deadline: '',
@@ -164,13 +143,23 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
           },
           {
             id: null,
-            title: 'Goal 3 – TX Material Procurement & Quality Assurance',
-            description: 'Ensure TX line materials and concrete poles meet approved technical specifications, manufacturing standards, quality requirements and procurement schedules.',
+            title: '',
+            description: '',
             subtasks: [
-              { id: 'st-2-1', code: '3.1', title: 'Review specifications for all TX materials, supplier qualifications, applicable standards, type-test reports and compliance documentation.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-2-2', code: '3.2', title: 'Monitor and expedite concrete pole procurement, including supplier qualifications, production progress, certifications and delivery schedules.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-2-3', code: '3.3', title: 'Review concrete pole manufacturing Inspection and Test Plans (ITPs), factory inspection procedures, test requirements, quality documents and delivery acceptance arrangements.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
-              { id: 'st-2-4', code: '3.4', title: 'Verify concrete pole quality, dimensions, manufacturing compliance, inspection results, test reports and acceptance documentation.', target: '30%', deadline: '', achievement: '', status: 'not_started' }
+              { id: 'st-1-1', code: '2.1', title: '', target: '100%', deadline: '', achievement: '', status: 'not_started' }
+            ],
+            weight: 30,
+            deadline: '',
+            achievement: '',
+            status: 'not_started',
+            actual_marks: '',
+          },
+          {
+            id: null,
+            title: '',
+            description: '',
+            subtasks: [
+              { id: 'st-2-1', code: '3.1', title: '', target: '100%', deadline: '', achievement: '', status: 'not_started' }
             ],
             weight: 30,
             deadline: '',
@@ -847,6 +836,13 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
             </tr>
           </thead>
           <tbody>
+            {objectives.length === 0 && (
+              <tr>
+                <td colSpan={8} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b', fontStyle: 'italic', background: '#f8fafc' }}>
+                  No objectives assigned yet for this month.
+                </td>
+              </tr>
+            )}
             {objectives.map((obj, objIdx) => {
               const subtasks = (obj.subtasks && obj.subtasks.length > 0)
                 ? obj.subtasks
@@ -913,14 +909,14 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                               type="text"
                               value={obj.title}
                               onChange={(e) => updateObjectiveField(objIdx, 'title', e.target.value)}
-                              placeholder={`Goal ${objIdx + 1} – e.g. TX Line Engineering Design`}
+                              placeholder={`Enter Goal #${objIdx + 1} title...`}
                               style={{ width: '100%', padding: '0.4rem 0.55rem', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.4rem' }}
                             />
                             <textarea
                               rows={3}
                               value={obj.description || ''}
                               onChange={(e) => updateObjectiveField(objIdx, 'description', e.target.value)}
-                              placeholder="Main Monthly Goal: Ensure TX line designs, calculations, technical specifications..."
+                              placeholder="Main Monthly Goal description..."
                               style={{ width: '100%', padding: '0.4rem 0.55rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.76rem', resize: 'vertical' }}
                             />
                             <div style={{ marginTop: '0.45rem' }}>
@@ -948,7 +944,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                         ) : (
                           <div>
                             <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem', fontSize: '0.84rem' }}>
-                              {obj.title || `Goal ${objIdx + 1}`}
+                              {obj.title || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Pending goal title</span>}
                             </div>
                             {obj.description && (
                               <div style={{ fontSize: '0.77rem', color: '#475569', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
@@ -984,7 +980,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                             rows={2}
                             value={st.title || ''}
                             onChange={(e) => updateSubtaskField(objIdx, stIdx, 'title', e.target.value)}
-                            placeholder="e.g. Review TX line design drawings and verify compliance..."
+                            placeholder="Enter subtask description..."
                             style={{ width: '100%', padding: '0.35rem 0.45rem', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.78rem', resize: 'vertical' }}
                           />
                         </div>
