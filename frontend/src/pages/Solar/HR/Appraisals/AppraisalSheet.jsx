@@ -640,7 +640,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
   const canPrint = Boolean(permissions.can_print ?? permissions.is_hr);
 
   return (
-    <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid var(--surface-2, #e2e8f0)', padding: '1.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+    <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid var(--surface-2, #e2e8f0)', padding: '0rem', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
       {/* ── Top Header Bar ─────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid var(--surface-2, #e2e8f0)' }}>
         <div>
