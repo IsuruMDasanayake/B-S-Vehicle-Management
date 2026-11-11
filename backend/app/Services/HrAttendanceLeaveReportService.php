@@ -927,11 +927,11 @@ class HrAttendanceLeaveReportService
             $earlyMins = 0;
             $overtimeHrs = 0.0;
 
-            // Compute late minutes (official start: 09:00, grace until 09:10)
+            // Compute late minutes (official start: 09:00:00, grace until 09:10:59 AM / late at 09:11:00 AM or after)
             if ($clockIn) {
-                $shiftStart = Carbon::parse($dateStr . ' 09:00:00', 'Asia/Colombo');
-                $graceEnd   = Carbon::parse($dateStr . ' 09:10:00', 'Asia/Colombo');
-                if ($clockIn->gt($graceEnd)) {
+                $shiftStart    = Carbon::parse($dateStr . ' 09:00:00', 'Asia/Colombo');
+                $lateThreshold = Carbon::parse($dateStr . ' 09:11:00', 'Asia/Colombo');
+                if ($clockIn->gte($lateThreshold)) {
                     $lateMins = (int) $shiftStart->diffInMinutes($clockIn);
                 }
             }

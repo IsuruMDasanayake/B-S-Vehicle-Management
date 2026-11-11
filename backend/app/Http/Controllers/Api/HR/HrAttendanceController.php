@@ -21,10 +21,11 @@ use Illuminate\Support\Facades\Storage;
 class HrAttendanceController extends Controller
 {
     // ── Company Shift Configuration ────────────────────────────────────────────
-    const SHIFT_START  = '09:00:00'; // Official shift start
-    const GRACE_END    = '09:10:00'; // Late after this (grace period 9–9:10 AM)
-    const SHIFT_END    = '17:30:00'; // Official end (5:30 PM)
-    const HALF_DAY_HRS = 4.5;        // Below this = half day
+    const SHIFT_START    = '09:00:00'; // Official shift start
+    const GRACE_END      = '09:10:59'; // Grace until 09:10:59 AM (Before 09:11:00 AM is not late)
+    const LATE_THRESHOLD = '09:11:00'; // Late at 09:11:00 AM or after
+    const SHIFT_END      = '17:30:00'; // Official end (5:30 PM)
+    const HALF_DAY_HRS   = 4.5;        // Below this = half day
 
     /**
      * Check if user is authorized as an adjustment manager.
@@ -58,12 +59,12 @@ class HrAttendanceController extends Controller
         return null;
     }
 
-    /** Determine status from clock-in time. Grace: 9:00–10:00 = present. After 10:00 = late. */
+    /** Determine status from clock-in time. Grace: 09:00:00–09:10:59 AM (before 09:11:00 AM) = present. At 09:11:00 AM or after = late. */
     private function deriveStatus(Carbon $clockIn, string $date): string
     {
         $localClockIn = $clockIn->copy()->timezone('Asia/Colombo');
-        $graceEnd = Carbon::parse($localClockIn->toDateString() . ' ' . self::GRACE_END, 'Asia/Colombo');
-        return $localClockIn->greaterThan($graceEnd) ? 'late' : 'present';
+        $lateThreshold = Carbon::parse($localClockIn->toDateString() . ' ' . self::LATE_THRESHOLD, 'Asia/Colombo');
+        return $localClockIn->greaterThanOrEqualTo($lateThreshold) ? 'late' : 'present';
     }
 
     /** Recalculate hours and status on clock-out */
