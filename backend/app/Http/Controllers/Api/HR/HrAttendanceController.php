@@ -77,8 +77,10 @@ class HrAttendanceController extends Controller
         $shiftEnd = Carbon::parse($localClockOut->toDateString() . ' ' . self::SHIFT_END, 'Asia/Colombo');
         $earlyDepart = $localClockOut->lessThan($shiftEnd);
 
-        // Less than half a day worked → mark as half_day
-        $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : $att->status;
+        // Derive base status from clock-in (present if strictly before 09:11:00 AM, late if >= 09:11:00 AM)
+        $baseStatus = $this->deriveStatus($clockIn, Carbon::parse($att->date)->toDateString());
+        // Less than half a day worked → mark as half_day, otherwise use base status (or respect HR manual override)
+        $status = $hoursWorked < self::HALF_DAY_HRS ? 'half_day' : ($att->is_manual_override ? $att->status : $baseStatus);
 
         return [
             'clock_out_time'  => $clockOut,
@@ -238,12 +240,20 @@ class HrAttendanceController extends Controller
         // Self-heal any unclosed past attendance records
         $this->autoClosePastAttendances($employee->id);
 
-        return response()->json(
-            HrAttendance::with('clockInLocation')
-                ->where('employee_id', $employee->id)
-                ->where('date', Carbon::today()->toDateString())
-                ->first()
-        );
+        $att = HrAttendance::with('clockInLocation')
+            ->where('employee_id', $employee->id)
+            ->where('date', Carbon::today()->toDateString())
+            ->first();
+
+        // Self-heal: if marked 'late' under old logic but clocked in before 09:11:00 AM, correct to 'present' in DB
+        if ($att && $att->status === 'late' && $att->clock_in_time && !$att->is_manual_override) {
+            if ($this->deriveStatus(Carbon::parse($att->clock_in_time), $att->date) === 'present') {
+                $att->status = 'present';
+                $att->save();
+            }
+        }
+
+        return response()->json($att);
     }
 
     /**
@@ -784,6 +794,33 @@ class HrAttendanceController extends Controller
                 'is_auto_clock_out' => true,
                 'notes'             => 'Missing clock-out (Clock-out left blank — employee must submit time & reason before month end)',
             ]);
+        }
+
+        // Self-heal any attendances erroneously marked 'late' within grace period (< 09:11:00 AM)
+        $this->selfHealGracePeriodLateStatus($employeeId);
+    }
+
+    /**
+     * Self-heal any attendance records in DB that were erroneously marked as 'late'
+     * despite clocking in strictly before 09:11:00 AM Colombo time (within the 09:10:59 AM grace period).
+     */
+    private function selfHealGracePeriodLateStatus(?int $employeeId = null): void
+    {
+        $query = HrAttendance::where('status', 'late')
+            ->whereNotNull('clock_in_time')
+            ->where('is_manual_override', false);
+
+        if ($employeeId !== null) {
+            $query->where('employee_id', $employeeId);
+        }
+
+        $records = $query->get();
+
+        foreach ($records as $att) {
+            if ($this->deriveStatus(Carbon::parse($att->clock_in_time), $att->date) === 'present') {
+                $att->status = 'present';
+                $att->save();
+            }
         }
     }
 
