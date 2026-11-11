@@ -11,6 +11,7 @@ class HrAppraisalObjective extends Model
         'order_num',
         'title',
         'description',
+        'subtasks',
         'weight',
         'deadline',
         'target_kpi',
@@ -30,6 +31,7 @@ class HrAppraisalObjective extends Model
         'marks'          => 'decimal:2',
         'weighted_marks' => 'decimal:2',
         'order_num'      => 'integer',
+        'subtasks'       => 'array',
     ];
 
     public function appraisal()

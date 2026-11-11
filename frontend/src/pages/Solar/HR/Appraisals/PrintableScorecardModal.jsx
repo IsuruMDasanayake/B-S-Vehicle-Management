@@ -392,117 +392,221 @@ export const PrintableScorecardModal = ({ appraisalId, appraisalData, isOpen, on
 
                 {/* ── The Exact Paper Table ── */}
                 <div style={{ border: '1.5px solid #0f172a', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.75rem' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                     <thead>
                       <tr style={{ background: '#f1f5f9', borderBottom: '1.5px solid #0f172a' }}>
-                        <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left', fontWeight: 800, width: '30%', borderRight: '1px solid #cbd5e1' }}>
+                        <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left', fontWeight: 800, width: '24%', borderRight: '1px solid #cbd5e1' }}>
                           Objective
                         </th>
-                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '10%', borderRight: '1px solid #cbd5e1' }}>
-                          Weight
+                        <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left', fontWeight: 800, width: '26%', borderRight: '1px solid #cbd5e1' }}>
+                          Subtask
                         </th>
-                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '13%', borderRight: '1px solid #cbd5e1' }}>
-                          Dead Line
+                        <th style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 800, width: '7%', borderRight: '1px solid #cbd5e1' }}>
+                          Target
                         </th>
-                        <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left', fontWeight: 800, width: '27%', borderRight: '1px solid #cbd5e1' }}>
+                        <th style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 800, width: '9%', borderRight: '1px solid #cbd5e1' }}>
+                          Deadline
+                        </th>
+                        <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left', fontWeight: 800, width: '18%', borderRight: '1px solid #cbd5e1' }}>
                           Achievement
                         </th>
-                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '10%', borderRight: '1px solid #cbd5e1' }}>
-                          Status of objectives
+                        <th style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 800, width: '8%', borderRight: '1px solid #cbd5e1' }}>
+                          Status
                         </th>
-                        <th style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '10%' }}>
+                        <th style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 800, width: '8%', borderRight: '1px solid #cbd5e1' }}>
+                          Weight
+                        </th>
+                        <th style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 800, width: '8%' }}>
                           Actual Marks
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {objectives.map((obj, idx) => (
-                        <tr key={obj.id || idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
-                          <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
-                            {obj.title}
-                          </td>
-                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 800 }}>
-                            {obj.weight ? `${obj.weight}%` : '—'}
-                          </td>
-                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
-                            {obj.deadline ? new Date(obj.deadline).toLocaleDateString('en-GB') : '—'}
-                          </td>
-                          <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
-                            {obj.achievement || '—'}
-                          </td>
-                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', textTransform: 'capitalize', fontSize: '0.78rem' }}>
-                            {obj.status?.replace('_', ' ') || 'In progress'}
-                          </td>
-                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 900, fontSize: '0.9rem' }}>
-                            {obj.actual_marks !== null && obj.actual_marks !== undefined ? obj.actual_marks : '—'}
-                          </td>
-                        </tr>
-                      ))}
+                      {objectives.map((obj, objIdx) => {
+                        const subtasks = (obj.subtasks && Array.isArray(obj.subtasks) && obj.subtasks.length > 0)
+                          ? obj.subtasks
+                          : [{
+                              id: `st-${objIdx}-0`,
+                              code: `${objIdx + 1}.1`,
+                              title: obj.description || obj.title || '',
+                              target: '100%',
+                              deadline: obj.deadline || '',
+                              achievement: obj.achievement || '',
+                              status: obj.status || 'not_started',
+                            }];
+                        const rowCount = subtasks.length;
+
+                        return subtasks.map((st, stIdx) => {
+                          const isFirstRow = stIdx === 0;
+                          const isLastRow = stIdx === rowCount - 1;
+
+                          return (
+                            <tr
+                              key={`${obj.id || objIdx}-${st.id || stIdx}`}
+                              style={{
+                                borderBottom: isLastRow ? '1.5px solid #0f172a' : '1px solid #e2e8f0',
+                                verticalAlign: 'top',
+                              }}
+                            >
+                              {/* 1. Objective (Goal Title + Main Monthly Goal) */}
+                              {isFirstRow && (
+                                <td
+                                  rowSpan={rowCount}
+                                  style={{
+                                    padding: '0.5rem 0.6rem',
+                                    borderRight: '1px solid #cbd5e1',
+                                    borderBottom: '1.5px solid #0f172a',
+                                    verticalAlign: 'top',
+                                    width: '24%',
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>
+                                    {obj.title}
+                                  </div>
+                                  {obj.description && (
+                                    <div style={{ fontSize: '0.74rem', color: '#475569', lineHeight: 1.4 }}>
+                                      <strong style={{ color: '#0f172a' }}>Main Monthly Goal: </strong>
+                                      {obj.description.replace(/^Main Monthly Goal:\s*/i, '')}
+                                    </div>
+                                  )}
+                                </td>
+                              )}
+
+                              {/* 2. Subtask */}
+                              <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', width: '26%' }}>
+                                <div style={{ fontSize: '0.78rem', lineHeight: 1.35 }}>
+                                  <strong style={{ color: '#0284c7', marginRight: '0.35rem' }}>{st.code || `${objIdx + 1}.${stIdx + 1}`}</strong>
+                                  {st.title}
+                                </div>
+                              </td>
+
+                              {/* 3. Target */}
+                              <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', width: '7%', verticalAlign: 'middle', fontWeight: 700 }}>
+                                {st.target || '100%'}
+                              </td>
+
+                              {/* 4. Deadline */}
+                              <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', width: '9%', verticalAlign: 'middle', fontSize: '0.76rem' }}>
+                                {st.deadline ? new Date(st.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (obj.deadline ? new Date(obj.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—')}
+                              </td>
+
+                              {/* 5. Achievement */}
+                              <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', width: '18%', fontSize: '0.76rem', whiteSpace: 'pre-wrap', lineHeight: 1.3 }}>
+                                {st.achievement || '—'}
+                              </td>
+
+                              {/* 6. Status */}
+                              <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', width: '8%', verticalAlign: 'middle', textTransform: 'capitalize', fontSize: '0.74rem' }}>
+                                {st.status?.replace('_', ' ') || 'In progress'}
+                              </td>
+
+                              {/* 7. Weight */}
+                              {isFirstRow && (
+                                <td
+                                  rowSpan={rowCount}
+                                  style={{
+                                    padding: '0.5rem 0.4rem',
+                                    textAlign: 'center',
+                                    borderRight: '1px solid #cbd5e1',
+                                    borderBottom: '1.5px solid #0f172a',
+                                    verticalAlign: 'middle',
+                                    fontWeight: 800,
+                                    width: '8%',
+                                  }}
+                                >
+                                  {obj.weight ? `${obj.weight}%` : '—'}
+                                </td>
+                              )}
+
+                              {/* 8. Actual Marks */}
+                              {isFirstRow && (
+                                <td
+                                  rowSpan={rowCount}
+                                  style={{
+                                    padding: '0.5rem 0.4rem',
+                                    textAlign: 'center',
+                                    borderBottom: '1.5px solid #0f172a',
+                                    verticalAlign: 'middle',
+                                    fontWeight: 900,
+                                    fontSize: '0.9rem',
+                                    width: '8%',
+                                  }}
+                                >
+                                  {obj.actual_marks !== null && obj.actual_marks !== undefined ? obj.actual_marks : '—'}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        });
+                      })}
 
                       {/* Comments & Deductions */}
                       {/* Row 1: Appraiser Comments + Attendance Notes + Attendance Label + Marks */}
                       <tr style={{ borderTop: '1.5px solid #0f172a', borderBottom: '1px solid #cbd5e1' }}>
-                        <td rowSpan={2} colSpan={3} style={{ padding: '0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'top', width: '53%' }}>
+                        <td rowSpan={2} colSpan={4} style={{ padding: '0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'top', width: '66%' }}>
                           <strong style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.2rem' }}>Appraiser's Comments</strong>
                           <div style={{ fontSize: '0.78rem', color: '#334155' }}>
                             {data.manager_comments || 'No remarks recorded.'}
                           </div>
                         </td>
-                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', fontSize: '0.78rem', width: '27%', color: data.attendance_deduction_notes ? '#0f172a' : '#94a3b8', fontStyle: data.attendance_deduction_notes ? 'normal' : 'italic' }}>
+                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', fontSize: '0.76rem', width: '18%', color: data.attendance_deduction_notes ? '#0f172a' : '#94a3b8', fontStyle: data.attendance_deduction_notes ? 'normal' : 'italic' }}>
                           {data.attendance_deduction_notes || '—'}
                         </td>
-                        <td style={{ padding: '0.5rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, textAlign: 'right', verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', width: '10%' }}>
+                        <td style={{ padding: '0.5rem 0.4rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, textAlign: 'right', verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', width: '8%' }}>
                           Attendance
                         </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', width: '10%' }}>
+                        <td style={{ padding: '0.5rem 0.4rem', borderRight: '1px solid #cbd5e1', textAlign: 'center', verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', width: '8%', fontSize: '0.72rem', color: '#64748b' }}>
+                          Max -10
+                        </td>
+                        <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', width: '8%' }}>
                           {data.attendance_deduction > 0 ? `-${data.attendance_deduction}` : '0'}
                         </td>
                       </tr>
 
                       {/* Row 2: Misconduct Notes + Misconduct Label + Marks */}
                       <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', fontSize: '0.78rem', width: '27%', color: data.misconduct_deduction_notes ? '#0f172a' : '#94a3b8', fontStyle: data.misconduct_deduction_notes ? 'normal' : 'italic' }}>
+                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', fontSize: '0.76rem', width: '18%', color: data.misconduct_deduction_notes ? '#0f172a' : '#94a3b8', fontStyle: data.misconduct_deduction_notes ? 'normal' : 'italic' }}>
                           {data.misconduct_deduction_notes || '—'}
                         </td>
-                        <td style={{ padding: '0.5rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, textAlign: 'right', verticalAlign: 'middle', width: '10%' }}>
+                        <td style={{ padding: '0.5rem 0.4rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, textAlign: 'right', verticalAlign: 'middle', width: '8%' }}>
                           Misconduct
                         </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', width: '10%' }}>
+                        <td style={{ padding: '0.5rem 0.4rem', borderRight: '1px solid #cbd5e1', textAlign: 'center', verticalAlign: 'middle', width: '8%', fontSize: '0.72rem', color: '#64748b' }}>
+                          Max -30
+                        </td>
+                        <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', width: '8%' }}>
                           {data.misconduct_deduction > 0 ? `-${data.misconduct_deduction}` : '0'}
                         </td>
                       </tr>
 
                       {/* Summary Row */}
                       <tr style={{ background: '#f8fafc', borderTop: '1.5px solid #0f172a', fontWeight: 800 }}>
-                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', textAlign: 'right' }}>
-                          Total Weight:
+                        <td colSpan={2} style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1' }}>
+                          Total Weight: 100%
                         </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
-                          100%
+                        <td colSpan={2} style={{ padding: '0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 700, fontSize: '0.78rem' }}>
+                          Appraiser: {evaluator?.full_name || emp?.manager?.full_name || 'Reporting Manager & Approval Managers'}
                         </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
-                          Appraiser
-                        </td>
-                        <td style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1' }}>
-                          {evaluator?.full_name || emp?.manager?.full_name || 'Reporting Manager & Approval Managers'}
-                        </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
+                        <td colSpan={2} style={{ padding: '0.5rem 0.4rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
                           Total
                         </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'center', fontSize: '1.1rem', fontWeight: 900, color: '#0284c7' }}>
+                        <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 800 }}>
+                          100%
+                        </td>
+                        <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontSize: '1.1rem', fontWeight: 900, color: '#0284c7' }}>
                           {data.final_score}
                         </td>
                       </tr>
 
                       {/* Grade Row */}
                       <tr style={{ background: '#f1f5f9', fontWeight: 800 }}>
-                        <td colSpan={4} style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
+                        <td colSpan={5} style={{ padding: '0.5rem 0.6rem', borderRight: '1px solid #cbd5e1', fontSize: '0.76rem' }}>
                           Variable Performance Pay: <strong>{data.variable_pay_adjustment || '100%'}</strong> ({data.performance_level || gradeMeta.label})
                         </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900, fontSize: '0.8rem' }}>
+                        <td colSpan={2} style={{ padding: '0.5rem 0.4rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900, fontSize: '0.78rem' }}>
                           Monthly Performance Grade
                         </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'center', fontSize: '1.2rem', fontWeight: 900, color: gradeMeta.color }}>
+                        <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontSize: '1.2rem', fontWeight: 900, color: gradeMeta.color }}>
                           {data.grade || 'A1'}
                         </td>
                       </tr>
