@@ -587,20 +587,37 @@ class HrAppraisalController extends Controller
     //  Appraiser: Objectives (Objective / Weight / Deadline)
     // ═════════════════════════════════════════════════════════════════════════
 
+    private static bool $subtasksColumnChecked = false;
+    private function ensureSubtasksColumnExists(): void
+    {
+        if (self::$subtasksColumnChecked) return;
+        self::$subtasksColumnChecked = true;
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('hr_appraisal_objectives', 'subtasks')) {
+                \Illuminate\Support\Facades\Schema::table('hr_appraisal_objectives', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->json('subtasks')->nullable()->after('description');
+                });
+            }
+        } catch (\Throwable $e) {}
+    }
+
     /** PUT appraisals/objectives — body: employee_id, month, objectives[], reason */
     public function saveObjectives(Request $request)
     {
+        $this->ensureSubtasksColumnExists();
         $user = $request->user();
 
         $validated = $request->validate([
-            'employee_id'            => 'required|exists:hr_employees,id',
-            'month'                  => ['required', 'regex:/^\d{4}-\d{2}$/'],
-            'objectives'             => 'required|array|min:1',
-            'objectives.*.id'        => 'nullable|integer',
-            'objectives.*.title'     => 'required|string|max:255',
-            'objectives.*.weight'    => 'required|numeric|min:1|max:100',
-            'objectives.*.deadline'  => 'nullable|date',
-            'reason'                 => 'nullable|string|max:1000',
+            'employee_id'               => 'required|exists:hr_employees,id',
+            'month'                     => ['required', 'regex:/^\d{4}-\d{2}$/'],
+            'objectives'                => 'required|array|min:1',
+            'objectives.*.id'           => 'nullable|integer',
+            'objectives.*.title'        => 'required|string|max:500',
+            'objectives.*.description'  => 'nullable|string|max:5000',
+            'objectives.*.weight'       => 'required|numeric|min:1|max:100',
+            'objectives.*.deadline'     => 'nullable|date',
+            'objectives.*.subtasks'     => 'nullable|array',
+            'reason'                    => 'nullable|string|max:1000',
         ], [
             'objectives.*.title.required'  => 'Every objective needs a title.',
             'objectives.*.weight.required' => 'Every objective needs a weight.',
@@ -632,9 +649,11 @@ class HrAppraisalController extends Controller
 
         // ── Build change set ──
         $snapshot = fn($o) => [
-            'title'    => $o['title'],
-            'weight'   => round((float) $o['weight'], 2),
-            'deadline' => !empty($o['deadline']) ? Carbon::parse($o['deadline'])->format('Y-m-d') : null,
+            'title'       => $o['title'],
+            'description' => $o['description'] ?? null,
+            'subtasks'    => $o['subtasks'] ?? [],
+            'weight'      => round((float) $o['weight'], 2),
+            'deadline'    => !empty($o['deadline']) ? Carbon::parse($o['deadline'])->format('Y-m-d') : null,
         ];
 
         $changes = [];
@@ -647,9 +666,11 @@ class HrAppraisalController extends Controller
                 $keptIds[] = $id;
                 $cur = $existing->get($id);
                 $old = [
-                    'title'    => $cur->title,
-                    'weight'   => round((float) $cur->weight, 2),
-                    'deadline' => $cur->deadline?->format('Y-m-d'),
+                    'title'       => $cur->title,
+                    'description' => $cur->description,
+                    'subtasks'    => $cur->subtasks ?? [],
+                    'weight'      => round((float) $cur->weight, 2),
+                    'deadline'    => $cur->deadline?->format('Y-m-d'),
                 ];
                 if ($old !== $new) {
                     $changes[] = ['action' => 'updated', 'id' => $id, 'old' => $old, 'new' => $new, 'order' => $idx + 1];
@@ -664,7 +685,13 @@ class HrAppraisalController extends Controller
             if (!in_array($id, $keptIds, true)) {
                 $changes[] = [
                     'action' => 'removed', 'id' => $id, 'order' => null, 'new' => null,
-                    'old' => ['title' => $cur->title, 'weight' => round((float) $cur->weight, 2), 'deadline' => $cur->deadline?->format('Y-m-d')],
+                    'old' => [
+                        'title'       => $cur->title,
+                        'description' => $cur->description,
+                        'subtasks'    => $cur->subtasks ?? [],
+                        'weight'      => round((float) $cur->weight, 2),
+                        'deadline'    => $cur->deadline?->format('Y-m-d'),
+                    ],
                 ];
             }
         }
@@ -688,20 +715,24 @@ class HrAppraisalController extends Controller
 
                 if ($c['action'] === 'added') {
                     $obj = $sheet->objectives()->create([
-                        'order_num' => $c['order'],
-                        'title'     => $c['new']['title'],
-                        'weight'    => $c['new']['weight'],
-                        'deadline'  => $c['new']['deadline'],
-                        'status'    => 'not_started',
+                        'order_num'   => $c['order'],
+                        'title'       => $c['new']['title'],
+                        'description' => $c['new']['description'] ?? null,
+                        'subtasks'    => $c['new']['subtasks'] ?? [],
+                        'weight'      => $c['new']['weight'],
+                        'deadline'    => $c['new']['deadline'],
+                        'status'      => 'not_started',
                     ]);
                     $objectiveId = $obj->id;
                 } elseif ($c['action'] === 'updated') {
                     $obj = HrAppraisalObjective::find($c['id']);
                     $obj->fill([
-                        'order_num' => $c['order'],
-                        'title'     => $c['new']['title'],
-                        'weight'    => $c['new']['weight'],
-                        'deadline'  => $c['new']['deadline'],
+                        'order_num'   => $c['order'],
+                        'title'       => $c['new']['title'],
+                        'description' => $c['new']['description'] ?? null,
+                        'subtasks'    => $c['new']['subtasks'] ?? [],
+                        'weight'      => $c['new']['weight'],
+                        'deadline'    => $c['new']['deadline'],
                     ]);
                     // Marks above the new weight are no longer valid
                     if ($obj->actual_marks !== null && (float) $obj->actual_marks > (float) $c['new']['weight']) {
@@ -769,11 +800,13 @@ class HrAppraisalController extends Controller
             return response()->json(['message' => 'This appraisal has already been submitted.'], 422);
         }
 
+        $this->ensureSubtasksColumnExists();
         $validated = $request->validate([
             'objectives'               => 'required|array',
             'objectives.*.id'          => 'required|integer',
             'objectives.*.achievement' => 'nullable|string|max:5000',
             'objectives.*.status'      => 'required|in:' . implode(',', self::OBJ_STATUSES),
+            'objectives.*.subtasks'    => 'nullable|array',
             'employee_comments'        => 'nullable|string|max:5000',
             'submit'                   => 'nullable|boolean',
         ]);
@@ -785,7 +818,19 @@ class HrAppraisalController extends Controller
             foreach ($validated['objectives'] as $o) {
                 $obj = $objectives->get($o['id']);
                 if ($obj && $o['status'] !== 'not_started' && trim($o['achievement'] ?? '') === '') {
-                    return response()->json(['message' => "Please describe your achievement for \"{$obj->title}\"."], 422);
+                    // Check if subtasks have achievements filled
+                    $hasSubtaskAchievement = false;
+                    if (!empty($o['subtasks']) && is_array($o['subtasks'])) {
+                        foreach ($o['subtasks'] as $st) {
+                            if (!empty(trim($st['achievement'] ?? ''))) {
+                                $hasSubtaskAchievement = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!$hasSubtaskAchievement) {
+                        return response()->json(['message' => "Please describe your achievement for \"{$obj->title}\"."], 422);
+                    }
                 }
             }
         }
@@ -793,10 +838,14 @@ class HrAppraisalController extends Controller
         DB::transaction(function () use ($sheet, $validated, $objectives, $submit) {
             foreach ($validated['objectives'] as $o) {
                 if (!$objectives->has($o['id'])) continue;
-                HrAppraisalObjective::where('id', $o['id'])->update([
+                $updateData = [
                     'achievement' => $o['achievement'] ?? null,
                     'status'      => $o['status'],
-                ]);
+                ];
+                if (isset($o['subtasks'])) {
+                    $updateData['subtasks'] = $o['subtasks'];
+                }
+                HrAppraisalObjective::where('id', $o['id'])->update($updateData);
             }
 
             $sheet->employee_comments = $validated['employee_comments'] ?? $sheet->employee_comments;

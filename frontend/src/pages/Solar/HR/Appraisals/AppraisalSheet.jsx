@@ -88,22 +88,96 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
       setData(d);
 
       const sheet = d.sheet;
-      const objs = (sheet?.objectives || []).map(o => ({
-        id: o.id,
-        title: o.title || '',
-        weight: o.weight !== null ? parseFloat(o.weight) : 0,
-        deadline: o.deadline ? o.deadline.split('T')[0] : '',
-        achievement: o.achievement || '',
-        status: o.status || 'not_started',
-        actual_marks: o.actual_marks !== null && o.actual_marks !== undefined ? parseFloat(o.actual_marks) : '',
-      }));
+      const objs = (sheet?.objectives || []).map((o, idx) => {
+        let subtasks = [];
+        if (Array.isArray(o.subtasks) && o.subtasks.length > 0) {
+          subtasks = o.subtasks.map((st, sIdx) => ({
+            id: st.id || `st-${idx}-${sIdx}`,
+            code: st.code || `${idx + 1}.${sIdx + 1}`,
+            title: st.title || '',
+            target: st.target !== undefined && st.target !== null ? String(st.target) : '100%',
+            deadline: st.deadline ? st.deadline.split('T')[0] : (o.deadline ? o.deadline.split('T')[0] : ''),
+            achievement: st.achievement || '',
+            status: st.status || 'not_started',
+          }));
+        } else {
+          subtasks = [{
+            id: `st-${idx}-0`,
+            code: `${idx + 1}.1`,
+            title: o.description || o.title || '',
+            target: '100%',
+            deadline: o.deadline ? o.deadline.split('T')[0] : '',
+            achievement: o.achievement || '',
+            status: o.status || 'not_started',
+          }];
+        }
 
-      // If appraiser opening an unassigned sheet, prep 3 empty rows by default
+        return {
+          id: o.id,
+          title: o.title || '',
+          description: o.description || '',
+          subtasks,
+          weight: o.weight !== null ? parseFloat(o.weight) : 0,
+          deadline: o.deadline ? o.deadline.split('T')[0] : '',
+          achievement: o.achievement || '',
+          status: o.status || 'not_started',
+          actual_marks: o.actual_marks !== null && o.actual_marks !== undefined ? parseFloat(o.actual_marks) : '',
+        };
+      });
+
+      // If appraiser opening an unassigned sheet, prep default engineering goals & subtasks from company template
       if (objs.length === 0 && d.permissions?.is_appraiser) {
         setObjectives([
-          { id: null, title: '', weight: 40, deadline: '', achievement: '', status: 'not_started', actual_marks: '' },
-          { id: null, title: '', weight: 30, deadline: '', achievement: '', status: 'not_started', actual_marks: '' },
-          { id: null, title: '', weight: 30, deadline: '', achievement: '', status: 'not_started', actual_marks: '' },
+          {
+            id: null,
+            title: 'Goal 1 – TX Line Engineering Design & Technical Compliance',
+            description: 'Ensure TX line designs, engineering calculations, technical specifications and supporting documentation are accurate, compliant and ready for approval.',
+            subtasks: [
+              { id: 'st-0-1', code: '1.1', title: 'Review TX line design drawings, calculations and documents for completeness, accuracy, compliance and authority submission readiness.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-0-2', code: '1.2', title: 'Verify pole structural designs, loading calculations, foundation designs, geotechnical suitability and conductor compatibility. Obtain CE-certified documents from QQ.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-0-3', code: '1.3', title: 'Review ACCC conductors, insulators, fittings, clamps, joints, vibration controls, stringing equipment and technical data from QQ.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-0-4', code: '1.4', title: 'Verify TX line route alignment, survey coordinates, pole locations, longitudinal profiles and route drawings against actual site conditions.', target: '100%', deadline: '', achievement: '', status: 'not_started' }
+            ],
+            weight: 30,
+            deadline: '',
+            achievement: '',
+            status: 'not_started',
+            actual_marks: '',
+          },
+          {
+            id: null,
+            title: 'Goal 2 – Regulatory Approvals, Wayleave & Stakeholder Coordination',
+            description: 'Facilitate statutory approvals, land access permissions and stakeholder coordination to support uninterrupted TX line construction.',
+            subtasks: [
+              { id: 'st-1-1', code: '2.1', title: 'Prepare the TX line A2 Approval List with certified technical documentation and submit it to Vajira for bonded-facility storage.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-1-2', code: '2.2', title: 'Coordinate authorities, affected landowners and stakeholders regarding wayleave and right-of-way approvals.', target: '70%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-1-3', code: '2.3', title: 'Prepare a pole-location-wise wayleave tracker covering landowners, access status, objections, approvals, compensation and outstanding matters.', target: '50%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-1-4', code: '2.4', title: 'Assess worst-case wayleave scenarios, landowner objections and access restrictions, and prepare preliminary compensation and mitigation proposals.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-1-5', code: '2.5', title: 'Identify required crossing approvals and clearances for roads, canals, watercourses, power lines and other infrastructure.', target: '30%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-1-6', code: '2.6', title: 'Follow up Mahaweli Authority approvals relating to TX works and documentation submitted by Vajira.', target: '100%', deadline: '', achievement: '', status: 'not_started' }
+            ],
+            weight: 40,
+            deadline: '',
+            achievement: '',
+            status: 'not_started',
+            actual_marks: '',
+          },
+          {
+            id: null,
+            title: 'Goal 3 – TX Material Procurement & Quality Assurance',
+            description: 'Ensure TX line materials and concrete poles meet approved technical specifications, manufacturing standards, quality requirements and procurement schedules.',
+            subtasks: [
+              { id: 'st-2-1', code: '3.1', title: 'Review specifications for all TX materials, supplier qualifications, applicable standards, type-test reports and compliance documentation.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-2-2', code: '3.2', title: 'Monitor and expedite concrete pole procurement, including supplier qualifications, production progress, certifications and delivery schedules.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-2-3', code: '3.3', title: 'Review concrete pole manufacturing Inspection and Test Plans (ITPs), factory inspection procedures, test requirements, quality documents and delivery acceptance arrangements.', target: '100%', deadline: '', achievement: '', status: 'not_started' },
+              { id: 'st-2-4', code: '3.4', title: 'Verify concrete pole quality, dimensions, manufacturing compliance, inspection results, test reports and acceptance documentation.', target: '30%', deadline: '', achievement: '', status: 'not_started' }
+            ],
+            weight: 30,
+            deadline: '',
+            achievement: '',
+            status: 'not_started',
+            actual_marks: '',
+          }
         ]);
         setEditingObjectives(true);
       } else {
@@ -161,13 +235,75 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
   // Has existing objectives assigned
   const hasAssignedObjectives = Boolean(sheet?.objectives && sheet.objectives.length > 0);
 
-  // ── Objective Row Manipulation (Appraiser) ───────────────────────────────
+  // ── Subtask & Objective Manipulation (Appraiser) ─────────────────────────
+  const addSubtask = (objIdx) => {
+    setObjectives(prev => prev.map((obj, i) => {
+      if (i !== objIdx) return obj;
+      const currentSubtasks = obj.subtasks || [];
+      const nextNum = currentSubtasks.length + 1;
+      const newSt = {
+        id: `temp-${Date.now()}-${nextNum}`,
+        code: `${i + 1}.${nextNum}`,
+        title: '',
+        target: '100%',
+        deadline: obj.deadline || '',
+        achievement: '',
+        status: 'not_started',
+      };
+      return {
+        ...obj,
+        subtasks: [...currentSubtasks, newSt],
+      };
+    }));
+  };
+
+  const removeSubtask = (objIdx, stIdx) => {
+    setObjectives(prev => prev.map((obj, i) => {
+      if (i !== objIdx) return obj;
+      const currentSubtasks = obj.subtasks || [];
+      if (currentSubtasks.length <= 1) {
+        toast.error('Each goal must have at least 1 subtask.');
+        return obj;
+      }
+      const filtered = currentSubtasks.filter((_, s) => s !== stIdx);
+      const renumbered = filtered.map((st, s) => ({
+        ...st,
+        code: `${i + 1}.${s + 1}`,
+      }));
+      return { ...obj, subtasks: renumbered };
+    }));
+  };
+
+  const updateSubtaskField = (objIdx, stIdx, field, value) => {
+    setObjectives(prev => prev.map((obj, i) => {
+      if (i !== objIdx) return obj;
+      const updatedSubtasks = (obj.subtasks || []).map((st, s) => {
+        if (s !== stIdx) return st;
+        return { ...st, [field]: value };
+      });
+      return { ...obj, subtasks: updatedSubtasks };
+    }));
+  };
+
   const addObjectiveRow = () => {
     const currentSum = objectives.reduce((s, o) => s + (parseFloat(o.weight) || 0), 0);
     const rem = Math.max(0, 100 - currentSum);
+    const nextNum = objectives.length + 1;
     setObjectives([...objectives, {
       id: null,
-      title: '',
+      title: `Goal ${nextNum}`,
+      description: '',
+      subtasks: [
+        {
+          id: `temp-${Date.now()}-1`,
+          code: `${nextNum}.1`,
+          title: '',
+          target: '100%',
+          deadline: '',
+          achievement: '',
+          status: 'not_started',
+        }
+      ],
       weight: rem > 0 ? rem : 10,
       deadline: '',
       achievement: '',
@@ -178,7 +314,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
 
   const removeObjectiveRow = (idx) => {
     if (objectives.length <= 1) {
-      toast.error('At least 1 objective is required.');
+      toast.error('At least 1 goal is required.');
       return;
     }
     setObjectives(objectives.filter((_, i) => i !== idx));
@@ -191,17 +327,30 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
   // ── Save Objectives (Hasintha) ─────────────────────────────────────────────
   const handleInitiateSaveObjectives = () => {
     if (objectives.length === 0) {
-      toast.error('Add at least 1 objective.');
+      toast.error('Add at least 1 goal.');
       return;
     }
     for (let i = 0; i < objectives.length; i++) {
-      if (!objectives[i].title.trim()) {
-        toast.error(`Objective #${i + 1} must have a title.`);
+      const obj = objectives[i];
+      if (!obj.title || !obj.title.trim()) {
+        toast.error(`Goal #${i + 1} must have a title.`);
         return;
+      }
+      const subtasks = obj.subtasks || [];
+      if (subtasks.length === 0) {
+        toast.error(`Goal #${i + 1} must have at least 1 subtask.`);
+        return;
+      }
+      for (let j = 0; j < subtasks.length; j++) {
+        const st = subtasks[j];
+        if (!st.title || !st.title.trim()) {
+          toast.error(`Subtask ${st.code || `${i + 1}.${j + 1}`} in Goal #${i + 1} must have a description.`);
+          return;
+        }
       }
     }
     if (Math.abs(totalWeight - 100.0) > 0.01) {
-      toast.error(`Combined weight of all objectives must equal 100%. Current: ${totalWeight}%`);
+      toast.error(`Combined weight of all goals must equal 100%. Current: ${totalWeight}%`);
       return;
     }
 
@@ -223,8 +372,18 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
         objectives: objectives.map(o => ({
           id: o.id || undefined,
           title: o.title.trim(),
+          description: o.description ? o.description.trim() : null,
           weight: parseFloat(o.weight),
-          deadline: o.deadline || null,
+          deadline: o.deadline || (o.subtasks?.[0]?.deadline || null),
+          subtasks: (o.subtasks || []).map(st => ({
+            id: typeof st.id === 'number' ? st.id : undefined,
+            code: st.code || '',
+            title: st.title ? st.title.trim() : '',
+            target: st.target !== undefined && st.target !== null ? String(st.target) : '100%',
+            deadline: st.deadline || null,
+            achievement: st.achievement || '',
+            status: st.status || 'not_started',
+          })),
         })),
         reason: reason || undefined,
       };
@@ -249,11 +408,33 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
     setSaving(true);
     try {
       const payload = {
-        objectives: objectives.map(o => ({
-          id: o.id,
-          achievement: o.achievement || '',
-          status: o.status,
-        })),
+        objectives: objectives.map(o => {
+          const subtasks = o.subtasks || [];
+          let overallStatus = o.status || 'not_started';
+          if (subtasks.length > 0) {
+            const allDone = subtasks.every(st => st.status === 'completed');
+            const anyProgress = subtasks.some(st => st.status === 'in_progress' || st.status === 'completed');
+            overallStatus = allDone ? 'completed' : anyProgress ? 'in_progress' : 'not_started';
+          }
+          const joinedAchievements = subtasks
+            .filter(st => st.achievement && st.achievement.trim())
+            .map(st => `${st.code}: ${st.achievement.trim()}`)
+            .join('\n');
+
+          return {
+            id: o.id,
+            achievement: joinedAchievements || o.achievement || '',
+            status: overallStatus,
+            subtasks: subtasks.map(st => ({
+              code: st.code || '',
+              title: st.title || '',
+              target: st.target || '100%',
+              deadline: st.deadline || null,
+              achievement: st.achievement || '',
+              status: st.status || 'not_started',
+            })),
+          };
+        }),
         employee_comments: employeeComments,
         submit: isSubmit,
       };
@@ -632,218 +813,387 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
       </div>
 
       {/* ── MAIN APPRAISAL TABLE (Paper-Style) ─────────────────────────────── */}
-      <div className="portal-table-scroll" style={{ border: '1px solid #0f172a', borderRadius: '8px', marginBottom: '1.25rem' }}>
-        <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', fontSize: '0.85rem', color: '#0f172a' }}>
+      <div className="portal-table-scroll" style={{ border: '1.5px solid #0f172a', borderRadius: '8px', marginBottom: '1.25rem', overflowX: 'auto' }}>
+        <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', fontSize: '0.82rem', color: '#0f172a' }}>
           <thead>
             <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #0f172a' }}>
-              <th style={{ padding: '0.65rem 0.85rem', textAlign: 'left', fontWeight: 800, width: '28%', borderRight: '1px solid #cbd5e1' }}>
+              <th style={{ padding: '0.65rem 0.85rem', textAlign: 'left', fontWeight: 800, width: '24%', borderRight: '1px solid #cbd5e1' }}>
                 Objective
               </th>
-              <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '10%', borderRight: '1px solid #cbd5e1' }}>
-                Weight
+              <th style={{ padding: '0.65rem 0.75rem', textAlign: 'left', fontWeight: 800, width: '26%', borderRight: '1px solid #cbd5e1' }}>
+                Subtask
               </th>
-              <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '13%', borderRight: '1px solid #cbd5e1' }}>
-                Dead Line
+              <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '7%', borderRight: '1px solid #cbd5e1' }}>
+                Target
               </th>
-              <th style={{ padding: '0.65rem 0.85rem', textAlign: 'left', fontWeight: 800, width: '27%', borderRight: '1px solid #cbd5e1' }}>
+              <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '9%', borderRight: '1px solid #cbd5e1' }}>
+                Deadline
+              </th>
+              <th style={{ padding: '0.65rem 0.75rem', textAlign: 'left', fontWeight: 800, width: '18%', borderRight: '1px solid #cbd5e1' }}>
                 Achievement
-                <span style={{ display: 'block', fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>
-                  (Employee fill end of the month)
+                <span style={{ display: 'block', fontSize: '0.66rem', fontWeight: 500, color: '#64748b' }}>
+                  (Employee fill end of month)
                 </span>
               </th>
-              <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '12%', borderRight: '1px solid #cbd5e1' }}>
-                Status of objectives
+              <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '8%', borderRight: '1px solid #cbd5e1' }}>
+                Status
               </th>
-              <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '10%' }}>
+              <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '8%', borderRight: '1px solid #cbd5e1' }}>
+                Weight
+              </th>
+              <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '8%' }}>
                 Actual Marks
               </th>
             </tr>
           </thead>
           <tbody>
-            {objectives.map((obj, idx) => {
+            {objectives.map((obj, objIdx) => {
+              const subtasks = (obj.subtasks && obj.subtasks.length > 0)
+                ? obj.subtasks
+                : [{
+                    id: `temp-${objIdx}-0`,
+                    code: `${objIdx + 1}.1`,
+                    title: obj.description || obj.title || '',
+                    target: '100%',
+                    deadline: obj.deadline || '',
+                    achievement: obj.achievement || '',
+                    status: obj.status || 'not_started',
+                  }];
+
+              const rowCount = subtasks.length;
               const maxMark = parseFloat(obj.weight) || 0;
               const markVal = obj.actual_marks !== '' && obj.actual_marks !== null ? parseFloat(obj.actual_marks) : null;
               const markValid = markVal === null || (markVal >= 0 && markVal <= maxMark);
+              const isEven = objIdx % 2 === 0;
 
-              return (
-                <tr key={obj.id || `temp-${idx}`} style={{ borderBottom: '1px solid #cbd5e1', verticalAlign: 'top', background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                  {/* 1. Objective Title & Description */}
-                  <td style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1' }}>
-                    {canEditObj ? (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0284c7' }}>Objective #{idx + 1}</span>
-                          {objectives.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeObjectiveRow(idx)}
-                              title="Remove objective"
-                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 0.2rem' }}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          type="text"
-                          value={obj.title}
-                          onChange={(e) => updateObjectiveField(idx, 'title', e.target.value)}
-                          placeholder="Enter objective title..."
-                          style={{ width: '100%', padding: '0.4rem 0.55rem', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.83rem', fontWeight: 600 }}
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '0.2rem' }}>
-                          Objective {idx + 1}: {obj.title || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Pending assignment</span>}
-                        </div>
-                      </div>
-                    )}
-                  </td>
+              return subtasks.map((st, stIdx) => {
+                const isFirstRow = stIdx === 0;
+                const isLastRow = stIdx === rowCount - 1;
 
-                  {/* 2. Weight % */}
-                  <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
-                    {canEditObj ? (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          max="100"
-                          step="1"
-                          value={obj.weight}
-                          onChange={(e) => updateObjectiveField(idx, 'weight', e.target.value)}
-                          style={{ width: '55px', padding: '0.35rem', textAlign: 'center', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 700 }}
-                        />
-                        <span style={{ fontWeight: 700 }}>%</span>
-                      </div>
-                    ) : (
-                      <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>
-                        {obj.weight ? `${obj.weight}%` : '—'}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* 3. Dead Line */}
-                  <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
-                    {canEditObj ? (
-                      <input
-                        type="date"
-                        value={obj.deadline}
-                        onChange={(e) => updateObjectiveField(idx, 'deadline', e.target.value)}
-                        style={{ width: '100%', padding: '0.35rem 0.4rem', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.78rem' }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: obj.deadline ? '#334155' : '#94a3b8' }}>
-                        {obj.deadline ? new Date(obj.deadline).toLocaleDateString('en-GB') : '—'}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* 4. Achievement */}
-                  <td style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1' }}>
-                    {canEditAch ? (
-                      <textarea
-                        rows={2}
-                        value={obj.achievement}
-                        onChange={(e) => updateObjectiveField(idx, 'achievement', e.target.value)}
-                        placeholder="Describe your achievement / progress..."
-                        style={{ width: '100%', padding: '0.4rem 0.55rem', border: '1.5px solid #0284c7', borderRadius: '6px', fontSize: '0.82rem', resize: 'vertical' }}
-                      />
-                    ) : (
-                      <div style={{ fontSize: '0.82rem', whiteSpace: 'pre-wrap', color: obj.achievement ? '#0f172a' : '#94a3b8', fontStyle: obj.achievement ? 'normal' : 'italic' }}>
-                        {obj.achievement || (isFinalized ? 'No achievement notes' : 'Employee will fill at end of month')}
-                      </div>
-                    )}
-                  </td>
-
-                  {/* 5. Status of objectives */}
-                  <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
-                    {canEditAch ? (
-                      <select
-                        value={obj.status}
-                        onChange={(e) => updateObjectiveField(idx, 'status', e.target.value)}
-                        style={{ padding: '0.35rem 0.4rem', border: '1.5px solid #0284c7', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, width: '100%' }}
+                return (
+                  <tr
+                    key={`${obj.id || objIdx}-${st.id || stIdx}`}
+                    style={{
+                      borderBottom: isLastRow ? '1.5px solid #0f172a' : '1px solid #e2e8f0',
+                      verticalAlign: 'top',
+                      background: isEven ? '#fff' : '#fcfcfd',
+                    }}
+                  >
+                    {/* 1. Objective Column (Goal Title & Main Monthly Goal Description - rowSpan) */}
+                    {isFirstRow && (
+                      <td
+                        rowSpan={rowCount}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRight: '1px solid #cbd5e1',
+                          borderBottom: '1.5px solid #0f172a',
+                          background: isEven ? '#ffffff' : '#f8fafc',
+                          verticalAlign: 'top',
+                          width: '24%',
+                        }}
                       >
-                        <option value="not_started">Not started</option>
-                        <option value="in_progress">In progress</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                    ) : (
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        background: obj.status === 'completed' ? '#dcfce7' : obj.status === 'in_progress' ? '#e0f2fe' : '#f1f5f9',
-                        color: obj.status === 'completed' ? '#15803d' : obj.status === 'in_progress' ? '#0369a1' : '#64748b'
-                      }}>
-                        {obj.status === 'completed' ? 'Completed' : obj.status === 'in_progress' ? 'In progress' : 'Not started'}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* 6. Actual Marks (entered out of weight) */}
-                  <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
-                    {canEditMarks ? (
-                      <div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                          <input
-                            type="number"
-                            min="0"
-                            max={maxMark}
-                            step="0.5"
-                            value={obj.actual_marks}
-                            onChange={(e) => updateObjectiveField(idx, 'actual_marks', e.target.value)}
-                            placeholder="0"
-                            style={{
-                              width: '55px',
-                              padding: '0.35rem',
-                              textAlign: 'center',
-                              border: markValid ? '1.5px solid #8b5cf6' : '2px solid #ef4444',
-                              borderRadius: '6px',
-                              fontSize: '0.85rem',
-                              fontWeight: 800,
-                              background: '#faf5ff'
-                            }}
-                          />
-                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>/{maxMark}</span>
-                        </div>
-                        {!markValid && (
-                          <div style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '0.2rem' }}>
-                            Max {maxMark}
+                        {canEditObj ? (
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                Goal #{objIdx + 1}
+                              </span>
+                              {objectives.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeObjectiveRow(objIdx)}
+                                  title="Remove entire goal"
+                                  style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 0.2rem' }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              value={obj.title}
+                              onChange={(e) => updateObjectiveField(objIdx, 'title', e.target.value)}
+                              placeholder={`Goal ${objIdx + 1} – e.g. TX Line Engineering Design`}
+                              style={{ width: '100%', padding: '0.4rem 0.55rem', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.4rem' }}
+                            />
+                            <textarea
+                              rows={3}
+                              value={obj.description || ''}
+                              onChange={(e) => updateObjectiveField(objIdx, 'description', e.target.value)}
+                              placeholder="Main Monthly Goal: Ensure TX line designs, calculations, technical specifications..."
+                              style={{ width: '100%', padding: '0.4rem 0.55rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.76rem', resize: 'vertical' }}
+                            />
+                            <div style={{ marginTop: '0.45rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => addSubtask(objIdx)}
+                                style={{
+                                  background: '#f0fdf4',
+                                  border: '1px dashed #16a34a',
+                                  color: '#15803d',
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: '5px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                }}
+                              >
+                                <Plus size={11} /> Add Subtask
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem', fontSize: '0.84rem' }}>
+                              {obj.title || `Goal ${objIdx + 1}`}
+                            </div>
+                            {obj.description && (
+                              <div style={{ fontSize: '0.77rem', color: '#475569', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
+                                <span style={{ fontWeight: 700, color: '#0f172a' }}>Main Monthly Goal: </span>
+                                {obj.description.replace(/^Main Monthly Goal:\s*/i, '')}
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    ) : (
-                      <span style={{ fontWeight: 900, fontSize: '0.95rem', color: markVal !== null ? '#0f172a' : '#94a3b8' }}>
-                        {markVal !== null ? markVal : '—'}
-                      </span>
+                      </td>
                     )}
-                  </td>
-                </tr>
-              );
+
+                    {/* 2. Subtask Column (Code & Description) */}
+                    <td style={{ padding: '0.55rem 0.65rem', borderRight: '1px solid #cbd5e1', width: '26%' }}>
+                      {canEditObj ? (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0369a1', background: '#e0f2fe', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                              {st.code || `${objIdx + 1}.${stIdx + 1}`}
+                            </span>
+                            {rowCount > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeSubtask(objIdx, stIdx)}
+                                title="Remove subtask"
+                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.1rem' }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+                          <textarea
+                            rows={2}
+                            value={st.title || ''}
+                            onChange={(e) => updateSubtaskField(objIdx, stIdx, 'title', e.target.value)}
+                            placeholder="e.g. Review TX line design drawings and verify compliance..."
+                            style={{ width: '100%', padding: '0.35rem 0.45rem', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.78rem', resize: 'vertical' }}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.8rem', lineHeight: 1.4, color: '#0f172a' }}>
+                          <strong style={{ color: '#0284c7', marginRight: '0.35rem' }}>{st.code || `${objIdx + 1}.${stIdx + 1}`}</strong>
+                          {st.title || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Pending subtask description</span>}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* 3. Target Column */}
+                    <td style={{ padding: '0.55rem 0.4rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', width: '7%', verticalAlign: 'middle' }}>
+                      {canEditObj ? (
+                        <input
+                          type="text"
+                          value={st.target ?? '100%'}
+                          onChange={(e) => updateSubtaskField(objIdx, stIdx, 'target', e.target.value)}
+                          placeholder="100%"
+                          style={{ width: '100%', maxWidth: '55px', padding: '0.25rem', textAlign: 'center', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700 }}
+                        />
+                      ) : (
+                        <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a' }}>
+                          {st.target || '100%'}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 4. Subtask Deadline Column */}
+                    <td style={{ padding: '0.55rem 0.4rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', width: '9%', verticalAlign: 'middle' }}>
+                      {canEditObj ? (
+                        <input
+                          type="date"
+                          value={st.deadline || ''}
+                          onChange={(e) => updateSubtaskField(objIdx, stIdx, 'deadline', e.target.value)}
+                          style={{ width: '100%', padding: '0.25rem 0.3rem', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.72rem' }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: st.deadline ? '#334155' : '#94a3b8' }}>
+                          {st.deadline ? new Date(st.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—'}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 5. Subtask Achievement (Employee) */}
+                    <td style={{ padding: '0.55rem 0.65rem', borderRight: '1px solid #cbd5e1', width: '18%' }}>
+                      {canEditAch ? (
+                        <textarea
+                          rows={2}
+                          value={st.achievement || ''}
+                          onChange={(e) => updateSubtaskField(objIdx, stIdx, 'achievement', e.target.value)}
+                          placeholder="Your progress / notes for this subtask..."
+                          style={{ width: '100%', padding: '0.35rem 0.45rem', border: '1.5px solid #0284c7', borderRadius: '6px', fontSize: '0.78rem', resize: 'vertical' }}
+                        />
+                      ) : (
+                        <div style={{ fontSize: '0.78rem', whiteSpace: 'pre-wrap', color: st.achievement ? '#0f172a' : '#94a3b8', fontStyle: st.achievement ? 'normal' : 'italic', lineHeight: 1.35 }}>
+                          {st.achievement || (isFinalized ? 'No achievement notes' : 'Employee will fill at end of month')}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* 6. Subtask Status */}
+                    <td style={{ padding: '0.55rem 0.4rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', width: '8%', verticalAlign: 'middle' }}>
+                      {canEditAch ? (
+                        <select
+                          value={st.status || 'not_started'}
+                          onChange={(e) => updateSubtaskField(objIdx, stIdx, 'status', e.target.value)}
+                          style={{ padding: '0.25rem 0.3rem', border: '1.5px solid #0284c7', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, width: '100%' }}
+                        >
+                          <option value="not_started">Not started</option>
+                          <option value="in_progress">In progress</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      ) : (
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '5px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          background: st.status === 'completed' ? '#dcfce7' : st.status === 'in_progress' ? '#e0f2fe' : '#f1f5f9',
+                          color: st.status === 'completed' ? '#15803d' : st.status === 'in_progress' ? '#0369a1' : '#64748b',
+                        }}>
+                          {st.status === 'completed' ? 'Completed' : st.status === 'in_progress' ? 'In progress' : 'Not started'}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 7. Weight (Goal Level - rowSpan) */}
+                    {isFirstRow && (
+                      <td
+                        rowSpan={rowCount}
+                        style={{
+                          padding: '0.65rem 0.4rem',
+                          textAlign: 'center',
+                          borderRight: '1px solid #cbd5e1',
+                          borderBottom: '1.5px solid #0f172a',
+                          verticalAlign: 'middle',
+                          width: '8%',
+                          background: isEven ? '#ffffff' : '#f8fafc',
+                        }}
+                      >
+                        {canEditObj ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center' }}>
+                            <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              step="1"
+                              value={obj.weight}
+                              onChange={(e) => updateObjectiveField(objIdx, 'weight', e.target.value)}
+                              style={{ width: '48px', padding: '0.35rem 0.2rem', textAlign: 'center', border: '1px solid #94a3b8', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 800 }}
+                            />
+                            <span style={{ fontWeight: 800 }}>%</span>
+                          </div>
+                        ) : (
+                          <span style={{ fontWeight: 900, fontSize: '0.95rem' }}>
+                            {obj.weight ? `${obj.weight}%` : '—'}
+                          </span>
+                        )}
+                      </td>
+                    )}
+
+                    {/* 8. Actual Marks (Goal Level - rowSpan) */}
+                    {isFirstRow && (
+                      <td
+                        rowSpan={rowCount}
+                        style={{
+                          padding: '0.65rem 0.4rem',
+                          textAlign: 'center',
+                          borderBottom: '1.5px solid #0f172a',
+                          verticalAlign: 'middle',
+                          width: '8%',
+                          background: isEven ? '#ffffff' : '#f8fafc',
+                        }}
+                      >
+                        {canEditMarks ? (
+                          <div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center' }}>
+                              <input
+                                type="number"
+                                min="0"
+                                max={maxMark}
+                                step="0.5"
+                                value={obj.actual_marks}
+                                onChange={(e) => updateObjectiveField(objIdx, 'actual_marks', e.target.value)}
+                                placeholder="0"
+                                style={{
+                                  width: '48px',
+                                  padding: '0.35rem 0.2rem',
+                                  textAlign: 'center',
+                                  border: markValid ? '1.5px solid #8b5cf6' : '2px solid #ef4444',
+                                  borderRadius: '6px',
+                                  fontSize: '0.85rem',
+                                  fontWeight: 800,
+                                  background: '#faf5ff',
+                                }}
+                              />
+                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>/{maxMark}</span>
+                            </div>
+                            {!markValid && (
+                              <div style={{ fontSize: '0.62rem', color: '#ef4444', marginTop: '0.2rem' }}>
+                                Max {maxMark}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontWeight: 900, fontSize: '1rem', color: markVal !== null ? '#0f172a' : '#94a3b8' }}>
+                            {markVal !== null ? markVal : '—'}
+                          </span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              });
             })}
 
-            {/* Add row button for Appraiser in editing mode */}
+            {/* Add Goal row button for Appraiser in editing mode */}
             {canEditObj && (
               <tr>
-                <td colSpan={6} style={{ padding: '0.5rem', textAlign: 'center', background: '#f8fafc' }}>
+                <td colSpan={8} style={{ padding: '0.6rem', textAlign: 'center', background: '#f8fafc' }}>
                   <button
                     type="button"
                     onClick={addObjectiveRow}
-                    style={{ background: 'transparent', border: '1px dashed #0284c7', color: '#0284c7', padding: '0.35rem 0.9rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                    style={{
+                      background: 'transparent',
+                      border: '1px dashed #0284c7',
+                      color: '#0284c7',
+                      padding: '0.4rem 1.1rem',
+                      borderRadius: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
                   >
-                    + Add Objective Row
+                    <Plus size={14} /> Add Goal / Objective Row
                   </button>
                 </td>
               </tr>
             )}
 
             {/* ── Appraiser's Comments & Deductions Block ────────────────── */}
-            {/* Row 1: Appraiser Comments (spanning cols 1-3, rows 1-2) + Attendance Notes + Attendance Label + Attendance Marks */}
+            {/* Row 1: Appraiser Comments (spanning cols 1-4, rows 1-2) + Attendance Notes + Attendance Label + Attendance Marks */}
             <tr style={{ borderTop: '2px solid #0f172a', borderBottom: '1px solid #cbd5e1' }}>
-              <td rowSpan={2} colSpan={3} style={{ padding: '0.75rem 0.85rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'top', width: '51%' }}>
+              <td rowSpan={2} colSpan={4} style={{ padding: '0.75rem 0.85rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'top', width: '66%' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.82rem', marginBottom: '0.35rem' }}>
                   Appraiser's Comments
                 </div>
@@ -863,13 +1213,13 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
               </td>
 
               {/* Attendance Notes (under Achievement column) */}
-              <td style={{ padding: '0.65rem 0.75rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', width: '27%', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '0.65rem 0.75rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', width: '18%', borderBottom: '1px solid #e2e8f0' }}>
                 {canEditDed ? (
                   <input
                     type="text"
                     value={attendanceNotes}
                     onChange={(e) => setAttendanceNotes(e.target.value)}
-                    placeholder="Attendance notes (Late arrivals, missed punch)..."
+                    placeholder="Attendance notes (Late, missed punch)..."
                     title="Attendance deduction notes"
                     style={{ width: '100%', padding: '0.35rem 0.5rem', border: '1px solid #0891b2', borderRadius: '6px', fontSize: '0.8rem', background: '#f0fdfa' }}
                   />
@@ -881,12 +1231,17 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
               </td>
 
               {/* Attendance label (under Status column) */}
-              <td style={{ padding: '0.65rem 0.65rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, verticalAlign: 'middle', textAlign: 'right', width: '12%', borderBottom: '1px solid #e2e8f0', color: '#0f172a' }}>
+              <td style={{ padding: '0.65rem 0.5rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, verticalAlign: 'middle', textAlign: 'right', width: '8%', borderBottom: '1px solid #e2e8f0', color: '#0f172a' }}>
                 Attendance
               </td>
 
+              {/* Max deduction info (under Weight column) */}
+              <td style={{ padding: '0.65rem 0.4rem', borderRight: '1px solid #cbd5e1', textAlign: 'center', verticalAlign: 'middle', width: '8%', borderBottom: '1px solid #e2e8f0', fontSize: '0.72rem', color: '#64748b' }}>
+                Max -10
+              </td>
+
               {/* Attendance deduction marks (under Actual Marks column) */}
-              <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', verticalAlign: 'middle', width: '10%', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', verticalAlign: 'middle', width: '8%', borderBottom: '1px solid #e2e8f0' }}>
                 {canEditDed ? (
                   <input
                     type="number"
@@ -896,7 +1251,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                     value={attendanceDed}
                     onChange={(e) => setAttendanceDed(e.target.value)}
                     title="Attendance deduction marks (0 to 10)"
-                    style={{ width: '55px', padding: '0.25rem', textAlign: 'center', border: '1.5px solid #0891b2', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 800 }}
+                    style={{ width: '48px', padding: '0.25rem', textAlign: 'center', border: '1.5px solid #0891b2', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 800 }}
                   />
                 ) : (
                   <span style={{ fontWeight: 800, color: attendanceDed > 0 ? '#b45309' : '#0f172a' }}>
@@ -909,7 +1264,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
             {/* Row 2: Misconduct Notes + Misconduct Label + Misconduct Marks */}
             <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
               {/* Misconduct Notes (under Achievement column) */}
-              <td style={{ padding: '0.65rem 0.75rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', width: '27%' }}>
+              <td style={{ padding: '0.65rem 0.75rem', borderRight: '1px solid #cbd5e1', verticalAlign: 'middle', width: '18%' }}>
                 {canEditDed ? (
                   <input
                     type="text"
@@ -927,12 +1282,17 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
               </td>
 
               {/* Misconduct label (under Status column) */}
-              <td style={{ padding: '0.65rem 0.65rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, verticalAlign: 'middle', textAlign: 'right', width: '12%', color: '#0f172a' }}>
+              <td style={{ padding: '0.65rem 0.5rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, verticalAlign: 'middle', textAlign: 'right', width: '8%', color: '#0f172a' }}>
                 Misconduct
               </td>
 
+              {/* Max deduction info (under Weight column) */}
+              <td style={{ padding: '0.65rem 0.4rem', borderRight: '1px solid #cbd5e1', textAlign: 'center', verticalAlign: 'middle', width: '8%', fontSize: '0.72rem', color: '#64748b' }}>
+                Max -30
+              </td>
+
               {/* Misconduct deduction marks (under Actual Marks column) */}
-              <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', verticalAlign: 'middle', width: '10%' }}>
+              <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', verticalAlign: 'middle', width: '8%' }}>
                 {canEditDed ? (
                   <input
                     type="number"
@@ -942,7 +1302,7 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
                     value={misconductDed}
                     onChange={(e) => setMisconductDed(e.target.value)}
                     title="Misconduct deduction marks (0 to 30)"
-                    style={{ width: '55px', padding: '0.25rem', textAlign: 'center', border: '1.5px solid #ef4444', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 800 }}
+                    style={{ width: '48px', padding: '0.25rem', textAlign: 'center', border: '1.5px solid #ef4444', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 800 }}
                   />
                 ) : (
                   <span style={{ fontWeight: 800, color: misconductDed > 0 ? '#ef4444' : '#0f172a' }}>
@@ -954,23 +1314,20 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
 
             {/* ── Summary & Grade Row ────────────────────────────────────── */}
             <tr style={{ background: '#f8fafc', borderTop: '2px solid #0f172a', fontWeight: 800 }}>
-              <td style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1' }}>
+              <td colSpan={2} style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1' }}>
                 <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Combined Weight Target: </span>
                 <strong style={{ color: Math.abs(totalWeight - 100) < 0.01 ? '#15803d' : '#ef4444' }}>
                   {totalWeight}% {Math.abs(totalWeight - 100) < 0.01 ? '✓' : '(Must equal 100%)'}
                 </strong>
               </td>
+              <td colSpan={2} style={{ padding: '0.65rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                Appraiser: <strong style={{ color: '#0f172a' }}>{data?.evaluator?.full_name || appraiser?.full_name || (employee?.manager?.full_name ? `${employee.manager.full_name} / Approval Managers` : 'Reporting Manager & Approval Managers')}</strong>
+              </td>
+              <td colSpan={2} style={{ padding: '0.65rem 0.65rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
+                Total
+              </td>
               <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontSize: '0.95rem' }}>
                 100%
-              </td>
-              <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
-                Appraiser
-              </td>
-              <td style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1', fontWeight: 800, color: '#0f172a' }}>
-                {data?.evaluator?.full_name || appraiser?.full_name || (employee?.manager?.full_name ? `${employee.manager.full_name} / Approval Managers` : 'Reporting Manager & Approval Managers')}
-              </td>
-              <td style={{ padding: '0.65rem 0.65rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900 }}>
-                Total
               </td>
               <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', fontSize: '1.15rem', fontWeight: 900, color: '#0284c7' }}>
                 {liveFinalScore}
@@ -979,10 +1336,10 @@ export const AppraisalSheet = ({ employeeId, month, onBack, onSheetUpdated }) =>
 
             {/* Performance Grade Row */}
             <tr style={{ background: GRADE_CONFIG[liveGrade]?.bg || '#f1f5f9', fontWeight: 800 }}>
-              <td colSpan={4} style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1', fontSize: '0.8rem', color: '#475569' }}>
+              <td colSpan={5} style={{ padding: '0.65rem 0.85rem', borderRight: '1px solid #cbd5e1', fontSize: '0.8rem', color: '#475569' }}>
                 Variable Performance Pay: <strong>{GRADE_CONFIG[liveGrade]?.pay}</strong> ({GRADE_CONFIG[liveGrade]?.label})
               </td>
-              <td style={{ padding: '0.65rem 0.65rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900, fontSize: '0.82rem' }}>
+              <td colSpan={2} style={{ padding: '0.65rem 0.65rem', textAlign: 'right', borderRight: '1px solid #cbd5e1', fontWeight: 900, fontSize: '0.82rem' }}>
                 Monthly Performance Grade
               </td>
               <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center', fontSize: '1.25rem', fontWeight: 900, color: GRADE_CONFIG[liveGrade]?.color || '#0f172a' }}>
