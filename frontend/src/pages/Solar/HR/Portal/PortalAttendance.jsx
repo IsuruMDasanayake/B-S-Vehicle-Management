@@ -345,7 +345,7 @@ const PortalAttendance = () => {
   }, {});
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
       {/* View Tabs for Managers */}
       {isManager && (
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--surface-2)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>

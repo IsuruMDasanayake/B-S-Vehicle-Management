@@ -247,7 +247,7 @@ export const PortalTeamAttendance = () => {
   };
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
       {/* ── Top Bar: Title & View Mode Switcher ─────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
         <div>
@@ -487,19 +487,37 @@ export const PortalTeamAttendance = () => {
               </p>
             </div>
           ) : (
-            <div className="portal-table-scroll" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <table style={{ width: '100%', minWidth: '860px', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569' }}>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 800, width: '28%' }}>Employee</th>
-                    <th style={{ padding: '0.75rem 0.85rem', textAlign: 'left', fontWeight: 800, width: '18%' }}>Department</th>
-                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '12%' }}>Clock In</th>
-                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '12%' }}>Clock Out</th>
-                    <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '10%' }}>Working Hours</th>
-                    <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '12%' }}>Status</th>
-                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '8%' }}>Action</th>
-                  </tr>
-                </thead>
+            <>
+              {/* Mobile Scroll Hint */}
+              <div className="portal-scroll-hint">
+                <span>↔ Swipe table horizontally to view Clock Out, Hours, Status & Actions</span>
+              </div>
+              <div
+                className="portal-table-scroll"
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                  width: '100%',
+                  maxWidth: '100%',
+                }}
+              >
+                <table style={{ width: '100%', minWidth: '860px', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', whiteSpace: 'nowrap' }}>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 800, width: '28%', minWidth: '220px' }}>Employee</th>
+                      <th style={{ padding: '0.75rem 0.85rem', textAlign: 'left', fontWeight: 800, width: '18%', minWidth: '150px' }}>Department</th>
+                      <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '12%', minWidth: '100px' }}>Clock In</th>
+                      <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '12%', minWidth: '110px' }}>Clock Out</th>
+                      <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '10%', minWidth: '100px' }}>Working Hours</th>
+                      <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '12%', minWidth: '110px' }}>Status</th>
+                      <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 800, width: '8%', minWidth: '80px' }}>Action</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {filteredDailyEmployees.map((emp, idx) => {
                     const att = emp.attendances?.[0];
@@ -654,6 +672,7 @@ export const PortalTeamAttendance = () => {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       )}
@@ -705,24 +724,42 @@ export const PortalTeamAttendance = () => {
               </p>
             </div>
           ) : (
-            <div className="portal-table-scroll" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <table style={{ width: '100%', minWidth: '920px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569' }}>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 800, width: '24%' }}>Employee</th>
-                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'left', fontWeight: 800, width: '16%' }}>Department</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '7%' }}>Work Days</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', color: '#16a34a' }}>Present</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', color: '#d97706' }}>Late</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', color: '#0891b2' }}>Short Lv</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', color: '#7c3aed' }}>Half Day</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', color: '#2563eb' }}>Leave</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', color: '#dc2626' }}>Absent</th>
-                    <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '8%' }}>Total Hrs</th>
-                    <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '9%' }}>Rate %</th>
-                    <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '6%' }}>Action</th>
-                  </tr>
-                </thead>
+            <>
+              {/* Mobile Scroll Hint */}
+              <div className="portal-scroll-hint">
+                <span>↔ Swipe table horizontally to view Work Days, Leaves, Deficiencies & Rate %</span>
+              </div>
+              <div
+                className="portal-table-scroll"
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                  width: '100%',
+                  maxWidth: '100%',
+                }}
+              >
+                <table style={{ width: '100%', minWidth: '920px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', whiteSpace: 'nowrap' }}>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 800, width: '24%', minWidth: '220px' }}>Employee</th>
+                      <th style={{ padding: '0.75rem 0.75rem', textAlign: 'left', fontWeight: 800, width: '16%', minWidth: '150px' }}>Department</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '7%', minWidth: '70px' }}>Work Days</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', minWidth: '65px', color: '#16a34a' }}>Present</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', minWidth: '65px', color: '#d97706' }}>Late</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', minWidth: '65px', color: '#0891b2' }}>Short Lv</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', minWidth: '65px', color: '#7c3aed' }}>Half Day</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', minWidth: '65px', color: '#2563eb' }}>Leave</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 800, width: '6%', minWidth: '65px', color: '#dc2626' }}>Absent</th>
+                      <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '8%', minWidth: '75px' }}>Total Hrs</th>
+                      <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '9%', minWidth: '75px' }}>Rate %</th>
+                      <th style={{ padding: '0.75rem 0.65rem', textAlign: 'center', fontWeight: 800, width: '6%', minWidth: '65px' }}>Action</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {filteredMonthlyReport.map((row, idx) => {
                     const rate = parseFloat(row.attendance_rate) || 0;
@@ -819,6 +856,7 @@ export const PortalTeamAttendance = () => {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       )}
@@ -908,8 +946,19 @@ export const PortalTeamAttendance = () => {
                   <p style={{ margin: 0, fontWeight: 600 }}>No attendance records found for this month.</p>
                 </div>
               ) : (
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <div
+                  className="portal-table-scroll"
+                  style={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    WebkitOverflowScrolling: 'touch',
+                    width: '100%',
+                    maxWidth: '100%',
+                  }}
+                >
+                  <table style={{ width: '100%', minWidth: '580px', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569' }}>
                         <th style={{ padding: '0.55rem 0.75rem', textAlign: 'left', fontWeight: 800 }}>Date</th>
