@@ -839,7 +839,7 @@ const PortalAnnouncements = () => {
                   borderRadius: '12px',
                   border: '1px solid',
                   borderColor: isUnread ? '#bae6fd' : '#e2e8f0',
-                  borderLeft: `4px solid ${isUnread ? '#0284c7' : cat.color}`,
+                  borderLeft: `1px solid ${isUnread ? '#0284c7' : cat.color}`,
                   padding: '1.1rem 1.25rem',
                   boxShadow: isUnread ? '0 3px 10px rgba(2, 132, 199, 0.08)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
                   cursor: targetLink ? 'pointer' : 'default',
