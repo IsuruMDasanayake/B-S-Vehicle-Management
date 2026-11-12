@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
-  BellRing, BellOff, X, CalendarDays, Award, Video, Camera, Upload, ExternalLink, ShieldCheck, Globe, RefreshCw, FileText
+  BellRing, BellOff, X, CalendarDays, Award, Video, Camera, Upload, ExternalLink, ShieldCheck, Globe, RefreshCw, FileText, Users
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
@@ -1363,6 +1363,40 @@ const PortalHome = () => {
               </div>
               <ChevronRight size={18} style={{ color: 'var(--text-muted)' }} />
             </button>
+
+            {isManager && (
+              <button
+                onClick={() => navigate('/solar/hr/portal/attendance?tab=team-attendance')}
+                className="card"
+                style={{
+                  padding: '1rem',
+                  border: '1px solid #bfdbfe',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #eff6ff 100%)',
+                  transition: 'transform 0.15s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(37,99,235,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', flexShrink: 0 }}>
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      All Employees Attendance
+                      <span style={{ fontSize: '0.65rem', background: '#dbeafe', color: '#1d4ed8', padding: '0.1rem 0.45rem', borderRadius: '4px', fontWeight: 700 }}>
+                        Manager
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Daily attendance logs, status tracking &amp; monthly company timesheets</div>
+                  </div>
+                </div>
+                <ChevronRight size={18} color="#2563eb" />
+              </button>
+            )}
 
             <button
               onClick={() => navigate('/solar/hr/portal/appraisals')}
