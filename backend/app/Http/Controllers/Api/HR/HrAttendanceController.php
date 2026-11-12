@@ -359,7 +359,11 @@ class HrAttendanceController extends Controller
 
     public function employeeHistory(Request $request, $employeeId)
     {
-        if (!$request->user()->hasRole('super_admin') && !$request->user()->hasRole('solar_hr_admin')) {
+        $user = $request->user();
+        $isHR = $user->hasRole('super_admin') || $user->hasRole('solar_hr_admin');
+        $isApprovalMgr = HrSettingController::isApprovalManager($user);
+
+        if (!$isHR && !$isApprovalMgr) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -378,11 +382,20 @@ class HrAttendanceController extends Controller
     }
 
     /**
-     * Get authenticated employee's attendance report & deficiency breakdown for a given month.
+     * Get employee's attendance report & deficiency breakdown for a given month.
+     * Accessible by employee (self), HR Admins, and Approval Managers (for any employee).
      */
     public function myReport(Request $request, HrAttendanceLeaveReportService $service)
     {
-        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        $user = $request->user();
+        $isHR = $user->hasRole('super_admin') || $user->hasRole('solar_hr_admin');
+        $isApprovalMgr = HrSettingController::isApprovalManager($user);
+
+        if ($request->filled('employee_id') && ($isHR || $isApprovalMgr)) {
+            $employee = HrEmployee::findOrFail($request->employee_id);
+        } else {
+            $employee = HrEmployee::where('user_id', $user->id)->first();
+        }
         if (!$employee) {
             return response()->json(['message' => 'Employee profile not linked to user account.'], 404);
         }
@@ -414,11 +427,20 @@ class HrAttendanceController extends Controller
     }
 
     /**
-     * Download authenticated employee's attendance report as PDF or CSV.
+     * Download employee's attendance report as PDF or CSV.
+     * Accessible by employee (self), HR Admins, and Approval Managers (for any employee).
      */
     public function downloadMyReport(Request $request, HrAttendanceLeaveReportService $service)
     {
-        $employee = HrEmployee::where('user_id', $request->user()->id)->first();
+        $user = $request->user();
+        $isHR = $user->hasRole('super_admin') || $user->hasRole('solar_hr_admin');
+        $isApprovalMgr = HrSettingController::isApprovalManager($user);
+
+        if ($request->filled('employee_id') && ($isHR || $isApprovalMgr)) {
+            $employee = HrEmployee::findOrFail($request->employee_id);
+        } else {
+            $employee = HrEmployee::where('user_id', $user->id)->first();
+        }
         if (!$employee) {
             return response()->json(['message' => 'Employee profile not linked to user account.'], 404);
         }

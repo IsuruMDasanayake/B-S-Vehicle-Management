@@ -3,12 +3,13 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Check, X, Clock, Loader2, AlertCircle, Calendar,
   Globe, MapPin, ExternalLink, Image as ImageIcon, CheckCircle2, Search,
-  Download, FileText, AlertTriangle, ShieldAlert, ArrowRight, UserCheck
+  Download, FileText, AlertTriangle, ShieldAlert, ArrowRight, UserCheck, Users
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../../../store/authStore';
 import { isLeaveApprovalManager } from '../../../../utils/hrRoles';
+import PortalTeamAttendance from './PortalTeamAttendance';
 
 const STATUS_CELL = {
   present:     { label: 'P',   color: '#fff', bg: '#22c55e',           title: 'Present' },
@@ -50,8 +51,20 @@ const PortalAttendance = () => {
     ? 'remote-approvals'
     : (isManager && searchParams.get('tab') === 'approvals')
       ? 'approvals'
-      : 'my';
+      : (isManager && (searchParams.get('tab') === 'team-attendance' || searchParams.get('tab') === 'team'))
+        ? 'team-attendance'
+        : 'my';
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'my') {
+      searchParams.delete('tab');
+      setSearchParams(searchParams, { replace: true });
+    } else {
+      setSearchParams({ tab }, { replace: true });
+    }
+  };
 
   // ── Manager Team Adjustments State ──
   const [teamAdjustments, setTeamAdjustments] = useState([]);
@@ -335,10 +348,10 @@ const PortalAttendance = () => {
     <div style={{ width: '100%' }}>
       {/* View Tabs for Managers */}
       {isManager && (
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--surface-2)', paddingBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--surface-2)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setActiveTab('my')}
+            onClick={() => handleTabChange('my')}
             style={{
               background: activeTab === 'my' ? 'var(--primary, #0284c7)' : 'transparent',
               color: activeTab === 'my' ? '#fff' : 'var(--text-muted)',
@@ -354,7 +367,26 @@ const PortalAttendance = () => {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('approvals')}
+            onClick={() => handleTabChange('team-attendance')}
+            style={{
+              background: activeTab === 'team-attendance' ? 'var(--primary, #0284c7)' : 'transparent',
+              color: activeTab === 'team-attendance' ? '#fff' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.45rem 1rem',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <Users size={15} /> All Employees Attendance
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange('approvals')}
             style={{
               background: activeTab === 'approvals' ? 'var(--primary, #0284c7)' : 'transparent',
               color: activeTab === 'approvals' ? '#fff' : 'var(--text-muted)',
@@ -387,7 +419,7 @@ const PortalAttendance = () => {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('remote-approvals')}
+            onClick={() => handleTabChange('remote-approvals')}
             style={{
               background: activeTab === 'remote-approvals' ? '#059669' : 'transparent',
               color: activeTab === 'remote-approvals' ? '#fff' : 'var(--text-muted)',
@@ -421,7 +453,10 @@ const PortalAttendance = () => {
         </div>
       )}
 
-      {activeTab === 'approvals' ? (
+      {activeTab === 'team-attendance' ? (
+        /* ── View 4: Manager All Employees Attendance ── */
+        <PortalTeamAttendance />
+      ) : activeTab === 'approvals' ? (
         /* ── View 2: Manager Team Clock-Out Approvals ── */
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
