@@ -438,8 +438,11 @@ const PortalHome = () => {
     }
   };
 
-  const hasClockIn  = !!today?.clock_in_time;
-  const hasClockOut = !!today?.clock_out_time;
+  const hasRemoteClockIn = !!todayRemote?.clock_in && !['rejected', 'manager_rejected'].includes(todayRemote.clock_in.status);
+  const hasRemoteClockOut = !!todayRemote?.clock_out && !['rejected', 'manager_rejected'].includes(todayRemote.clock_out.status);
+
+  const hasClockIn  = !!today?.clock_in_time || hasRemoteClockIn;
+  const hasClockOut = !!today?.clock_out_time || hasRemoteClockOut;
   const canClockIn  = !hasClockIn;
   const canClockOut = hasClockIn && !hasClockOut;
   const needsClocking = canClockIn || canClockOut;
@@ -851,33 +854,62 @@ const PortalHome = () => {
           <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Today's Attendance</span>
-              {today?.status && (
+              {today?.status ? (
                 <span style={{
                   padding: '0.2rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
                   background: STATUS_COLORS[today.status]?.bg, color: STATUS_COLORS[today.status]?.color,
                 }}>
                   {STATUS_COLORS[today.status]?.label}
                 </span>
-              )}
+              ) : hasRemoteClockIn ? (
+                <span style={{
+                  padding: '0.2rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
+                  background: todayRemote.clock_in.status === 'manager_approved' ? '#e0f2fe' : '#fef3c7',
+                  color: todayRemote.clock_in.status === 'manager_approved' ? '#0369a1' : '#b45309',
+                }}>
+                  {todayRemote.clock_in.status === 'manager_approved' ? 'Remote In (Mgr Approved)' : 'Remote In (Pending Review)'}
+                </span>
+              ) : null}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
               <div style={{ textAlign: 'center', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>CLOCK IN</div>
                 <div style={{ fontWeight: 700, fontSize: '1.25rem', color: hasClockIn ? '#22c55e' : 'var(--text-muted)' }}>
-                  {hasClockIn ? formatTime(today.clock_in_time) : '—'}
+                  {today?.clock_in_time
+                    ? formatTime(today.clock_in_time)
+                    : hasRemoteClockIn
+                      ? formatTime(todayRemote.clock_in.requested_time)
+                      : '—'}
                 </div>
-                {today?.clock_in_address && (
+                {today?.clock_in_address ? (
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
                     <MapPin size={10} />{today.clock_in_address.split(',').slice(0, 2).join(', ')}
                   </div>
-                )}
+                ) : hasRemoteClockIn && todayRemote.clock_in.location_name ? (
+                  <div style={{ fontSize: '0.65rem', color: '#0284c7', marginTop: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', fontWeight: 600 }}>
+                    <Globe size={10} /> {todayRemote.clock_in.location_name} {todayRemote.clock_in.status !== 'approved' && '(Remote)'}
+                  </div>
+                ) : null}
               </div>
               <div style={{ textAlign: 'center', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>CLOCK OUT</div>
                 <div style={{ fontWeight: 700, fontSize: '1.25rem', color: hasClockOut ? '#f59e0b' : 'var(--text-muted)' }}>
-                  {hasClockOut ? formatTime(today.clock_out_time) : '—'}
+                  {today?.clock_out_time
+                    ? formatTime(today.clock_out_time)
+                    : hasRemoteClockOut
+                      ? formatTime(todayRemote.clock_out.requested_time)
+                      : '—'}
                 </div>
+                {today?.clock_out_address ? (
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
+                    <MapPin size={10} />{today.clock_out_address.split(',').slice(0, 2).join(', ')}
+                  </div>
+                ) : hasRemoteClockOut && todayRemote.clock_out.location_name ? (
+                  <div style={{ fontSize: '0.65rem', color: '#0284c7', marginTop: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', fontWeight: 600 }}>
+                    <Globe size={10} /> {todayRemote.clock_out.location_name} {todayRemote.clock_out.status !== 'approved' && '(Remote)'}
+                  </div>
+                ) : null}
                 {hasClockOut && today?.working_hours && (
                   <div style={{ fontSize: '0.7rem', color: '#22c55e', marginTop: '0.25rem', fontWeight: 600 }}>
                     {formatHours(today.working_hours)} worked
@@ -935,7 +967,7 @@ const PortalHome = () => {
             {/* Remote Attendance Submissions & Status Blocks */}
             <div style={{ marginTop: (canClockIn || canClockOut) ? '0.85rem' : '0' }}>
               {/* Remote Clock-In Status or Button */}
-              {!hasClockIn && (
+              {!today?.clock_in_time && (
                 <>
                   {todayRemote?.clock_in?.status === 'pending' && (
                     <div style={{
@@ -1019,7 +1051,7 @@ const PortalHome = () => {
                     </div>
                   )}
 
-                  {!todayRemote?.clock_in && (
+                  {!hasClockIn && !todayRemote?.clock_in && (
                     <button
                       type="button"
                       onClick={() => openRemoteModal('clock_in')}
@@ -1049,7 +1081,7 @@ const PortalHome = () => {
               )}
 
               {/* Remote Clock-Out Status or Button */}
-              {(hasClockIn || (todayRemote?.clock_in && todayRemote.clock_in.status !== 'rejected')) && !hasClockOut && (
+              {hasClockIn && !hasClockOut && (
                 <div style={{ marginTop: '0.5rem' }}>
                   {todayRemote?.clock_out?.status === 'pending' && (
                     <div style={{
