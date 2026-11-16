@@ -1071,10 +1071,19 @@ class HrAttendanceController extends Controller
         // Calculate counts
         $baseCountQuery = HrAttendanceRegularization::query();
 
-        $pendingCount = (clone $baseCountQuery)->where('status', 'pending')->count();
+        $pendingCount     = (clone $baseCountQuery)->where('status', 'pending')->count();
         $mgrApprovedCount = (clone $baseCountQuery)->where('status', 'manager_approved')->count();
-        $approvedCount = (clone $baseCountQuery)->where('status', 'approved')->count();
-        $rejectedCount = (clone $baseCountQuery)->whereIn('status', ['rejected', 'manager_rejected'])->count();
+        $approvedCount    = (clone $baseCountQuery)->where('status', 'approved')->count();
+        $rejectedCount    = (clone $baseCountQuery)->whereIn('status', ['rejected', 'manager_rejected'])->count();
+        $totalCount       = (clone $baseCountQuery)->count();
+
+        $counts = [
+            'pending'          => $pendingCount,
+            'manager_approved' => $mgrApprovedCount,
+            'approved'         => $approvedCount,
+            'rejected'         => $rejectedCount,
+            'total'            => $totalCount,
+        ];
 
         return response()->json([
             'data'                   => $records,
@@ -1082,6 +1091,7 @@ class HrAttendanceController extends Controller
             'manager_approved_count' => $mgrApprovedCount,
             'approved_count'         => $approvedCount,
             'rejected_count'         => $rejectedCount,
+            'counts'                 => $counts,
         ]);
     }
 
@@ -1430,8 +1440,23 @@ class HrAttendanceController extends Controller
 
         $myEmp = HrEmployee::where('user_id', $user->id)->first();
 
+        $emptyCounts = [
+            'pending'          => 0,
+            'manager_approved' => 0,
+            'approved'         => 0,
+            'rejected'         => 0,
+            'total'            => 0,
+        ];
+
         if ($scope === 'my') {
-            if (!$myEmp) return response()->json(['data' => [], 'counts' => []]);
+            if (!$myEmp) return response()->json([
+                'data'                   => [],
+                'pending_count'          => 0,
+                'manager_approved_count' => 0,
+                'approved_count'         => 0,
+                'rejected_count'         => 0,
+                'counts'                 => $emptyCounts,
+            ]);
             $query = HrRemoteAttendanceRequest::where('employee_id', $myEmp->id);
         } else {
             if (!$isHR && !$isMgr) {
@@ -1477,10 +1502,19 @@ class HrAttendanceController extends Controller
             $baseCountQuery->where('employee_id', $myEmp->id);
         }
 
-        $pendingCount = (clone $baseCountQuery)->where('status', 'pending')->count();
+        $pendingCount     = (clone $baseCountQuery)->where('status', 'pending')->count();
         $mgrApprovedCount = (clone $baseCountQuery)->where('status', 'manager_approved')->count();
-        $approvedCount = (clone $baseCountQuery)->where('status', 'approved')->count();
-        $rejectedCount = (clone $baseCountQuery)->whereIn('status', ['rejected', 'manager_rejected'])->count();
+        $approvedCount    = (clone $baseCountQuery)->where('status', 'approved')->count();
+        $rejectedCount    = (clone $baseCountQuery)->whereIn('status', ['rejected', 'manager_rejected'])->count();
+        $totalCount       = (clone $baseCountQuery)->count();
+
+        $counts = [
+            'pending'          => $pendingCount,
+            'manager_approved' => $mgrApprovedCount,
+            'approved'         => $approvedCount,
+            'rejected'         => $rejectedCount,
+            'total'            => $totalCount,
+        ];
 
         return response()->json([
             'data'                   => $records,
@@ -1488,6 +1522,7 @@ class HrAttendanceController extends Controller
             'manager_approved_count' => $mgrApprovedCount,
             'approved_count'         => $approvedCount,
             'rejected_count'         => $rejectedCount,
+            'counts'                 => $counts,
         ]);
     }
 

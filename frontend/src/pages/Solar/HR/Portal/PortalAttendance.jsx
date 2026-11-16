@@ -92,7 +92,14 @@ const PortalAttendance = () => {
       const res = await api.get('/hr/attendance/remote-requests', { params: { status: teamRemoteFilter } });
       setTeamRemoteRequests(res.data.data || []);
       setTeamRemotePendingCount(res.data.pending_count || 0);
-      setTeamRemoteCounts(res.data.counts || { pending: 0, manager_approved: 0, approved: 0, rejected: 0, total: 0 });
+      const counts = res.data.counts || {
+        pending: res.data.pending_count ?? 0,
+        manager_approved: res.data.manager_approved_count ?? 0,
+        approved: res.data.approved_count ?? 0,
+        rejected: res.data.rejected_count ?? 0,
+        total: (res.data.pending_count ?? 0) + (res.data.manager_approved_count ?? 0) + (res.data.approved_count ?? 0) + (res.data.rejected_count ?? 0),
+      };
+      setTeamRemoteCounts(counts);
     } catch {
       // silent
     } finally {
