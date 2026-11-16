@@ -109,17 +109,40 @@ class HrAttendanceController extends Controller
         $now   = Carbon::now();
 
         $existing = HrAttendance::where('employee_id', $employee->id)->where('date', $today)->first();
+        $remoteClockOut = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+            ->where('date', $today)
+            ->where('request_type', 'clock_out')
+            ->whereIn('status', ['pending', 'manager_approved', 'approved'])
+            ->exists();
+
+        if ($existing?->clock_out_time || $remoteClockOut) {
+            return response()->json(['message' => 'You have already clocked out today.'], 400);
+        }
+
         if ($existing?->clock_in_time) {
+            $clockInTime = Carbon::parse($existing->clock_in_time);
+            // If already clocked in >= 30 mins ago and not yet clocked out,
+            // process as Clock Out so a user tapping the action button is never blocked.
+            if ($now->diffInMinutes($clockInTime) >= 30) {
+                return $this->clockOut($request);
+            }
             return response()->json(['message' => 'You have already clocked in today.'], 400);
         }
 
-        $hasRemoteClockIn = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+        $remoteClockIn = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
             ->where('date', $today)
             ->where('request_type', 'clock_in')
             ->whereIn('status', ['pending', 'manager_approved', 'approved'])
-            ->exists();
-        if ($hasRemoteClockIn) {
-            return response()->json(['message' => 'You have already clocked in via remote today. Please clock out when your shift ends.'], 400);
+            ->latest()
+            ->first();
+
+        if ($remoteClockIn) {
+            $remoteTime = Carbon::parse($remoteClockIn->requested_time);
+            // If remote clock-in occurred >= 30 mins ago, process this action as Clock Out seamlessly.
+            if ($now->diffInMinutes($remoteTime) >= 30) {
+                return $this->clockOut($request);
+            }
+            return response()->json(['message' => 'You have already clocked in via remote today. Please use Clock Out when departing.'], 400);
         }
 
         // Strict Geofencing check
@@ -216,7 +239,14 @@ class HrAttendanceController extends Controller
         if (!$att?->clock_in_time && !$remoteClockIn) {
             return response()->json(['message' => 'You must clock in before clocking out.'], 400);
         }
-        if ($att?->clock_out_time) {
+
+        $hasRemoteClockOut = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+            ->where('date', $today)
+            ->where('request_type', 'clock_out')
+            ->whereIn('status', ['pending', 'manager_approved', 'approved'])
+            ->exists();
+
+        if ($att?->clock_out_time || $hasRemoteClockOut) {
             return response()->json(['message' => 'You have already clocked out today.'], 400);
         }
 
@@ -273,7 +303,7 @@ class HrAttendanceController extends Controller
             ]
         ));
 
-        return response()->json(['message' => 'Clocked out successfully', 'data' => $att]);
+        return response()->json(['message' => 'Clocked out successfully at ' . $location->name, 'data' => $att]);
     }
 
     // ── Employee: Today's Record ───────────────────────────────────────────────
@@ -285,9 +315,11 @@ class HrAttendanceController extends Controller
         // Self-heal any unclosed past attendance records
         $this->autoClosePastAttendances($employee->id);
 
+        $today = Carbon::today()->toDateString();
+
         $att = HrAttendance::with('clockInLocation')
             ->where('employee_id', $employee->id)
-            ->where('date', Carbon::today()->toDateString())
+            ->where('date', $today)
             ->first();
 
         // Self-heal: if marked 'late' under old logic but clocked in before 09:11:00 AM, correct to 'present' in DB
@@ -295,6 +327,52 @@ class HrAttendanceController extends Controller
             if ($this->deriveStatus(Carbon::parse($att->clock_in_time), $att->date) === 'present') {
                 $att->status = 'present';
                 $att->save();
+            }
+        }
+
+        // If no attendance record exists or clock_in_time is empty, check for active remote clock-in today
+        if (!$att || !$att->clock_in_time) {
+            $remoteClockIn = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+                ->where('date', $today)
+                ->where('request_type', 'clock_in')
+                ->whereIn('status', ['pending', 'manager_approved', 'approved'])
+                ->latest()
+                ->first();
+
+            if ($remoteClockIn) {
+                if (!$att) {
+                    $att = new HrAttendance([
+                        'employee_id' => $employee->id,
+                        'date'        => $today,
+                    ]);
+                }
+                $att->clock_in_time      = $remoteClockIn->requested_time;
+                $att->clock_in_lat       = $remoteClockIn->latitude;
+                $att->clock_in_lng       = $remoteClockIn->longitude;
+                $att->clock_in_address   = $remoteClockIn->location_name . ($remoteClockIn->address ? ' (' . $remoteClockIn->address . ')' : '');
+                $att->is_remote          = true;
+                $att->is_remote_clock_in = true;
+                $att->status             = $this->deriveStatus(Carbon::parse($remoteClockIn->requested_time), $today);
+                $att->remote_status      = $remoteClockIn->status;
+            }
+        }
+
+        // Also check if there is an active remote clock-out today
+        if ($att && !$att->clock_out_time) {
+            $remoteClockOut = HrRemoteAttendanceRequest::where('employee_id', $employee->id)
+                ->where('date', $today)
+                ->where('request_type', 'clock_out')
+                ->whereIn('status', ['pending', 'manager_approved', 'approved'])
+                ->latest()
+                ->first();
+
+            if ($remoteClockOut) {
+                $att->clock_out_time      = $remoteClockOut->requested_time;
+                $att->clock_out_lat       = $remoteClockOut->latitude;
+                $att->clock_out_lng       = $remoteClockOut->longitude;
+                $att->clock_out_address   = $remoteClockOut->location_name . ($remoteClockOut->address ? ' (' . $remoteClockOut->address . ')' : '');
+                $att->is_remote_clock_out = true;
+                $att->remote_out_status   = $remoteClockOut->status;
             }
         }
 
