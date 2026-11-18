@@ -475,10 +475,29 @@ class HrProbationEvaluationController extends Controller
         })
         ->get();
 
+        // 4. CEO Pending Decision dossiers (if logged-in user is CEO or Super Admin)
+        $ceoPendingDecisions = [];
+        if ($this->isCeo($user) || $this->isSuperAdmin($user)) {
+            $ceoPendingDecisions = HrProbationEvaluation::with([
+                'employee.department',
+                'employee.designation',
+                'lineManager',
+                'gmUser',
+                'ceoUser',
+                'hrUser',
+                'forms',
+            ])
+            ->where('status', 'pending_ceo_approval')
+            ->latest('id')
+            ->get();
+        }
+
         return response()->json([
             'my_probation_evaluation' => $myProbationEvaluation,
             'pending_forms'           => $pendingForms,
             'completed_forms'         => $completedForms,
+            'ceo_pending_decisions'   => $ceoPendingDecisions,
+            'is_ceo'                  => $this->isCeo($user) || $this->isSuperAdmin($user),
         ]);
     }
 
@@ -913,9 +932,10 @@ class HrProbationEvaluationController extends Controller
         $user = $request->user();
         $isCeoUser = $this->isCeo($user);
         $isSuperAdmin = $this->isSuperAdmin($user);
+        $isHrUser = $this->isHr($user);
 
-        if (!$isCeoUser && !$isSuperAdmin) {
-            return response()->json(['message' => 'Only the Chief Executive Officer can submit the final probation decision.'], 403);
+        if (!$isCeoUser && !$isSuperAdmin && !$isHrUser) {
+            return response()->json(['message' => 'Only the Chief Executive Officer or HR Administration can record the final probation decision.'], 403);
         }
 
         $request->validate([

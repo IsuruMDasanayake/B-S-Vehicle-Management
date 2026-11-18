@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   UserCheck, Award, Clock, CheckCircle2, AlertCircle, ArrowLeft,
-  Loader2, Save, Send, Users, ChevronRight, FileText, ExternalLink
+  Loader2, Save, Send, Users, ChevronRight, FileText, ExternalLink, ShieldCheck
 } from 'lucide-react';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
@@ -138,6 +138,12 @@ export const PortalProbation = () => {
   const [evalComments, setEvalComments] = useState('');
   const [submittingEval, setSubmittingEval] = useState(false);
 
+  // CEO Final Sign-off State (for CEO Eranda Ellepola)
+  const [ceoDecisions, setCeoDecisions] = useState([]);
+  const [ceoDecisionChoice, setCeoDecisionChoice] = useState('confirm');
+  const [ceoDecisionNotes, setCeoDecisionNotes] = useState('');
+  const [submittingPortalCeo, setSubmittingPortalCeo] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -149,6 +155,7 @@ export const PortalProbation = () => {
       setMyEval(evalRes.data?.my_probation_evaluation || null);
       setPendingForms((evalRes.data?.pending_forms || []).filter(f => f.evaluator_role !== 'self'));
       setCompletedForms((evalRes.data?.completed_forms || []).filter(f => f.evaluator_role !== 'self'));
+      setCeoDecisions(evalRes.data?.ceo_pending_decisions || []);
       setEmployeesList(empRes.data || []);
     } catch (err) {
       console.error('Failed to load portal probation evaluations:', err);
@@ -157,6 +164,22 @@ export const PortalProbation = () => {
       setLoading(false);
     }
   }, []);
+
+  const handleSubmitPortalCeoDecision = async (evalId) => {
+    setSubmittingPortalCeo(true);
+    try {
+      await api.post(`/hr/probation/evaluations/${evalId}/ceo-decision`, {
+        ceo_decision: ceoDecisionChoice,
+        ceo_notes: ceoDecisionNotes,
+      });
+      toast.success('CEO final decision confirmed and employee confirmation status updated!');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit CEO decision.');
+    } finally {
+      setSubmittingPortalCeo(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -870,6 +893,144 @@ export const PortalProbation = () => {
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* SECTION: CEO EXECUTIVE FINAL APPROVALS (Visible to CEO Eranda Ellepola) */}
+      {ceoDecisions.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)',
+            color: '#fff', padding: '1.25rem 1.5rem', borderRadius: '12px',
+            marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: '42px', height: '42px', borderRadius: '10px',
+                background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+                  CEO Executive Approvals Required ({ceoDecisions.length})
+                </h3>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)' }}>
+                  All 270° multi-party evaluations are submitted. Please render the final executive employment confirmation decision.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {ceoDecisions.map(ev => {
+              const emp = ev.employee || {};
+
+              return (
+                <div key={ev.id} className="card" style={{ padding: '1.25rem', border: '2px solid #c4b5fd' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: '#7c3aed' }}>
+                        Ready for CEO Final Sign-Off
+                      </span>
+                      <h4 style={{ margin: '0.2rem 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                        {emp.full_name} ({emp.employee_id})
+                      </h4>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {emp.designation?.name || 'Staff'} · {emp.department?.name || 'Department'}
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Final Weighted Score</div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: ev.final_score >= 80 ? '#15803d' : '#dc2626' }}>
+                        {ev.final_score} / 100
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: ev.threshold_met ? '#15803d' : '#dc2626' }}>
+                        {ev.threshold_met ? '✓ Threshold Met (≥ 80)' : '✗ Below Threshold (< 80)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Summary of Recommendations */}
+                  <div style={{
+                    marginTop: '1rem', padding: '0.75rem 1rem', background: '#f5f3ff', borderRadius: '8px',
+                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', fontSize: '0.78rem',
+                  }}>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>Line Manager</span>
+                      <strong>{ev.line_manager_recommendation ? `✓ ${ev.line_manager_recommendation.toUpperCase()}` : '—'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>General Manager</span>
+                      <strong>{ev.gm_recommendation ? `✓ ${ev.gm_recommendation.toUpperCase()}` : '—'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>HR Recommendation</span>
+                      <strong>{ev.hr_recommendation ? `✓ ${ev.hr_recommendation.toUpperCase()}` : '—'}</strong>
+                    </div>
+                  </div>
+
+                  {/* Sign-off Form */}
+                  <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.35rem', color: '#0f172a' }}>
+                        Executive Decision:
+                      </label>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        {[
+                          { key: 'confirm', label: '✓ Confirm Employment' },
+                          { key: 'extend', label: '⏳ Extend Probation' },
+                          { key: 'do_not_confirm', label: '✗ Non-Confirmation (Exit)' },
+                        ].map(opt => (
+                          <label key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                            <input
+                              type="radio"
+                              name={`ceo_dec_${ev.id}`}
+                              value={opt.key}
+                              checked={ceoDecisionChoice === opt.key}
+                              onChange={() => setCeoDecisionChoice(opt.key)}
+                            />
+                            <strong>{opt.label}</strong>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '0.85rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                        CEO Remarks / Directives (Optional):
+                      </label>
+                      <input
+                        type="text"
+                        value={ceoDecisionNotes}
+                        onChange={e => setCeoDecisionNotes(e.target.value)}
+                        placeholder="Enter any directives or performance observations..."
+                        style={{ width: '100%', padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSubmitPortalCeoDecision(ev.id)}
+                        disabled={submittingPortalCeo}
+                        className="btn btn-primary"
+                        style={{
+                          background: '#7c3aed', borderColor: '#7c3aed',
+                          padding: '0.55rem 1.5rem', fontWeight: 800, fontSize: '0.85rem',
+                          display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        }}
+                      >
+                        {submittingPortalCeo ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <ShieldCheck size={16} />}
+                        <span>{submittingPortalCeo ? 'Signing...' : 'Sign & Apply CEO Final Decision'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

@@ -935,12 +935,19 @@ export const ProbationDetail = () => {
                   Approved by CEO: <strong>{evaluation.ceo_approver?.name || 'Eranda Ellepola'}</strong> on {evaluation.ceo_approved_at}
                 </div>
               </div>
-            ) : isCeo ? (
+            ) : (isCeo || isHrAdmin) ? (
               <form onSubmit={handleSubmitCeoDecision}>
                 <div style={{ marginBottom: '0.85rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                    Select Final Decision
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                      Select Final Decision
+                    </label>
+                    {isHrAdmin && !isCeo && (
+                      <span style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 600, background: '#ede9fe', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                        Admin Sign-Off (on behalf of CEO Eranda Ellepola)
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     {[
                       { key: 'confirm', label: 'Confirm Employment' },
