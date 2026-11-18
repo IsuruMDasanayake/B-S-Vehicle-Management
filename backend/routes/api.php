@@ -227,6 +227,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('appraisals/{id}/remind-appraiser', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'remindAppraiserForSheet']);
         Route::get('appraisals/{id}', [\App\Http\Controllers\Api\HR\HrAppraisalController::class, 'show']);
 
+        // 270° Probation Evaluations
+        Route::get('probation/expiring-employees', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'expiringEmployees']);
+        Route::get('probation/evaluations', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'index']);
+        Route::post('probation/evaluations', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'store']);
+        Route::get('probation/evaluations/{id}', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'show']);
+        Route::patch('probation/evaluations/{id}/peers', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'reviewPeers']);
+        Route::patch('probation/evaluations/{id}/presentation', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'schedulePresentation']);
+        Route::post('probation/evaluations/{id}/self-evaluation', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'submitSelfEvaluation']);
+        Route::post('probation/evaluations/{id}/hr-review', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'submitHrReview']);
+        Route::post('probation/evaluations/{id}/ceo-decision', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'submitCeoDecision']);
+        Route::get('probation/my-evaluations', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'myEvaluations']);
+        Route::get('probation/forms/{formId}', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'getForm']);
+        Route::post('probation/forms/{formId}/draft', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'saveDraft']);
+        Route::post('probation/forms/{formId}/submit', [\App\Http\Controllers\Api\HR\HrProbationEvaluationController::class, 'submitForm']);
+
         // Employee Training & Video Lessons
         Route::get('training/lessons', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'index']);
         Route::post('training/lessons', [\App\Http\Controllers\Api\HR\HrTrainingController::class, 'store']);

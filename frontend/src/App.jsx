@@ -78,8 +78,11 @@ import PortalLeave from './pages/Solar/HR/Portal/PortalLeave';
 import PortalProfile from './pages/Solar/HR/Portal/PortalProfile';
 import PortalAnnouncements from './pages/Solar/HR/Portal/PortalAnnouncements';
 import PortalAppraisal from './pages/Solar/HR/Portal/PortalAppraisal';
+import PortalProbation from './pages/Solar/HR/Portal/PortalProbation';
 import PortalTraining from './pages/Solar/HR/Portal/PortalTraining';
 import AppraisalManagement from './pages/Solar/HR/Appraisals/AppraisalManagement';
+import ProbationManagement from './pages/Solar/HR/Probation/ProbationManagement';
+import ProbationDetail from './pages/Solar/HR/Probation/ProbationDetail';
 import TrainingManagement from './pages/Solar/HR/Training/TrainingManagement';
 import HRSettings from './pages/Solar/HR/Settings/HRSettings';
 import SolarDashboard from './pages/Solar/Admin/SolarDashboard';
@@ -236,6 +239,8 @@ function App() {
         <Route path="locations" element={<LocationsList />} />
         <Route path="leave" element={<LeaveManagement />} />
         <Route path="appraisals" element={<AppraisalManagement />} />
+        <Route path="probation" element={<ProbationManagement />} />
+        <Route path="probation/:id" element={<ProbationDetail />} />
         <Route path="training" element={<TrainingManagement />} />
         <Route path="reports" element={<AttendanceReport />} />
         <Route path="settings" element={<RoleProtectedRoute allowedRoles={['super_admin']} fallbackUnauthorized="/solar/hr/admin/dashboard"><HRSettings /></RoleProtectedRoute>} />
@@ -249,6 +254,7 @@ function App() {
         <Route path="attendance" element={<PortalAttendance />} />
         <Route path="leaves" element={<PortalLeave />} />
         <Route path="appraisals" element={<PortalAppraisal />} />
+        <Route path="probation" element={<PortalProbation />} />
         <Route path="training" element={<PortalTraining />} />
         <Route path="profile" element={<PortalProfile />} />
         <Route path="announcements" element={<PortalAnnouncements />} />

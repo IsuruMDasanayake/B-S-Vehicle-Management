@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MapPin, Clock, CheckCircle2, AlertCircle, Loader2, ChevronRight,
-  BellRing, BellOff, X, CalendarDays, Award, Video, Camera, Upload, ExternalLink, ShieldCheck, Globe, RefreshCw, FileText, Users
+  BellRing, BellOff, X, CalendarDays, Award, Video, Camera, Upload, ExternalLink, ShieldCheck, Globe, RefreshCw, FileText, Users, UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../services/api';
@@ -62,6 +62,7 @@ const PortalHome = () => {
   const [pendingLeaveApprovals, setPendingLeaveApprovals] = useState(0);
   const [pendingAttApprovals, setPendingAttApprovals] = useState(0);
   const [pendingRemoteApprovals, setPendingRemoteApprovals] = useState(0);
+  const [probationCount, setProbationCount] = useState(0);
 
   // Remote Clock-In / Clock-Out state
   const [todayRemote, setTodayRemote] = useState(null);
@@ -215,6 +216,27 @@ const PortalHome = () => {
     };
     window.addEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
     return () => window.removeEventListener('hr-approval-managers-updated', handleManagerAssignmentChange);
+  }, []);
+
+  // Fetch pending probation evaluation tasks
+  useEffect(() => {
+    let mounted = true;
+    const fetchProbationCount = async () => {
+      try {
+        const res = await api.get('/hr/probation/my-evaluations');
+        if (!mounted || !res.data) return;
+        let count = 0;
+        if (res.data.self_evaluation?.evaluation?.status === 'self_evaluation_pending') {
+          count += 1;
+        }
+        if (Array.isArray(res.data.evaluator_tasks)) {
+          count += res.data.evaluator_tasks.filter(t => t.form_status === 'draft').length;
+        }
+        setProbationCount(count);
+      } catch {}
+    };
+    fetchProbationCount();
+    return () => { mounted = false; };
   }, []);
 
   const handleEnablePush = async () => {
@@ -721,6 +743,62 @@ const PortalHome = () => {
             flexShrink: 0,
           }}>
             <span>Review</span>
+            <ChevronRight size={16} />
+          </div>
+        </div>
+      )}
+
+      {/* Probation Evaluations Pending Alert */}
+      {probationCount > 0 && (
+        <div
+          onClick={() => navigate('/solar/hr/portal/probation')}
+          className="card"
+          style={{
+            padding: '0.9rem 1.15rem',
+            marginBottom: '1rem',
+            background: 'linear-gradient(135deg, rgba(234,88,12,0.08) 0%, rgba(245,158,11,0.05) 100%)',
+            border: '1px solid rgba(234,88,12,0.3)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'rgba(234,88,12,0.15)',
+              color: '#ea580c',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <UserCheck size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)' }}>
+                {probationCount} Probation Evaluation Action{probationCount > 1 ? 's' : ''} Pending
+              </div>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                You have 270° probation evaluation forms or self-evaluations awaiting your submission
+              </p>
+            </div>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            color: '#ea580c',
+            flexShrink: 0,
+          }}>
+            <span>Complete</span>
             <ChevronRight size={16} />
           </div>
         </div>
@@ -1455,6 +1533,33 @@ const PortalHome = () => {
                 </div>
               </div>
               <ChevronRight size={18} color="#6366f1" />
+            </button>
+
+            <button
+              onClick={() => navigate('/solar/hr/portal/probation')}
+              className="card"
+              style={{
+                padding: '1rem',
+                border: '1px solid #fed7aa',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, #ffffff 0%, #fff7ed 100%)',
+                transition: 'transform 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(234,88,12,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c', flexShrink: 0 }}>
+                  <UserCheck size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>Probation Evaluations (270°)</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Self-evaluation, peer reviews & multi-evaluator scoring</div>
+                </div>
+              </div>
+              <ChevronRight size={18} color="#ea580c" />
             </button>
 
             <button
