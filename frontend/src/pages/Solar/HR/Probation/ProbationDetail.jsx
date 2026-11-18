@@ -22,6 +22,25 @@ const formatDate = (val) => {
   return cleanStr;
 };
 
+const formatDateTime = (val) => {
+  if (!val) return '—';
+  if (!String(val).includes('T') && !String(val).includes(':')) {
+    return formatDate(val);
+  }
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return formatDate(val);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${day} ${month} ${year}, ${timeStr.toUpperCase()}`;
+  } catch (e) {
+    return formatDate(val);
+  }
+};
+
 // 7 Standardized Evaluator Criteria (Image 2)
 const EVALUATOR_CRITERIA = [
   {
@@ -503,8 +522,13 @@ export const ProbationDetail = () => {
                 <div style={{ fontWeight: 700, color: '#15803d', marginBottom: '0.2rem' }}>
                   ✓ Employee Requested 10-Minute Presentation
                 </div>
+                {evaluation.presentation_scheduled_at && (
+                  <div style={{ color: '#0369a1', fontWeight: 600, fontSize: '0.78rem', marginTop: '0.25rem' }}>
+                    Scheduled: {formatDateTime(evaluation.presentation_scheduled_at)}
+                  </div>
+                )}
                 {evaluation.presentation_notes && (
-                  <div style={{ color: '#166534', fontSize: '0.76rem' }}>
+                  <div style={{ color: '#166534', fontSize: '0.76rem', marginTop: '0.2rem' }}>
                     Note: {evaluation.presentation_notes}
                   </div>
                 )}
@@ -788,6 +812,11 @@ export const ProbationDetail = () => {
                   evaluation.hr_recommendation === 'extend'  ? '⏳ Extend Probation' : '✗ Do Not Confirm'
                 ) : 'Awaiting HR final review'}
               </div>
+              {evaluation.hr_reviewed_at && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Reviewed on {formatDateTime(evaluation.hr_reviewed_at)}
+                </div>
+              )}
             </div>
           </div>
 
@@ -932,7 +961,7 @@ export const ProbationDetail = () => {
                   </div>
                 )}
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Approved by CEO: <strong>{evaluation.ceo_approver?.name || 'Eranda Ellepola'}</strong> on {evaluation.ceo_approved_at}
+                  Approved by CEO: <strong>{evaluation.ceo_approver?.name || 'Eranda Ellepola'}</strong> on {formatDateTime(evaluation.ceo_approved_at)}
                 </div>
               </div>
             ) : (isCeo || isHrAdmin) ? (

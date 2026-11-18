@@ -109,6 +109,25 @@ const formatDate = (val) => {
   return cleanStr;
 };
 
+const formatDateTime = (val) => {
+  if (!val) return '—';
+  if (!String(val).includes('T') && !String(val).includes(':')) {
+    return formatDate(val);
+  }
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return formatDate(val);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${day} ${month} ${year}, ${timeStr.toUpperCase()}`;
+  } catch (e) {
+    return formatDate(val);
+  }
+};
+
 export const PortalProbation = () => {
   const user = useAuthStore(state => state.user);
   const [loading, setLoading] = useState(true);
@@ -888,9 +907,16 @@ export const PortalProbation = () => {
                   Final Score: <strong>{myEval.final_score} / 100</strong> (Pass mark: 80)
                 </div>
               </div>
-              <span style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 700 }}>
-                ✓ Decision Approved by CEO
-              </span>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 700 }}>
+                  ✓ Decision Approved by CEO
+                </span>
+                {myEval.ceo_approved_at && (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    {formatDateTime(myEval.ceo_approved_at)}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1111,7 +1137,7 @@ export const PortalProbation = () => {
                   <div>
                     <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>{item.evaluation?.employee?.full_name}</strong>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Evaluated as {formatRoleName(item.evaluator_role)} · {item.submitted_at?.split('T')[0]}
+                      Evaluated as {formatRoleName(item.evaluator_role)} · {formatDateTime(item.submitted_at)}
                     </div>
                   </div>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d' }}>
