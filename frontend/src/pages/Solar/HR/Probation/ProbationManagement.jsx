@@ -55,7 +55,7 @@ export const ProbationManagement = () => {
   const urgentCount = expiringEmployees.filter(e => e.days_remaining !== null && e.days_remaining <= 14 && !e.has_active_eval).length;
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '0.5rem', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
@@ -63,15 +63,15 @@ export const ProbationManagement = () => {
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-            <div style={{
+            {/* <div style={{
               width: '38px', height: '38px', borderRadius: '10px',
               background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <UserCheck size={22} />
-            </div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.3px' }}>
-              270° Probation Evaluation Management
+            </div> */}
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 600, margin: 0, color: '#0f172a', letterSpacing: '-0.3px' }}>
+              Probation Evaluation Management
             </h1>
           </div>
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -320,7 +320,7 @@ export const ProbationManagement = () => {
                               }}
                             >
                               <UserCheck size={14} />
-                              <span>Initiate 270° Evaluation</span>
+                              <span>Initiate Evaluation</span>
                             </button>
                           )}
                         </td>

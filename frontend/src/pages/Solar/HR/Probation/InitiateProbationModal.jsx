@@ -103,25 +103,26 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
     }}>
       <div style={{
-        background: '#fff', borderRadius: '16px', maxWidth: '560px', width: '100%',
+        background: '#fff', borderRadius: '14px', maxWidth: '520px', width: '100%',
         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden',
-        border: '1px solid #e2e8f0',
+        border: '1px solid #e2e8f0', maxHeight: '94vh', overflowY: 'auto',
       }}>
         {/* Header */}
         <div style={{
-          padding: '1.25rem 1.5rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0.75rem 1.25rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+          color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <div style={{
-              width: '36px', height: '36px', borderRadius: '10px',
+              width: '32px', height: '32px', borderRadius: '8px',
               background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#ffffff', flexShrink: 0,
             }}>
-              <UserCheck size={20} />
+              <UserCheck size={18} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Initiate 270° Probation Evaluation</h3>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)' }}>
+              <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#ffffff' }}>Initiate 270° Probation Evaluation</h3>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#ffffff' }}>
                 Target: {employee.full_name} ({employee.employee_id})
               </p>
             </div>
@@ -129,68 +130,68 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
           <button
             onClick={onClose}
             disabled={loading}
-            style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.8 }}
+            style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer', opacity: 0.9, padding: '4px' }}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+        <form onSubmit={handleSubmit} style={{ padding: '0.85rem 1.25rem' }}>
           {/* Employee Info Strip */}
           <div style={{
-            background: '#f8fafc', borderRadius: '10px', padding: '0.9rem',
-            border: '1px solid #e2e8f0', marginBottom: '1.25rem',
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', fontSize: '0.8rem',
+            background: '#f8fafc', borderRadius: '8px', padding: '0.45rem 0.75rem',
+            border: '1px solid #e2e8f0', marginBottom: '0.65rem',
+            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.76rem',
           }}>
             <div>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Department</span>
+              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.66rem' }}>Department</span>
               <strong>{employee.department || '—'}</strong>
             </div>
             <div>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Joined Date</span>
+              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.66rem' }}>Joined Date</span>
               <strong>{employee.joined_date || '—'}</strong>
             </div>
             <div>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Probation End</span>
+              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.66rem' }}>Probation End</span>
               <strong style={{ color: '#0369a1' }}>{employee.probation_end_date || '—'}</strong>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {/* Submission Deadline */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                Submission Deadline <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="date"
-                  required
-                  value={form.submission_deadline}
-                  onChange={e => setForm({ ...form, submission_deadline: e.target.value })}
-                  style={{
-                    width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px',
-                    border: '1px solid #cbd5e1', fontSize: '0.88rem',
-                  }}
-                />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600 }}>
+                  Submission Deadline <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                  Evaluators must submit by this date
+                </span>
               </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Evaluators (Self, Line Manager, GM, CEO, Peers, HR) must submit by this date.
-              </span>
+              <input
+                type="date"
+                required
+                value={form.submission_deadline}
+                onChange={e => setForm({ ...form, submission_deadline: e.target.value })}
+                style={{
+                  width: '100%', padding: '0.42rem 0.65rem', borderRadius: '7px',
+                  border: '1px solid #cbd5e1', fontSize: '0.82rem',
+                }}
+              />
             </div>
 
             {/* Line Manager Selection */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.2rem' }}>
                 Reporting Line Manager (Weight: 30%)
               </label>
               <select
                 value={form.line_manager_id}
                 onChange={e => setForm({ ...form, line_manager_id: e.target.value })}
                 style={{
-                  width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px',
-                  border: '1px solid #cbd5e1', fontSize: '0.88rem', background: '#fff',
+                  width: '100%', padding: '0.42rem 0.65rem', borderRadius: '7px',
+                  border: '1px solid #cbd5e1', fontSize: '0.82rem', background: '#fff',
                 }}
               >
                 <option value="">-- Select Reporting Manager --</option>
@@ -204,15 +205,15 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
 
             {/* GM / Project Director */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.2rem' }}>
                 General Manager / Project Director (Weight: 20%)
               </label>
               <select
                 value={form.gm_user_id}
                 onChange={e => setForm({ ...form, gm_user_id: e.target.value })}
                 style={{
-                  width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px',
-                  border: '1px solid #cbd5e1', fontSize: '0.88rem', background: '#fff',
+                  width: '100%', padding: '0.42rem 0.65rem', borderRadius: '7px',
+                  border: '1px solid #cbd5e1', fontSize: '0.82rem', background: '#fff',
                 }}
               >
                 <option value="">-- Default: Hasintha Rathnayaka (hasintha@circlegroup.lk) --</option>
@@ -226,15 +227,15 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
 
             {/* CEO */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.2rem' }}>
                 Chief Executive Officer (Weight: 20% &amp; Final Decision)
               </label>
               <select
                 value={form.ceo_user_id}
                 onChange={e => setForm({ ...form, ceo_user_id: e.target.value })}
                 style={{
-                  width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px',
-                  border: '1px solid #cbd5e1', fontSize: '0.88rem', background: '#fff',
+                  width: '100%', padding: '0.42rem 0.65rem', borderRadius: '7px',
+                  border: '1px solid #cbd5e1', fontSize: '0.82rem', background: '#fff',
                 }}
               >
                 <option value="">-- Default: Eranda Ellepola (eranda@circlegroup.lk) --</option>
@@ -247,26 +248,25 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
             </div>
 
             <div style={{
-              background: '#eff6ff', borderRadius: '8px', padding: '0.75rem',
-              border: '1px solid #bfdbfe', fontSize: '0.75rem', color: '#1e40af',
-              display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+              background: '#eff6ff', borderRadius: '7px', padding: '0.45rem 0.65rem',
+              border: '1px solid #bfdbfe', fontSize: '0.72rem', color: '#1e40af',
+              display: 'flex', alignItems: 'center', gap: '0.45rem',
             }}>
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <AlertCircle size={15} style={{ flexShrink: 0 }} />
               <div>
-                <strong>Workflow Note:</strong> Upon initiation, forms will be dispatched concurrently to all evaluators.
-                The employee will receive an immediate task to submit their Self-Evaluation and nominate 2–3 peers.
+                <strong>Workflow Note:</strong> Evaluator forms are dispatched concurrently. Employee will submit Self-Evaluation and nominate 2–3 peers.
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '0.85rem' }}>
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
               className="btn btn-ghost"
-              style={{ border: '1px solid #cbd5e1', padding: '0.6rem 1.25rem' }}
+              style={{ border: '1px solid #cbd5e1', padding: '0.45rem 1rem', fontSize: '0.82rem' }}
             >
               Cancel
             </button>
@@ -276,11 +276,11 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
               className="btn btn-primary"
               style={{
                 background: '#0284c7', borderColor: '#0284c7',
-                padding: '0.6rem 1.5rem', fontWeight: 600,
+                padding: '0.45rem 1.25rem', fontWeight: 600, fontSize: '0.82rem',
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
               }}
             >
-              {loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <UserCheck size={16} />}
+              {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <UserCheck size={15} />}
               <span>{loading ? 'Initiating...' : 'Confirm & Initiate'}</span>
             </button>
           </div>
