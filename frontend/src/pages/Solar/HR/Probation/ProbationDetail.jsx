@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   UserCheck, ArrowLeft, Printer, ShieldCheck, Clock, CheckCircle2,
   AlertCircle, AlertTriangle, Users, Award, Calendar, ExternalLink,
-  Loader2, ThumbsUp, ThumbsDown, HelpCircle, FileText
+  Loader2, ThumbsUp, ThumbsDown, HelpCircle, FileText, X
 } from 'lucide-react';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
@@ -21,6 +21,60 @@ const formatDate = (val) => {
   }
   return cleanStr;
 };
+
+// 7 Standardized Evaluator Criteria (Image 2)
+const EVALUATOR_CRITERIA = [
+  {
+    id: 1,
+    title: 'Job Knowledge & Technical Competency',
+    prompt: 'Evaluate the employee’s understanding of job responsibilities, technical knowledge, practical skills, and ability to perform assigned duties effectively.',
+    weight: 20,
+  },
+  {
+    id: 2,
+    title: 'Achievement of Assigned Objectives',
+    prompt: 'Assess the employee’s success in completing assigned tasks, achieving agreed objectives, and delivering expected results during the probation period.',
+    weight: 25,
+  },
+  {
+    id: 3,
+    title: 'Quality, Accuracy & Timeliness',
+    prompt: 'Evaluate the quality and accuracy of completed work, attention to detail, ability to meet deadlines, and consistency of performance.',
+    weight: 15,
+  },
+  {
+    id: 4,
+    title: 'Teamwork & Communication',
+    prompt: 'Assess the employee’s ability to cooperate with colleagues, communicate clearly, share information, and maintain positive working relationships.',
+    weight: 10,
+  },
+  {
+    id: 5,
+    title: 'Accountability, Discipline & Reliability',
+    prompt: 'Evaluate the employee’s responsibility for assigned duties, punctuality, attendance, adherence to instructions, and dependability in completing commitments.',
+    weight: 10,
+  },
+  {
+    id: 6,
+    title: 'Initiative, Problem-Solving & Adaptability',
+    prompt: 'Assess the employee’s willingness to take initiative, identify and resolve problems, accept feedback, learn new skills, and adapt to changing work requirements.',
+    weight: 10,
+  },
+  {
+    id: 7,
+    title: 'Safety, Ethics & Company Compliance',
+    prompt: 'Evaluate the employee’s compliance with company policies, workplace safety procedures, professional ethics, confidentiality requirements, and expected standards of conduct.',
+    weight: 10,
+  },
+];
+
+const RATING_SCALE = [
+  { rating: 5, label: '5 - Outstanding', desc: 'Consistently performs significantly above expectations.' },
+  { rating: 4, label: '4 - Exceeds Expectations', desc: 'Frequently performs above required standards.' },
+  { rating: 3, label: '3 - Meets Expectations', desc: 'Consistently meets the expected job requirements.' },
+  { rating: 2, label: '2 - Needs Improvement', desc: 'Partially meets requirements; noticeable improvement needed.' },
+  { rating: 1, label: '1 - Unsatisfactory', desc: 'Fails to meet essential performance requirements.' },
+];
 
 export const ProbationDetail = () => {
   const { id } = useParams();
@@ -60,6 +114,89 @@ export const ProbationDetail = () => {
 
   // Peer Approval state
   const [approvingPeers, setApprovingPeers] = useState(false);
+
+  // HR Evaluation Marks Form Modal state
+  const [hrMarksModalOpen, setHrMarksModalOpen] = useState(false);
+  const [hrRatings, setHrRatings] = useState({
+    1: { rating: 4, comments: '' },
+    2: { rating: 4, comments: '' },
+    3: { rating: 4, comments: '' },
+    4: { rating: 4, comments: '' },
+    5: { rating: 4, comments: '' },
+    6: { rating: 4, comments: '' },
+    7: { rating: 4, comments: '' },
+  });
+  const [hrComments, setHrComments] = useState('');
+  const [hrRecommendation, setHrRecommendation] = useState('confirm');
+  const [hrExtensionDate, setHrExtensionDate] = useState('');
+  const [submittingHrMarks, setSubmittingHrMarks] = useState(false);
+
+  const handleOpenHrMarksModal = () => {
+    const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
+    if (hrObj && hrObj.ratings && Object.keys(hrObj.ratings).length > 0) {
+      setHrRatings(hrObj.ratings);
+    }
+    if (hrObj?.general_comments) {
+      setHrComments(hrObj.general_comments);
+    }
+    if (hrObj?.recommendation) {
+      setHrRecommendation(hrObj.recommendation);
+    }
+    if (hrObj?.proposed_extension_date) {
+      setHrExtensionDate(hrObj.proposed_extension_date.split('T')[0]);
+    }
+    setHrMarksModalOpen(true);
+  };
+
+  const handleRatingChange = (critId, rating) => {
+    setHrRatings(prev => ({
+      ...prev,
+      [critId]: { ...(prev[critId] || {}), rating },
+    }));
+  };
+
+  const handleCommentChange = (critId, comments) => {
+    setHrRatings(prev => ({
+      ...prev,
+      [critId]: { ...(prev[critId] || {}), comments },
+    }));
+  };
+
+  const calculateHrScore = () => {
+    let total = 0;
+    EVALUATOR_CRITERIA.forEach(c => {
+      const r = hrRatings[c.id]?.rating || 0;
+      total += (c.weight * r) / 5;
+    });
+    return Math.round(total * 100) / 100;
+  };
+
+  const handleSubmitHrMarks = async (e) => {
+    e.preventDefault();
+    const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
+    if (!hrObj) {
+      toast.error('HR evaluator form not found for this dossier.');
+      return;
+    }
+
+    setSubmittingHrMarks(true);
+    try {
+      await api.post(`/hr/probation/forms/${hrObj.id}/submit`, {
+        ratings: hrRatings,
+        recommendation: hrRecommendation,
+        proposed_extension_date: hrExtensionDate || null,
+        general_comments: hrComments,
+      });
+
+      toast.success('HR Evaluation Marks (10%) submitted successfully!');
+      setHrMarksModalOpen(false);
+      fetchDetail();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit HR marks.');
+    } finally {
+      setSubmittingHrMarks(false);
+    }
+  };
 
   const fetchDetail = useCallback(async () => {
     setLoading(true);
@@ -523,7 +660,42 @@ export const ProbationDetail = () => {
               <tr style={{ borderBottom: '2px solid #cbd5e1' }}>
                 <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>HR</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {hrFormObj?.status === 'submitted' ? hrFormObj.form_score : '⏳ Pending'}
+                  {hrFormObj?.status === 'submitted' ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontWeight: 800 }}>{hrFormObj.form_score}</span>
+                      {isHrAdmin && (
+                        <button
+                          type="button"
+                          onClick={handleOpenHrMarksModal}
+                          style={{
+                            background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer',
+                            fontSize: '0.72rem', textDecoration: 'underline', padding: 0,
+                          }}
+                        >
+                          (Edit)
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      <span style={{ color: '#d97706', fontWeight: 600 }}>⏳ Pending</span>
+                      {isHrAdmin && (
+                        <button
+                          type="button"
+                          onClick={handleOpenHrMarksModal}
+                          className="btn btn-primary"
+                          style={{
+                            background: '#0284c7', borderColor: '#0284c7',
+                            padding: '0.25rem 0.65rem', fontSize: '0.74rem', fontWeight: 700,
+                            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                          }}
+                        >
+                          <Award size={13} />
+                          <span>Enter HR Marks</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>10%</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
@@ -631,6 +803,30 @@ export const ProbationDetail = () => {
               <div style={{ padding: '0.65rem 0.85rem', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', marginTop: '0.35rem' }}>
                 {evaluation.improvement_objectives}
               </div>
+            </div>
+          )}
+
+          {/* Notice if HR 10% Evaluation Marks are still pending */}
+          {isHrAdmin && hrFormObj?.status !== 'submitted' && (
+            <div style={{
+              padding: '0.85rem 1rem', borderRadius: '8px', background: '#fffbeb', border: '1px solid #fde68a',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: '#b45309', fontSize: '0.84rem', fontWeight: 600 }}>
+                <AlertCircle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+                <span>
+                  <strong>HR Evaluation Marks Pending (10% Weight):</strong> Please rate the 7 standardized performance criteria to calculate HR's score.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenHrMarksModal}
+                className="btn btn-primary"
+                style={{ background: '#d97706', borderColor: '#d97706', padding: '0.35rem 0.85rem', fontSize: '0.78rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                <Award size={14} />
+                <span>Enter HR Marks</span>
+              </button>
             </div>
           )}
 
@@ -795,6 +991,246 @@ export const ProbationDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* MODAL: HR EVALUATION MARKS FORM (10% WEIGHT, 7 CRITERIA)            */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {hrMarksModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '16px', maxWidth: '920px', width: '100%',
+            maxHeight: '92vh', overflowY: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0',
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '1rem 1.5rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Award size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>
+                    HR Performance Evaluation (10% Weight)
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.76rem', color: '#ffffff' }}>
+                    Employee: {emp.full_name} ({emp.employee_id}) · {emp.designation?.name || 'Staff'} · {emp.department?.name || 'Department'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHrMarksModalOpen(false)}
+                disabled={submittingHrMarks}
+                style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.9, padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmitHrMarks} style={{ padding: '1.5rem' }}>
+              <div style={{
+                background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px',
+                border: '1px solid #e2e8f0', marginBottom: '1.25rem', fontSize: '0.8rem', color: '#334155',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem',
+              }}>
+                <span>Rate all 7 criteria using the 1–5 scale. Marks are computed automatically: <code>(Weight × Rating) ÷ 5</code>.</span>
+                <span style={{ fontWeight: 700, color: '#0369a1' }}>Passing mark threshold: 80 / 100</span>
+              </div>
+
+              {/* Table of 7 Criteria */}
+              <div style={{ overflowX: 'auto', marginBottom: '1.25rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1', color: '#1e293b' }}>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '40px', textAlign: 'center' }}>No.</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>Criterion and Performance Prompt</th>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '70px', textAlign: 'center' }}>Weight</th>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '220px', textAlign: 'center' }}>Rating (1–5)</th>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '80px', textAlign: 'center' }}>Marks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {EVALUATOR_CRITERIA.map(crit => {
+                      const curRating = hrRatings[crit.id]?.rating || 0;
+                      const curComments = hrRatings[crit.id]?.comments || '';
+                      const rowMarks = curRating ? ((crit.weight * curRating) / 5).toFixed(0) : '0';
+
+                      return (
+                        <tr key={crit.id} style={{ borderBottom: '1px solid #f1f5f9', verticalAlign: 'top' }}>
+                          <td style={{ padding: '0.85rem 0.85rem', fontWeight: 700, color: '#0284c7', textAlign: 'center' }}>
+                            {crit.id}
+                          </td>
+                          <td style={{ padding: '0.85rem 0.85rem' }}>
+                            <strong style={{ display: 'block', color: '#0f172a', fontSize: '0.86rem', marginBottom: '0.2rem' }}>
+                              {crit.title}
+                            </strong>
+                            <p style={{ margin: '0 0 0.5rem', fontSize: '0.76rem', color: '#475569', lineHeight: 1.4 }}>
+                              {crit.prompt}
+                            </p>
+                            <input
+                              type="text"
+                              placeholder="Evaluator comments / evidence on this criterion (optional)..."
+                              value={curComments}
+                              onChange={e => handleCommentChange(crit.id, e.target.value)}
+                              style={{
+                                width: '100%', padding: '0.35rem 0.6rem', borderRadius: '6px',
+                                border: '1px solid #cbd5e1', fontSize: '0.76rem',
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: '0.85rem 0.85rem', textAlign: 'center', fontWeight: 600, color: '#334155' }}>
+                            {crit.weight}%
+                          </td>
+                          <td style={{ padding: '0.85rem 0.85rem' }}>
+                            <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'center' }}>
+                              {[1, 2, 3, 4, 5].map(val => {
+                                const selected = curRating === val;
+                                return (
+                                  <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => handleRatingChange(crit.id, val)}
+                                    title={`Rate ${val}/5`}
+                                    style={{
+                                      width: '34px', height: '34px', borderRadius: '6px',
+                                      border: selected ? '2px solid #ca8a04' : '1px solid #cbd5e1',
+                                      background: selected ? '#fef08a' : '#fff',
+                                      color: selected ? '#854d0e' : '#334155',
+                                      fontWeight: selected ? 800 : 500,
+                                      cursor: 'pointer', transition: 'all 0.15s ease',
+                                    }}
+                                  >
+                                    {val}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.85rem 0.85rem', textAlign: 'center', fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>
+                            {rowMarks}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Total Score Calculation Card */}
+              <div style={{
+                background: '#f8fafc', padding: '1rem', borderRadius: '10px',
+                border: '1px solid #e2e8f0', marginBottom: '1.25rem',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    HR Form Result
+                  </span>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0284c7' }}>
+                    {calculateHrScore()} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>/ 100</span>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    HR Weighted Score (10% Weight)
+                  </span>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#15803d' }}>
+                    {(calculateHrScore() * 0.10).toFixed(2)} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>/ 10 Marks</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommendation & General Comments */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                    HR Recommendation <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <select
+                    value={hrRecommendation}
+                    onChange={e => setHrRecommendation(e.target.value)}
+                    required
+                    style={{
+                      width: '100%', padding: '0.5rem', borderRadius: '6px',
+                      border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#fff',
+                    }}
+                  >
+                    <option value="confirm">✓ Confirm Employment</option>
+                    <option value="extend">⏳ Extend Probation Period</option>
+                    <option value="do_not_confirm">✗ Do Not Confirm (Non-Confirmation)</option>
+                  </select>
+                </div>
+
+                {hrRecommendation === 'extend' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                      Proposed Extension End Date
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={hrExtensionDate}
+                      onChange={e => setHrExtensionDate(e.target.value)}
+                      style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                  General Evaluator Feedback &amp; Justification Notes
+                </label>
+                <textarea
+                  rows={3}
+                  value={hrComments}
+                  onChange={e => setHrComments(e.target.value)}
+                  placeholder="Enter overall HR evaluation observations, conduct remarks, and justification..."
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setHrMarksModalOpen(false)}
+                  disabled={submittingHrMarks}
+                  className="btn btn-ghost"
+                  style={{ border: '1px solid #cbd5e1', padding: '0.55rem 1.25rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingHrMarks}
+                  className="btn btn-primary"
+                  style={{
+                    background: '#0284c7', borderColor: '#0284c7',
+                    padding: '0.55rem 1.5rem', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  }}
+                >
+                  {submittingHrMarks ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Award size={16} />}
+                  <span>{submittingHrMarks ? 'Saving Marks...' : 'Submit & Lock HR Marks'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
