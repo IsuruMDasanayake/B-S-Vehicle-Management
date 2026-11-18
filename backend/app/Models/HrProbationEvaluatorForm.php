@@ -29,7 +29,7 @@ class HrProbationEvaluatorForm extends Model
 
     protected $casts = [
         'submitted_at'            => 'datetime',
-        'proposed_extension_date' => 'date',
+        'proposed_extension_date' => 'date:Y-m-d',
         'ratings'                 => 'array',
         'form_score'              => 'decimal:2',
     ];

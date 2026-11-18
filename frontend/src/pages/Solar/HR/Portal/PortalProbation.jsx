@@ -96,6 +96,19 @@ const RATING_SCALE = [
   { rating: 1, label: '1 - Unsatisfactory', desc: 'Fails to meet essential performance requirements.' },
 ];
 
+const formatDate = (val) => {
+  if (!val) return '—';
+  const cleanStr = String(val).split('T')[0];
+  const parts = cleanStr.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(m, 10) - 1] || m;
+    return `${d} ${monthName} ${y}`;
+  }
+  return cleanStr;
+};
+
 export const PortalProbation = () => {
   const user = useAuthStore(state => state.user);
   const [loading, setLoading] = useState(true);
@@ -315,11 +328,11 @@ export const PortalProbation = () => {
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Submission Deadline</span>
-              <strong style={{ color: '#0284c7' }}>{myEval.submission_deadline}</strong>
+              <strong style={{ color: '#0284c7' }}>{formatDate(myEval.submission_deadline)}</strong>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Probation End Date</span>
-              <strong style={{ color: '#dc2626' }}>{myEval.probation_end_date}</strong>
+              <strong style={{ color: '#dc2626' }}>{formatDate(myEval.probation_end_date)}</strong>
             </div>
           </div>
 
@@ -577,7 +590,7 @@ export const PortalProbation = () => {
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Probation End Date</span>
-              <strong style={{ color: '#dc2626' }}>{activeFormItem.evaluation?.probation_end_date}</strong>
+              <strong style={{ color: '#dc2626' }}>{formatDate(activeFormItem.evaluation?.probation_end_date)}</strong>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Evaluated By</span>
@@ -796,7 +809,7 @@ export const PortalProbation = () => {
                 270° Probation Evaluation
               </h3>
               <p style={{ margin: 0, fontSize: '0.82rem', color: '#475569' }}>
-                Probation End Date: <strong>{myEval.probation_end_date}</strong> &nbsp;|&nbsp; Deadline: <strong>{myEval.submission_deadline}</strong>
+                Probation End Date: <strong>{formatDate(myEval.probation_end_date)}</strong> &nbsp;|&nbsp; Deadline: <strong>{formatDate(myEval.submission_deadline)}</strong>
               </p>
             </div>
 
@@ -900,7 +913,7 @@ export const PortalProbation = () => {
                   </div>
 
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                    Deadline: <strong>{item.evaluation?.submission_deadline}</strong>
+                    Deadline: <strong>{formatDate(item.evaluation?.submission_deadline)}</strong>
                   </div>
 
                   <button

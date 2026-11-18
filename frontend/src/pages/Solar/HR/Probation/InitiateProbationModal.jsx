@@ -3,6 +3,19 @@ import { X, Calendar, UserCheck, AlertCircle, Loader2 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 
+const formatDate = (val) => {
+  if (!val) return '—';
+  const cleanStr = String(val).split('T')[0];
+  const parts = cleanStr.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(m, 10) - 1] || m;
+    return `${d} ${monthName} ${y}`;
+  }
+  return cleanStr;
+};
+
 export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated }) => {
   const [loading, setLoading] = useState(false);
   const [managers, setManagers] = useState([]);
@@ -18,16 +31,26 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
   useEffect(() => {
     if (!isOpen || !employee) return;
 
-    // Default deadline: 7 days before probation end date, or 7 days from today
-    let defaultDeadline = '';
+    // Default deadline: 7 days before probation end date (if in future) or 14 days from today
+    const now = new Date();
+    const fallbackDate = new Date(now);
+    fallbackDate.setDate(now.getDate() + 14);
+
+    let defaultDeadline = fallbackDate.toISOString().split('T')[0];
+
     if (employee.probation_end_date) {
-      const d = new Date(employee.probation_end_date);
-      d.setDate(d.getDate() - 7);
-      defaultDeadline = d.toISOString().split('T')[0];
-    } else {
-      const d = new Date();
-      d.setDate(d.getDate() + 7);
-      defaultDeadline = d.toISOString().split('T')[0];
+      const cleanProb = String(employee.probation_end_date).split('T')[0];
+      const probEnd = new Date(cleanProb);
+      const sevenDaysBefore = new Date(probEnd);
+      sevenDaysBefore.setDate(probEnd.getDate() - 7);
+
+      if (sevenDaysBefore > now) {
+        defaultDeadline = sevenDaysBefore.toISOString().split('T')[0];
+      } else if (probEnd > now) {
+        defaultDeadline = probEnd.toISOString().split('T')[0];
+      } else {
+        defaultDeadline = fallbackDate.toISOString().split('T')[0];
+      }
     }
 
     setForm({
@@ -113,13 +136,13 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
           color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{
+            {/* <div style={{
               width: '32px', height: '32px', borderRadius: '8px',
               background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#ffffff', flexShrink: 0,
             }}>
               <UserCheck size={18} />
-            </div>
+            </div> */}
             <div>
               <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#ffffff' }}>Initiate 270° Probation Evaluation</h3>
               <p style={{ margin: 0, fontSize: '0.75rem', color: '#ffffff' }}>
@@ -150,11 +173,11 @@ export const InitiateProbationModal = ({ isOpen, onClose, employee, onInitiated 
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.66rem' }}>Joined Date</span>
-              <strong>{employee.joined_date || '—'}</strong>
+              <strong>{formatDate(employee.joined_date)}</strong>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.66rem' }}>Probation End</span>
-              <strong style={{ color: '#0369a1' }}>{employee.probation_end_date || '—'}</strong>
+              <strong style={{ color: '#0369a1' }}>{formatDate(employee.probation_end_date)}</strong>
             </div>
           </div>
 

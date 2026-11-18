@@ -9,6 +9,19 @@ import api from '../../../../services/api';
 import InitiateProbationModal from './InitiateProbationModal';
 import toast from 'react-hot-toast';
 
+const formatDate = (val) => {
+  if (!val) return '—';
+  const cleanStr = String(val).split('T')[0];
+  const parts = cleanStr.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(m, 10) - 1] || m;
+    return `${d} ${monthName} ${y}`;
+  }
+  return cleanStr;
+};
+
 export const ProbationManagement = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('expiring'); // 'expiring' | 'active' | 'pending_ceo' | 'completed'
@@ -276,11 +289,11 @@ export const ProbationManagement = () => {
                           {emp.manager_name || '—'}
                         </td>
                         <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>
-                          {emp.joined_date || '—'}
+                          {formatDate(emp.joined_date)}
                         </td>
                         <td style={{ padding: '0.85rem 1rem' }}>
                           <strong style={{ color: isUrgent ? '#dc2626' : '#0f172a' }}>
-                            {emp.probation_end_date || '—'}
+                            {formatDate(emp.probation_end_date)}
                           </strong>
                         </td>
                         <td style={{ padding: '0.85rem 1rem' }}>
@@ -382,10 +395,10 @@ export const ProbationManagement = () => {
                           </div>
                         </td>
                         <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>
-                          {item.initiation_date}
+                          {formatDate(item.initiation_date)}
                         </td>
                         <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>
-                          {item.submission_deadline}
+                          {formatDate(item.submission_deadline)}
                         </td>
                         <td style={{ padding: '0.85rem 1rem', minWidth: '160px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '0.2rem' }}>

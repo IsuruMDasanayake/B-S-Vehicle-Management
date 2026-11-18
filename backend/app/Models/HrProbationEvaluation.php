@@ -50,10 +50,10 @@ class HrProbationEvaluation extends Model
     ];
 
     protected $casts = [
-        'probation_end_date'        => 'date',
-        'initiation_date'           => 'date',
-        'submission_deadline'       => 'date',
-        'proposed_extension_date'   => 'date',
+        'probation_end_date'        => 'date:Y-m-d',
+        'initiation_date'           => 'date:Y-m-d',
+        'submission_deadline'       => 'date:Y-m-d',
+        'proposed_extension_date'   => 'date:Y-m-d',
         'presentation_requested'    => 'boolean',
         'presentation_scheduled_at' => 'datetime',
         'hr_reviewed_at'            => 'datetime',

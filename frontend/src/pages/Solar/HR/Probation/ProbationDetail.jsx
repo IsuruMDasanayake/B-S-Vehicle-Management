@@ -9,6 +9,19 @@ import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
 import toast from 'react-hot-toast';
 
+const formatDate = (val) => {
+  if (!val) return '—';
+  const cleanStr = String(val).split('T')[0];
+  const parts = cleanStr.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(m, 10) - 1] || m;
+    return `${d} ${monthName} ${y}`;
+  }
+  return cleanStr;
+};
+
 export const ProbationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -251,19 +264,19 @@ export const ProbationDetail = () => {
           }}>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Date Joined</span>
-              <strong>{emp.joined_date || '—'}</strong>
+              <strong>{formatDate(emp.joined_date)}</strong>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Initiated</span>
-              <strong>{evaluation.initiation_date}</strong>
+              <strong>{formatDate(evaluation.initiation_date)}</strong>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Deadline</span>
-              <strong style={{ color: '#0284c7' }}>{evaluation.submission_deadline}</strong>
+              <strong style={{ color: '#0284c7' }}>{formatDate(evaluation.submission_deadline)}</strong>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Probation End</span>
-              <strong style={{ color: '#dc2626' }}>{evaluation.probation_end_date}</strong>
+              <strong style={{ color: '#dc2626' }}>{formatDate(evaluation.probation_end_date)}</strong>
             </div>
           </div>
         </div>
@@ -608,7 +621,7 @@ export const ProbationDetail = () => {
 
           {evaluation.proposed_extension_date && (
             <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem' }}>
-              <strong>Where applicable, proposed extension end date:</strong> {evaluation.proposed_extension_date}
+              <strong>Where applicable, proposed extension end date:</strong> {formatDate(evaluation.proposed_extension_date)}
             </div>
           )}
 
@@ -714,7 +727,7 @@ export const ProbationDetail = () => {
                 <div style={{ marginBottom: '0.5rem' }}>
                   <strong>Decision:</strong> &nbsp;
                   {evaluation.ceo_decision === 'confirm' && '✓ Confirm Employment'}
-                  {evaluation.ceo_decision === 'extend' && `⏳ Extend Probation (New Date: ${evaluation.proposed_extension_date || 'Pending'})`}
+                  {evaluation.ceo_decision === 'extend' && `⏳ Extend Probation (New Date: ${formatDate(evaluation.proposed_extension_date) || 'Pending'})`}
                   {evaluation.ceo_decision === 'do_not_confirm' && '✗ Non-confirmation (subject to legal/HR process)'}
                 </div>
                 {evaluation.ceo_notes && (

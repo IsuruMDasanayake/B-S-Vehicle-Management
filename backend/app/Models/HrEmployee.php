@@ -19,9 +19,9 @@ class HrEmployee extends Model
     ];
 
     protected $casts = [
-        'dob'               => 'date',
-        'joined_date'       => 'date',
-        'probation_end_date'=> 'date',
+        'dob'               => 'date:Y-m-d',
+        'joined_date'       => 'date:Y-m-d',
+        'probation_end_date'=> 'date:Y-m-d',
         'basic_salary'      => 'decimal:2',
     ];
 
