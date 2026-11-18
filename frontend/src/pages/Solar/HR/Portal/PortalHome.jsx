@@ -226,11 +226,12 @@ const PortalHome = () => {
         const res = await api.get('/hr/probation/my-evaluations');
         if (!mounted || !res.data) return;
         let count = 0;
-        if (res.data.self_evaluation?.evaluation?.status === 'self_evaluation_pending') {
+        const myEval = res.data.my_probation_evaluation;
+        if (myEval && myEval.self_score === null && ['initiated', 'in_progress'].includes(myEval.status)) {
           count += 1;
         }
-        if (Array.isArray(res.data.evaluator_tasks)) {
-          count += res.data.evaluator_tasks.filter(t => t.form_status === 'draft').length;
+        if (Array.isArray(res.data.pending_forms)) {
+          count += res.data.pending_forms.filter(f => f.evaluator_role !== 'self').length;
         }
         setProbationCount(count);
       } catch {}

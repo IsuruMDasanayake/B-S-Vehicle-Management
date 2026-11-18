@@ -439,11 +439,12 @@ class HrProbationEvaluationController extends Controller
             ->first();
         }
 
-        // 2. Forms assigned to me to evaluate others
+        // 2. Forms assigned to me to evaluate others (exclude self-evaluation, which has its own top section)
         $pendingFormsQuery = HrProbationEvaluatorForm::with([
             'evaluation.employee.department',
             'evaluation.employee.designation',
         ])
+        ->where('evaluator_role', '!=', 'self')
         ->where('status', '!=', 'submitted')
         ->where(function ($q) use ($user, $meEmp) {
             $q->where('evaluator_user_id', $user->id);
@@ -459,11 +460,12 @@ class HrProbationEvaluationController extends Controller
 
         $pendingForms = $pendingFormsQuery->get();
 
-        // 3. Completed forms I submitted
+        // 3. Completed forms I submitted for others
         $completedForms = HrProbationEvaluatorForm::with([
             'evaluation.employee.department',
             'evaluation.employee.designation',
         ])
+        ->where('evaluator_role', '!=', 'self')
         ->where('status', 'submitted')
         ->where(function ($q) use ($user, $meEmp) {
             $q->where('evaluator_user_id', $user->id);

@@ -63,7 +63,7 @@ const PortalAppraisal = () => {
       {/* ── Header with Month Picker ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 0.2rem 0', color: 'var(--dark)' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 0.2rem 0', color: 'var(--dark)' }}>
             Monthly Performance Appraisal
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: 0 }}>

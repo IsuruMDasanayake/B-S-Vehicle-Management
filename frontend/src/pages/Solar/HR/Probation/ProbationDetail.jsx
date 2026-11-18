@@ -195,7 +195,7 @@ export const ProbationDetail = () => {
   const pendingPeersApproval = peerForms.some(f => f.peer_approval_status === 'pending_hr');
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '0.5rem', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Top Action Bar */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -226,7 +226,7 @@ export const ProbationDetail = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{
               width: '56px', height: '56px', borderRadius: '50%',
-              background: '#e0f2fe', color: '#0369a1', fontWeight: 800, fontSize: '1.3rem',
+              background: '#e0f2fe', color: '#0369a1', fontWeight: 700, fontSize: '1.3rem',
               display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #bae6fd',
             }}>
               {emp.photo_url ? (
@@ -237,7 +237,7 @@ export const ProbationDetail = () => {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+                <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: '#0f172a' }}>
                   {emp.full_name}
                 </h2>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '999px', background: '#f1f5f9', color: '#475569' }}>

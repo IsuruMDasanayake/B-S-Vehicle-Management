@@ -147,8 +147,8 @@ export const PortalProbation = () => {
       ]);
 
       setMyEval(evalRes.data?.my_probation_evaluation || null);
-      setPendingForms(evalRes.data?.pending_forms || []);
-      setCompletedForms(evalRes.data?.completed_forms || []);
+      setPendingForms((evalRes.data?.pending_forms || []).filter(f => f.evaluator_role !== 'self'));
+      setCompletedForms((evalRes.data?.completed_forms || []).filter(f => f.evaluator_role !== 'self'));
       setEmployeesList(empRes.data || []);
     } catch (err) {
       console.error('Failed to load portal probation evaluations:', err);
@@ -778,15 +778,15 @@ export const PortalProbation = () => {
   // DEFAULT VIEW: Portal Probation Hub
   // ───────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '1rem' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0.5rem' }}>
       {/* Page Title */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <UserCheck size={20} />
-          </div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-            Probation Evaluations Hub
+          </div> */}
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+            Probation Evaluations
           </h1>
         </div>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -806,7 +806,7 @@ export const PortalProbation = () => {
                 Your Employment Confirmation
               </span>
               <h3 style={{ margin: '0.25rem 0', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                270° Probation Evaluation
+                Probation Evaluation
               </h3>
               <p style={{ margin: 0, fontSize: '0.82rem', color: '#475569' }}>
                 Probation End Date: <strong>{formatDate(myEval.probation_end_date)}</strong> &nbsp;|&nbsp; Deadline: <strong>{formatDate(myEval.submission_deadline)}</strong>
@@ -875,7 +875,7 @@ export const PortalProbation = () => {
 
       {/* SECTION 2: PENDING EVALUATIONS ASSIGNED TO ME TO RATE OTHERS */}
       <div style={{ marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Clock size={18} style={{ color: '#f59e0b' }} />
           <span>Pending Evaluation Tasks ({pendingForms.length})</span>
         </h3>
@@ -890,7 +890,7 @@ export const PortalProbation = () => {
               const target = item.evaluation?.employee;
 
               return (
-                <div key={item.id} className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #0284c7' }}>
+                <div key={item.id} className="card" style={{ padding: '1.25rem', borderLeft: '0px solid #0284c7' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.65rem' }}>
                     <div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
