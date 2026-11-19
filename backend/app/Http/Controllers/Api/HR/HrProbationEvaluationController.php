@@ -82,10 +82,36 @@ class HrProbationEvaluationController extends Controller
 
         $today = Carbon::today();
 
+        // 1. Find completed confirmations so we don't list already confirmed employees
+        $completedConfirmations = HrProbationEvaluation::where('status', 'completed')
+            ->where('ceo_decision', 'confirm')
+            ->latest('id')
+            ->get()
+            ->keyBy('employee_id');
+
+        // 2. Query employees: status = 'probation' OR (has probation_end_date and status IN ('active', 'probation') not older than 180 days)
         $employees = HrEmployee::with(['department', 'designation', 'manager'])
-            ->where('status', 'probation')
+            ->where(function ($q) use ($today) {
+                $q->where('status', 'probation')
+                  ->orWhere(function ($q2) use ($today) {
+                      $q2->whereNotNull('probation_end_date')
+                         ->whereIn('status', ['active', 'probation'])
+                         ->where('probation_end_date', '>=', $today->copy()->subDays(180));
+                  });
+            })
+            ->whereNotIn('status', ['resigned', 'terminated'])
             ->orderBy('probation_end_date', 'asc')
-            ->get();
+            ->get()
+            ->reject(function ($emp) use ($completedConfirmations) {
+                $conf = $completedConfirmations->get($emp->id);
+                if (!$conf) return false;
+                // If confirmed eval exists and emp's probation_end_date has not been extended beyond it, they are confirmed
+                if ($emp->probation_end_date && $conf->probation_end_date) {
+                    return Carbon::parse($conf->probation_end_date)->gte(Carbon::parse($emp->probation_end_date));
+                }
+                return true;
+            })
+            ->values();
 
         $activeEvals = HrProbationEvaluation::whereIn('employee_id', $employees->pluck('id'))
             ->whereIn('status', ['initiated', 'in_progress', 'pending_hr_review', 'pending_ceo_approval'])
@@ -251,6 +277,11 @@ class HrProbationEvaluationController extends Controller
                 'ceo_user_id'         => $ceoUserId,
                 'hr_user_id'          => $user->id,
             ]);
+
+            // Ensure employee status reflects probation
+            if ($employee->status !== 'probation') {
+                $employee->update(['status' => 'probation']);
+            }
 
             // Create Standard Evaluator Forms:
             // 1. Employee Self-Evaluation Form

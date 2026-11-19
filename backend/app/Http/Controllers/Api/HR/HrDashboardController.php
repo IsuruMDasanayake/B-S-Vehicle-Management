@@ -41,7 +41,13 @@ class HrDashboardController extends Controller
             ])->count();
 
         // Probation employees whose probation end date is within 30 days (contracts expiring)
-        $contractsExpiring = HrEmployee::where('status', 'probation')
+        $contractsExpiring = HrEmployee::where(function ($q) {
+                $q->where('status', 'probation')
+                  ->orWhere(function ($q2) {
+                      $q2->whereNotNull('probation_end_date')
+                         ->whereIn('status', ['active', 'probation']);
+                  });
+            })
             ->whereNotNull('probation_end_date')
             ->whereBetween('probation_end_date', [$today, $today->copy()->addDays(30)])
             ->count();
