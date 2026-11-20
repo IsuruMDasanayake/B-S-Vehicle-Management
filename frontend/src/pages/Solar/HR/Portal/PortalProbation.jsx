@@ -145,8 +145,6 @@ export const PortalProbation = () => {
   const [selfRatings, setSelfRatings] = useState({ 1: { rating: 5 }, 2: { rating: 4 }, 3: { rating: 4 }, 4: { rating: 5 }, 5: { rating: 4 } });
   const [selfAchievements, setSelfAchievements] = useState('');
   const [selfChallenges, setSelfChallenges] = useState('');
-  const [selfPresentation, setSelfPresentation] = useState(false);
-  const [selfPresentationNotes, setSelfPresentationNotes] = useState('');
   const [selfPeers, setSelfPeers] = useState(['', '', '']);
   const [submittingSelf, setSubmittingSelf] = useState(false);
 
@@ -155,6 +153,8 @@ export const PortalProbation = () => {
   const [evalRecommendation, setEvalRecommendation] = useState('confirm');
   const [evalProposedDate, setEvalProposedDate] = useState('');
   const [evalComments, setEvalComments] = useState('');
+  const [ceoPresentation, setCeoPresentation] = useState(false);
+  const [ceoPresentationNotes, setCeoPresentationNotes] = useState('');
   const [submittingEval, setSubmittingEval] = useState(false);
 
   // CEO Final Sign-off State (for CEO Eranda Ellepola / Assigned CEO)
@@ -162,6 +162,8 @@ export const PortalProbation = () => {
   const [ceoDecisionChoice, setCeoDecisionChoice] = useState('confirm');
   const [ceoExtensionDate, setCeoExtensionDate] = useState('');
   const [ceoDecisionNotes, setCeoDecisionNotes] = useState('');
+  const [ceoDecisionPresentation, setCeoDecisionPresentation] = useState(false);
+  const [ceoDecisionPresentationNotes, setCeoDecisionPresentationNotes] = useState('');
   const [submittingPortalCeo, setSubmittingPortalCeo] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -192,6 +194,8 @@ export const PortalProbation = () => {
         ceo_decision: ceoDecisionChoice,
         ceo_notes: ceoDecisionNotes,
         proposed_extension_date: ceoDecisionChoice === 'extend' ? ceoExtensionDate : undefined,
+        presentation_requested: ceoDecisionPresentation,
+        presentation_notes: ceoDecisionPresentationNotes,
       });
       toast.success('CEO final decision confirmed and employee confirmation status updated!');
       fetchData();
@@ -216,8 +220,6 @@ export const PortalProbation = () => {
       setSelfAchievements(sf.achievements_evidence || '');
       setSelfChallenges(sf.challenges_support || '');
     }
-    setSelfPresentation(!!myEval.presentation_requested);
-    setSelfPresentationNotes(myEval.presentation_notes || '');
 
     setActiveFormItem(sf || null);
     setActiveFormMode('self');
@@ -234,6 +236,10 @@ export const PortalProbation = () => {
     setEvalRecommendation(formItem.recommendation || 'confirm');
     setEvalProposedDate(formItem.proposed_extension_date || '');
     setEvalComments(formItem.general_comments || '');
+    if (formItem.evaluator_role === 'ceo') {
+      setCeoPresentation(!!formItem.evaluation?.presentation_requested);
+      setCeoPresentationNotes(formItem.evaluation?.presentation_notes || '');
+    }
     setActiveFormMode('evaluator');
   };
 
@@ -279,8 +285,6 @@ export const PortalProbation = () => {
         ratings: selfRatings,
         achievements_evidence: selfAchievements,
         challenges_support: selfChallenges,
-        presentation_requested: selfPresentation,
-        presentation_notes: selfPresentationNotes,
         peer_employee_ids: selectedPeers.map(Number),
       };
 
@@ -310,6 +314,8 @@ export const PortalProbation = () => {
         general_comments: evalComments,
         ceo_decision: isCeo ? evalRecommendation : undefined,
         ceo_notes: isCeo ? evalComments : undefined,
+        presentation_requested: isCeo ? ceoPresentation : undefined,
+        presentation_notes: isCeo ? ceoPresentationNotes : undefined,
       };
 
       const res = await api.post(`/hr/probation/forms/${activeFormItem.id}/submit`, payload);
@@ -528,39 +534,6 @@ export const PortalProbation = () => {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* 10-Minute Presentation Request Checkbox */}
-          {!isLocked && (
-            <div style={{
-              background: '#eff6ff', padding: '1rem', borderRadius: '10px',
-              border: '1px solid #bfdbfe', marginBottom: '1.5rem',
-            }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.88rem', color: '#1e40af' }}>
-                <input
-                  type="checkbox"
-                  checked={selfPresentation}
-                  onChange={e => setSelfPresentation(e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <span>Request a 10-Minute Presentation to Management</span>
-              </label>
-              <div style={{ fontSize: '0.74rem', color: '#3b82f6', marginTop: '0.35rem', marginLeft: '1.8rem' }}>
-                Note: Allocates no additional marks. HR will arrange a schedule with the panel where approved.
-              </div>
-
-              {selfPresentation && (
-                <div style={{ marginTop: '0.75rem', marginLeft: '1.8rem' }}>
-                  <input
-                    type="text"
-                    placeholder="Preferred presentation topics, key slides, or preferred dates..."
-                    value={selfPresentationNotes}
-                    onChange={e => setSelfPresentationNotes(e.target.value)}
-                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #bfdbfe', fontSize: '0.8rem' }}
-                  />
-                </div>
-              )}
             </div>
           )}
 
@@ -829,6 +802,39 @@ export const PortalProbation = () => {
                   />
                 </div>
               )}
+
+              {/* CEO Request for 10-Minute Presentation */}
+              <div style={{
+                marginTop: '1rem', background: '#fff', padding: '0.85rem 1rem', borderRadius: '8px',
+                border: '1px solid #d8b4fe',
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: isLocked ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem', color: '#6b21a8' }}>
+                  <input
+                    type="checkbox"
+                    disabled={isLocked}
+                    checked={ceoPresentation}
+                    onChange={e => setCeoPresentation(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: isLocked ? 'default' : 'pointer' }}
+                  />
+                  <span>Request a 10-Minute Presentation</span>
+                </label>
+                <div style={{ fontSize: '0.74rem', color: '#7e22ce', marginTop: '0.35rem', marginLeft: '1.8rem' }}>
+                  Note: Allocates no additional marks. HR will arrange a schedule with the executive panel where approved.
+                </div>
+
+                {ceoPresentation && (
+                  <div style={{ marginTop: '0.65rem', marginLeft: '1.8rem' }}>
+                    <input
+                      type="text"
+                      disabled={isLocked}
+                      placeholder="Focus topics, key project review, or presentation instructions for HR to schedule..."
+                      value={ceoPresentationNotes}
+                      onChange={e => setCeoPresentationNotes(e.target.value)}
+                      style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #d8b4fe', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -962,6 +968,31 @@ export const PortalProbation = () => {
             </button>
           </div>
 
+          {/* Executive Presentation Requested by CEO */}
+          {myEval.presentation_requested && (
+            <div style={{
+              marginTop: '1.25rem', padding: '0.85rem 1rem', borderRadius: '8px',
+              background: '#faf5ff', border: '1px solid #d8b4fe',
+            }}>
+              <div style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Award size={16} />
+                <span>Executive 10-Minute Presentation Requested by CEO</span>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#6b21a8', marginTop: '0.25rem' }}>
+                {myEval.presentation_scheduled_at ? (
+                  <span>Scheduled Date &amp; Time: <strong>{formatDateTime(myEval.presentation_scheduled_at)}</strong></span>
+                ) : (
+                  <span>HR is coordinating the panel schedule. You will be notified once the date and time are confirmed.</span>
+                )}
+              </div>
+              {myEval.presentation_notes && (
+                <div style={{ fontSize: '0.76rem', color: '#4c1d95', marginTop: '0.2rem' }}>
+                  CEO Instructions / Focus: {myEval.presentation_notes}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* If Completed by CEO, show transparent results ("nothing to hide") */}
           {myEval.status === 'completed' && (
             <div style={{
@@ -1067,7 +1098,7 @@ export const PortalProbation = () => {
                   </div>
 
                   {/* Sign-off Form */}
-                  <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                  {/* <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
                     <div style={{ marginBottom: '0.75rem' }}>
                       <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.35rem', color: '#0f172a' }}>
                         Executive Decision:
@@ -1119,6 +1150,35 @@ export const PortalProbation = () => {
                       />
                     </div>
 
+                    <div style={{
+                      background: '#faf5ff', padding: '0.75rem 1rem', borderRadius: '8px',
+                      border: '1px solid #e9d5ff', marginBottom: '0.85rem',
+                    }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', color: '#6b21a8' }}>
+                        <input
+                          type="checkbox"
+                          checked={ceoDecisionPresentation}
+                          onChange={e => setCeoDecisionPresentation(e.target.checked)}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <span>Request a 10-Minute Presentation to Management Panel</span>
+                      </label>
+                      <div style={{ fontSize: '0.73rem', color: '#7e22ce', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                        Note: HR will coordinate and schedule the panel presentation session.
+                      </div>
+                      {ceoDecisionPresentation && (
+                        <div style={{ marginTop: '0.5rem', marginLeft: '1.5rem' }}>
+                          <input
+                            type="text"
+                            value={ceoDecisionPresentationNotes}
+                            onChange={e => setCeoDecisionPresentationNotes(e.target.value)}
+                            placeholder="Presentation focus, required topics, or instructions for HR..."
+                            style={{ width: '100%', padding: '0.4rem 0.65rem', borderRadius: '6px', border: '1px solid #d8b4fe', fontSize: '0.78rem' }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <button
                         type="button"
@@ -1135,7 +1195,7 @@ export const PortalProbation = () => {
                         <span>{submittingPortalCeo ? 'Signing...' : 'Sign & Apply CEO Final Decision'}</span>
                       </button>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               );
             })}

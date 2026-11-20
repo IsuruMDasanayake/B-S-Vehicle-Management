@@ -569,8 +569,6 @@ class HrProbationEvaluationController extends Controller
             'ratings.*.rating'       => 'required|integer|between:1,5',
             'achievements_evidence'  => 'nullable|string|max:5000',
             'challenges_support'     => 'nullable|string|max:5000',
-            'presentation_requested' => 'nullable|boolean',
-            'presentation_notes'     => 'nullable|string|max:2000',
             'peer_employee_ids'      => 'required|array|min:2|max:3',
             'peer_employee_ids.*'    => 'required|exists:hr_employees,id|different:line_manager_id',
         ]);
@@ -586,9 +584,7 @@ class HrProbationEvaluationController extends Controller
 
         DB::beginTransaction();
         try {
-            // Compute score
-            $score = $selfForm->computeFormScore($request->ratings);
-
+            // Update self form
             $selfForm->update([
                 'ratings'               => $request->ratings,
                 'form_score'            => $score,
@@ -598,13 +594,8 @@ class HrProbationEvaluationController extends Controller
                 'submitted_at'          => Carbon::now(),
             ]);
 
-            // Update presentation request on evaluation
-            $presReq = (bool)$request->presentation_requested;
             $evaluation->update([
-                'presentation_requested' => $presReq,
-                'presentation_status'    => $presReq ? 'requested' : 'none',
-                'presentation_notes'     => $presReq ? $request->presentation_notes : null,
-                'status'                 => 'in_progress',
+                'status' => 'in_progress',
             ]);
 
             // Remove any previous peer forms not yet approved
@@ -751,7 +742,9 @@ class HrProbationEvaluationController extends Controller
 
         $evaluation = HrProbationEvaluation::with('employee.user')->findOrFail($id);
 
+        $presReq = in_array($request->status, ['scheduled', 'declined']) ? true : false;
         $evaluation->update([
+            'presentation_requested'    => $presReq,
             'presentation_status'       => $request->status,
             'presentation_scheduled_at' => $request->status === 'scheduled' ? $request->scheduled_at : null,
             'presentation_notes'        => $request->notes,
@@ -761,7 +754,7 @@ class HrProbationEvaluationController extends Controller
             $timeStr = $request->scheduled_at ? Carbon::parse($request->scheduled_at)->format('d M Y, h:i A') : '';
             $msg = $request->status === 'scheduled'
                 ? "Your 10-minute probation presentation has been scheduled for {$timeStr}."
-                : "Your presentation request has been noted (formal presentation not required for this cycle).";
+                : "The 10-minute probation presentation has been marked as not required for this cycle.";
 
             $evaluation->employee->user->notify(new HrNotification([
                 'division'   => 'hr',
@@ -896,6 +889,32 @@ class HrProbationEvaluationController extends Controller
             $evaluation = $form->evaluation;
             $evaluation->recalculateScores();
 
+            // If CEO provides presentation request in this submission
+            if ($form->evaluator_role === 'ceo' && $request->has('presentation_requested')) {
+                $presReq = (bool)$request->presentation_requested;
+                $evaluation->update([
+                    'presentation_requested' => $presReq,
+                    'presentation_status'    => $presReq ? 'requested' : 'none',
+                    'presentation_notes'     => $presReq ? ($request->presentation_notes ?? $request->general_comments) : null,
+                ]);
+
+                if ($presReq) {
+                    $hrUsers = User::where(function ($q) {
+                        $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                          ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+                    })->get();
+                    Notification::send($hrUsers, new HrNotification([
+                        'division'   => 'hr',
+                        'category'   => 'compliance',
+                        'severity'   => 'info',
+                        'title'      => 'CEO Requested 10-Minute Presentation',
+                        'message'    => "CEO {$user->name} requested a 10-minute presentation for {$evaluation->employee->full_name}. Please coordinate panel scheduling.",
+                        'link'       => '/solar/hr/admin/probation',
+                        'source_id'  => $evaluation->id,
+                    ]));
+                }
+            }
+
             // If CEO provides final executive decision in this submission
             if ($form->evaluator_role === 'ceo' && $request->filled('ceo_decision')) {
                 $evaluation->update([
@@ -1000,8 +1019,10 @@ class HrProbationEvaluationController extends Controller
         }
 
         $request->validate([
-            'ceo_decision' => 'required|in:confirm,extend,do_not_confirm',
-            'ceo_notes'    => 'nullable|string|max:5000',
+            'ceo_decision'           => 'required|in:confirm,extend,do_not_confirm',
+            'ceo_notes'              => 'nullable|string|max:5000',
+            'presentation_requested' => 'nullable|boolean',
+            'presentation_notes'     => 'nullable|string|max:2000',
         ]);
 
         DB::beginTransaction();
@@ -1015,6 +1036,32 @@ class HrProbationEvaluationController extends Controller
                 'final_outcome_applied_at' => Carbon::now(),
                 'final_outcome_applied_by' => $user->id,
             ]);
+
+            // If CEO requests a 10-minute presentation
+            if ($request->has('presentation_requested')) {
+                $presReq = (bool)$request->presentation_requested;
+                $evaluation->update([
+                    'presentation_requested' => $presReq,
+                    'presentation_status'    => $presReq ? 'requested' : 'none',
+                    'presentation_notes'     => $presReq ? ($request->presentation_notes ?? $request->ceo_notes) : null,
+                ]);
+
+                if ($presReq) {
+                    $hrUsers = User::where(function ($q) {
+                        $q->whereIn('role', ['super_admin', 'solar_hr_admin'])
+                          ->orWhereHas('roles', fn($r) => $r->whereIn('name', ['super_admin', 'solar_hr_admin']));
+                    })->get();
+                    Notification::send($hrUsers, new HrNotification([
+                        'division'   => 'hr',
+                        'category'   => 'compliance',
+                        'severity'   => 'info',
+                        'title'      => 'CEO Requested 10-Minute Presentation',
+                        'message'    => "CEO {$user->name} requested a 10-minute presentation for {$evaluation->employee->full_name}. Please coordinate panel scheduling.",
+                        'link'       => '/solar/hr/admin/probation',
+                        'source_id'  => $evaluation->id,
+                    ]));
+                }
+            }
 
             // Execute profile status update
             $emp = $evaluation->employee;

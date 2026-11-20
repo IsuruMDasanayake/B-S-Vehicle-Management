@@ -506,22 +506,22 @@ export const ProbationDetail = () => {
         {/* 10-Minute Presentation Request */}
         <div className="card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700, fontSize: '0.92rem', marginBottom: '0.75rem' }}>
-            <Award size={17} style={{ color: '#0284c7' }} />
-            <span>Optional 10-Minute Employee Presentation</span>
+            <Award size={17} style={{ color: '#7c3aed' }} />
+            <span>10-Minute Management Presentation (Requested by CEO)</span>
           </div>
 
           {!evaluation.presentation_requested ? (
             <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              No presentation requested by employee. (Allocates no additional marks).
+              No presentation requested by Chief Executive Officer. (Allocates no additional marks).
             </div>
           ) : (
             <div>
               <div style={{
-                padding: '0.75rem', borderRadius: '8px', background: '#f0fdf4',
-                border: '1px solid #bbf7d0', marginBottom: '0.85rem', fontSize: '0.8rem',
+                padding: '0.75rem', borderRadius: '8px', background: '#faf5ff',
+                border: '1px solid #e9d5ff', marginBottom: '0.85rem', fontSize: '0.8rem',
               }}>
-                <div style={{ fontWeight: 700, color: '#15803d', marginBottom: '0.2rem' }}>
-                  ✓ Employee Requested 10-Minute Presentation
+                <div style={{ fontWeight: 700, color: '#7c3aed', marginBottom: '0.2rem' }}>
+                  ✓ Presentation Requested by CEO ({evaluation.ceo_user?.name || 'Eranda Ellepola'})
                 </div>
                 {evaluation.presentation_scheduled_at && (
                   <div style={{ color: '#0369a1', fontWeight: 600, fontSize: '0.78rem', marginTop: '0.25rem' }}>
@@ -529,8 +529,8 @@ export const ProbationDetail = () => {
                   </div>
                 )}
                 {evaluation.presentation_notes && (
-                  <div style={{ color: '#166534', fontSize: '0.76rem', marginTop: '0.2rem' }}>
-                    Note: {evaluation.presentation_notes}
+                  <div style={{ color: '#581c87', fontSize: '0.76rem', marginTop: '0.2rem' }}>
+                    CEO Directive / Topic: {evaluation.presentation_notes}
                   </div>
                 )}
               </div>
