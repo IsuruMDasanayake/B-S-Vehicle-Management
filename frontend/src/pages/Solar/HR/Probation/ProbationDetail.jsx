@@ -107,6 +107,7 @@ export const ProbationDetail = () => {
   const [evaluation, setEvaluation] = useState(null);
 
   const isCeo = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
+  const isFinalized = !!(evaluation?.ceo_decision || evaluation?.status === 'completed');
 
   // HR Review modal state
   const [hrForm, setHrForm] = useState({
@@ -152,6 +153,10 @@ export const ProbationDetail = () => {
   const [submittingHrMarks, setSubmittingHrMarks] = useState(false);
 
   const handleOpenHrMarksModal = () => {
+    if (isFinalized) {
+      toast.error('This evaluation dossier has been finalized by CEO final decision and cannot be edited.');
+      return;
+    }
     const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
     if (hrObj && hrObj.ratings && Object.keys(hrObj.ratings).length > 0) {
       setHrRatings(hrObj.ratings);
@@ -193,6 +198,10 @@ export const ProbationDetail = () => {
 
   const handleSubmitHrMarks = async (e) => {
     e.preventDefault();
+    if (isFinalized) {
+      toast.error('This evaluation dossier has been finalized by CEO final decision and cannot be edited.');
+      return;
+    }
     const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
     if (!hrObj) {
       toast.error('HR evaluator form not found for this dossier.');
@@ -448,7 +457,7 @@ export const ProbationDetail = () => {
               <Users size={17} style={{ color: '#0284c7' }} />
               <span>Peer Evaluators (2–3 Employees)</span>
             </div>
-            {pendingPeersApproval && isHrAdmin && (
+            {pendingPeersApproval && isHrAdmin && !isFinalized && (
               <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
                 Pending HR Approval
               </span>
@@ -486,7 +495,7 @@ export const ProbationDetail = () => {
                 </div>
               ))}
 
-              {pendingPeersApproval && isHrAdmin && (
+              {pendingPeersApproval && isHrAdmin && !isFinalized && (
                 <button
                   onClick={handleApprovePeers}
                   disabled={approvingPeers}
@@ -535,7 +544,7 @@ export const ProbationDetail = () => {
                 )}
               </div>
 
-              {isHrAdmin && (
+              {isHrAdmin && !isFinalized && (
                 <form onSubmit={handleSchedulePresentation} style={{ fontSize: '0.82rem' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <div>
@@ -688,7 +697,7 @@ export const ProbationDetail = () => {
                   {hrFormObj?.status === 'submitted' ? (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{ fontWeight: 800 }}>{hrFormObj.form_score}</span>
-                      {isHrAdmin && (
+                      {isHrAdmin && !isFinalized && (
                         <button
                           type="button"
                           onClick={handleOpenHrMarksModal}
@@ -704,7 +713,7 @@ export const ProbationDetail = () => {
                   ) : (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                       <span style={{ color: '#d97706', fontWeight: 600 }}>⏳ Pending</span>
-                      {isHrAdmin && (
+                      {isHrAdmin && !isFinalized && (
                         <button
                           type="button"
                           onClick={handleOpenHrMarksModal}
@@ -837,7 +846,7 @@ export const ProbationDetail = () => {
           )}
 
           {/* Notice if HR 10% Evaluation Marks are still pending */}
-          {isHrAdmin && hrFormObj?.status !== 'submitted' && (
+          {isHrAdmin && hrFormObj?.status !== 'submitted' && !isFinalized && (
             <div style={{
               padding: '0.85rem 1rem', borderRadius: '8px', background: '#fffbeb', border: '1px solid #fde68a',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem',
@@ -861,7 +870,7 @@ export const ProbationDetail = () => {
           )}
 
           {/* HR Review Form (Active if HR hasn't finalized yet) */}
-          {isHrAdmin && !evaluation.hr_recommendation && (
+          {isHrAdmin && !evaluation.hr_recommendation && !isFinalized && (
             <form onSubmit={handleSubmitHrReview} style={{
               background: '#f0f9ff', padding: '1.25rem', borderRadius: '10px',
               border: '1px solid #bae6fd', marginBottom: '1.5rem',
