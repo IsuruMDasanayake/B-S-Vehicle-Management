@@ -1098,7 +1098,7 @@ export const PortalProbation = () => {
                   </div>
 
                   {/* Sign-off Form */}
-                  {/* <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                  <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
                     <div style={{ marginBottom: '0.75rem' }}>
                       <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.35rem', color: '#0f172a' }}>
                         Executive Decision:
@@ -1195,7 +1195,7 @@ export const PortalProbation = () => {
                         <span>{submittingPortalCeo ? 'Signing...' : 'Sign & Apply CEO Final Decision'}</span>
                       </button>
                     </div>
-                  </div> */}
+                  </div>
                 </div>
               );
             })}
