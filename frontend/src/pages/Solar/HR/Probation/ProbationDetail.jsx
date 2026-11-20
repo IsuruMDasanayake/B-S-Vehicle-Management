@@ -102,10 +102,11 @@ export const ProbationDetail = () => {
 
   const isSuperAdmin = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
   const isHrAdmin    = isSuperAdmin || user?.role === 'solar_hr_admin' || user?.roles?.includes('solar_hr_admin');
-  const isCeo        = isSuperAdmin || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
 
   const [loading, setLoading] = useState(true);
   const [evaluation, setEvaluation] = useState(null);
+
+  const isCeo = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
 
   // HR Review modal state
   const [hrForm, setHrForm] = useState({
@@ -505,22 +506,22 @@ export const ProbationDetail = () => {
         {/* 10-Minute Presentation Request */}
         <div className="card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700, fontSize: '0.92rem', marginBottom: '0.75rem' }}>
-            <Award size={17} style={{ color: '#0284c7' }} />
-            <span>Optional 10-Minute Employee Presentation</span>
+            <Award size={17} style={{ color: '#7c3aed' }} />
+            <span>10-Minute Management Presentation (Requested by CEO)</span>
           </div>
 
           {!evaluation.presentation_requested ? (
             <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              No presentation requested by employee. (Allocates no additional marks).
+              No presentation requested by Chief Executive Officer. (Allocates no additional marks).
             </div>
           ) : (
             <div>
               <div style={{
-                padding: '0.75rem', borderRadius: '8px', background: '#f0fdf4',
-                border: '1px solid #bbf7d0', marginBottom: '0.85rem', fontSize: '0.8rem',
+                padding: '0.75rem', borderRadius: '8px', background: '#faf5ff',
+                border: '1px solid #e9d5ff', marginBottom: '0.85rem', fontSize: '0.8rem',
               }}>
-                <div style={{ fontWeight: 700, color: '#15803d', marginBottom: '0.2rem' }}>
-                  ✓ Employee Requested 10-Minute Presentation
+                <div style={{ fontWeight: 700, color: '#7c3aed', marginBottom: '0.2rem' }}>
+                  ✓ Presentation Requested by CEO ({evaluation.ceo_user?.name || 'Eranda Ellepola'})
                 </div>
                 {evaluation.presentation_scheduled_at && (
                   <div style={{ color: '#0369a1', fontWeight: 600, fontSize: '0.78rem', marginTop: '0.25rem' }}>
@@ -528,8 +529,8 @@ export const ProbationDetail = () => {
                   </div>
                 )}
                 {evaluation.presentation_notes && (
-                  <div style={{ color: '#166534', fontSize: '0.76rem', marginTop: '0.2rem' }}>
-                    Note: {evaluation.presentation_notes}
+                  <div style={{ color: '#581c87', fontSize: '0.76rem', marginTop: '0.2rem' }}>
+                    CEO Directive / Topic: {evaluation.presentation_notes}
                   </div>
                 )}
               </div>
@@ -964,19 +965,12 @@ export const ProbationDetail = () => {
                   Approved by CEO: <strong>{evaluation.ceo_approver?.name || 'Eranda Ellepola'}</strong> on {formatDateTime(evaluation.ceo_approved_at)}
                 </div>
               </div>
-            ) : (isCeo || isHrAdmin) ? (
+            ) : isCeo ? (
               <form onSubmit={handleSubmitCeoDecision}>
                 <div style={{ marginBottom: '0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
-                      Select Final Decision
-                    </label>
-                    {isHrAdmin && !isCeo && (
-                      <span style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 600, background: '#ede9fe', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                        Admin Sign-Off (on behalf of CEO Eranda Ellepola)
-                      </span>
-                    )}
-                  </div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                    Select Final Decision
+                  </label>
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     {[
                       { key: 'confirm', label: 'Confirm Employment' },
@@ -1020,8 +1014,19 @@ export const ProbationDetail = () => {
                 </button>
               </form>
             ) : (
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                Awaiting final review and sign-off by Chief Executive Officer (Eranda Ellepola).
+              <div style={{
+                padding: '1rem 1.25rem', borderRadius: '8px', background: '#faf5ff',
+                border: '1px solid #e9d5ff', display: 'flex', alignItems: 'center', gap: '0.75rem'
+              }}>
+                <ShieldCheck size={24} style={{ color: '#7c3aed', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#581c87' }}>
+                    Awaiting Executive Review &amp; Sign-Off
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#6b21a8', marginTop: '0.2rem' }}>
+                    The final confirmation decision must be signed off by Chief Executive Officer (<strong>{evaluation.ceo_user?.name || 'Eranda Ellepola'}</strong>) via the CEO Employee Portal.
+                  </div>
+                </div>
               </div>
             )}
           </div>
