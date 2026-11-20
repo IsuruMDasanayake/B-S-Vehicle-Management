@@ -260,7 +260,21 @@ const EmployeeForm = () => {
                   </select>
                 </div>
                 <div className="form-group"><label className="form-label">Joining Date *</label><input type="date" className="form-control" style={inputStyle} value={form.joined_date} onChange={e => set('joined_date', e.target.value)} required /></div>
-                <div className="form-group"><label className="form-label">Probation End Date</label><input type="date" className="form-control" style={inputStyle} value={form.probation_end_date} onChange={e => set('probation_end_date', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Probation End Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    style={inputStyle}
+                    value={form.probation_end_date}
+                    onChange={e => {
+                      const val = e.target.value;
+                      set('probation_end_date', val);
+                      if (val && form.status === 'active') {
+                        set('status', 'probation');
+                      }
+                    }}
+                  />
+                </div>
                 <div className="form-group"><label className="form-label">Work Location</label>
                   <select className="form-control" style={inputStyle} value={form.work_location} onChange={e => set('work_location', e.target.value)}>
                     <option value="Office">Office</option><option value="Site">Site</option>
