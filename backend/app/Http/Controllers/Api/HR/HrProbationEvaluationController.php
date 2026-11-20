@@ -506,9 +506,11 @@ class HrProbationEvaluationController extends Controller
         })
         ->get();
 
-        // 4. CEO Pending Decision dossiers (if logged-in user is CEO or Super Admin)
+        // 4. CEO Pending Decision dossiers (for the assigned CEO or CEO / Super Admin)
+        $isAssignedCeo = HrProbationEvaluation::where('ceo_user_id', $user->id)->exists();
+        $isCeo = $this->isCeo($user) || $this->isSuperAdmin($user) || $isAssignedCeo;
         $ceoPendingDecisions = [];
-        if ($this->isCeo($user) || $this->isSuperAdmin($user)) {
+        if ($isCeo) {
             $ceoPendingDecisions = HrProbationEvaluation::with([
                 'employee.department',
                 'employee.designation',
@@ -518,7 +520,11 @@ class HrProbationEvaluationController extends Controller
                 'hrUser',
                 'forms',
             ])
-            ->where('status', 'pending_ceo_approval')
+            ->where(function ($q) use ($user) {
+                $q->where('ceo_user_id', $user->id)
+                  ->orWhereNull('ceo_user_id');
+            })
+            ->where('status', '!=', 'completed')
             ->latest('id')
             ->get();
         }
@@ -528,7 +534,7 @@ class HrProbationEvaluationController extends Controller
             'pending_forms'           => $pendingForms,
             'completed_forms'         => $completedForms,
             'ceo_pending_decisions'   => $ceoPendingDecisions,
-            'is_ceo'                  => $this->isCeo($user) || $this->isSuperAdmin($user),
+            'is_ceo'                  => $isCeo,
         ]);
     }
 
@@ -890,6 +896,29 @@ class HrProbationEvaluationController extends Controller
             $evaluation = $form->evaluation;
             $evaluation->recalculateScores();
 
+            // If CEO provides final executive decision in this submission
+            if ($form->evaluator_role === 'ceo' && $request->filled('ceo_decision')) {
+                $evaluation->update([
+                    'ceo_decision'             => $request->ceo_decision,
+                    'ceo_notes'                => $request->ceo_notes ?? $request->general_comments,
+                    'ceo_approved_at'          => Carbon::now(),
+                    'ceo_approved_by'          => $user->id,
+                    'status'                   => 'completed',
+                    'final_outcome_applied_at' => Carbon::now(),
+                    'final_outcome_applied_by' => $user->id,
+                ]);
+
+                // Execute profile status update
+                $emp = $evaluation->employee;
+                if ($emp) {
+                    if ($request->ceo_decision === 'confirm') {
+                        $emp->update(['status' => 'active']);
+                    } elseif ($request->ceo_decision === 'extend' && ($request->proposed_extension_date || $evaluation->proposed_extension_date)) {
+                        $emp->update(['probation_end_date' => $request->proposed_extension_date ?? $evaluation->proposed_extension_date]);
+                    }
+                }
+            }
+
             DB::commit();
 
             return response()->json([
@@ -961,20 +990,19 @@ class HrProbationEvaluationController extends Controller
     public function submitCeoDecision(Request $request, $id)
     {
         $user = $request->user();
-        $isCeoUser = $this->isCeo($user);
-        $isSuperAdmin = $this->isSuperAdmin($user);
-        $isHrUser = $this->isHr($user);
+        $evaluation = HrProbationEvaluation::with(['employee.user', 'ceoUser'])->findOrFail($id);
 
-        if (!$isCeoUser && !$isSuperAdmin && !$isHrUser) {
-            return response()->json(['message' => 'Only the Chief Executive Officer or HR Administration can record the final probation decision.'], 403);
+        $isAssignedCeo = ($evaluation->ceo_user_id && (int)$evaluation->ceo_user_id === (int)$user->id);
+        $isCeoUser = $this->isCeo($user) || $isAssignedCeo || $this->isSuperAdmin($user);
+
+        if (!$isCeoUser) {
+            return response()->json(['message' => 'Only the assigned Chief Executive Officer can sign off the final probation decision.'], 403);
         }
 
         $request->validate([
             'ceo_decision' => 'required|in:confirm,extend,do_not_confirm',
             'ceo_notes'    => 'nullable|string|max:5000',
         ]);
-
-        $evaluation = HrProbationEvaluation::with(['employee.user'])->findOrFail($id);
 
         DB::beginTransaction();
         try {

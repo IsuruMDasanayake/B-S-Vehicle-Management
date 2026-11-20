@@ -157,9 +157,10 @@ export const PortalProbation = () => {
   const [evalComments, setEvalComments] = useState('');
   const [submittingEval, setSubmittingEval] = useState(false);
 
-  // CEO Final Sign-off State (for CEO Eranda Ellepola)
+  // CEO Final Sign-off State (for CEO Eranda Ellepola / Assigned CEO)
   const [ceoDecisions, setCeoDecisions] = useState([]);
   const [ceoDecisionChoice, setCeoDecisionChoice] = useState('confirm');
+  const [ceoExtensionDate, setCeoExtensionDate] = useState('');
   const [ceoDecisionNotes, setCeoDecisionNotes] = useState('');
   const [submittingPortalCeo, setSubmittingPortalCeo] = useState(false);
 
@@ -190,6 +191,7 @@ export const PortalProbation = () => {
       await api.post(`/hr/probation/evaluations/${evalId}/ceo-decision`, {
         ceo_decision: ceoDecisionChoice,
         ceo_notes: ceoDecisionNotes,
+        proposed_extension_date: ceoDecisionChoice === 'extend' ? ceoExtensionDate : undefined,
       });
       toast.success('CEO final decision confirmed and employee confirmation status updated!');
       fetchData();
@@ -300,15 +302,18 @@ export const PortalProbation = () => {
 
     setSubmittingEval(true);
     try {
+      const isCeo = activeFormItem.evaluator_role === 'ceo';
       const payload = {
         ratings: evalRatings,
         recommendation: evalRecommendation,
         proposed_extension_date: evalProposedDate,
         general_comments: evalComments,
+        ceo_decision: isCeo ? evalRecommendation : undefined,
+        ceo_notes: isCeo ? evalComments : undefined,
       };
 
       const res = await api.post(`/hr/probation/forms/${activeFormItem.id}/submit`, payload);
-      toast.success(res.data?.message || 'Evaluation submitted and locked successfully!');
+      toast.success(res.data?.message || (isCeo ? 'Evaluation submitted and CEO Final Decision recorded!' : 'Evaluation submitted and locked successfully!'));
       setActiveFormMode(null);
       fetchData();
     } catch (err) {
@@ -774,6 +779,59 @@ export const PortalProbation = () => {
             </div>
           )}
 
+          {/* CEO Executive Final Decision Block (For CEO Eranda Ellepola / Assigned CEO) */}
+          {activeFormItem.evaluator_role === 'ceo' && (
+            <div style={{
+              background: '#faf5ff', padding: '1.25rem', borderRadius: '10px',
+              border: '2px solid #c4b5fd', marginBottom: '1.5rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.4rem' }}>
+                <ShieldCheck size={20} style={{ color: '#7c3aed' }} />
+                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#581c87' }}>
+                  CEO Executive Final Decision &amp; Sign-Off
+                </span>
+              </div>
+              <p style={{ margin: '0 0 0.85rem', fontSize: '0.8rem', color: '#6b21a8' }}>
+                As Chief Executive Officer, please select the official confirmation determination for this employee.
+              </p>
+
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                {[
+                  { key: 'confirm', label: '✓ Confirm Employment' },
+                  { key: 'extend', label: '⏳ Extend Probation' },
+                  { key: 'do_not_confirm', label: '✗ Non-Confirmation (Exit Process)' },
+                ].map(opt => (
+                  <label key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: isLocked ? 'default' : 'pointer', fontSize: '0.88rem' }}>
+                    <input
+                      type="radio"
+                      disabled={isLocked}
+                      name="ceo_final_decision"
+                      value={opt.key}
+                      checked={evalRecommendation === opt.key}
+                      onChange={e => setEvalRecommendation(e.target.value)}
+                    />
+                    <strong>{opt.label}</strong>
+                  </label>
+                ))}
+              </div>
+
+              {evalRecommendation === 'extend' && (
+                <div style={{ maxWidth: '280px' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.2rem' }}>
+                    Proposed Extension End Date
+                  </label>
+                  <input
+                    type="date"
+                    disabled={isLocked}
+                    value={evalProposedDate}
+                    onChange={e => setEvalProposedDate(e.target.value)}
+                    style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Qualitative General Comments */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem', color: '#0f172a' }}>
@@ -797,13 +855,24 @@ export const PortalProbation = () => {
                 disabled={submittingEval}
                 className="btn btn-primary"
                 style={{
-                  background: '#0284c7', borderColor: '#0284c7',
+                  background: activeFormItem.evaluator_role === 'ceo' ? '#7c3aed' : '#0284c7',
+                  borderColor: activeFormItem.evaluator_role === 'ceo' ? '#7c3aed' : '#0284c7',
                   padding: '0.65rem 1.75rem', fontWeight: 700, fontSize: '0.9rem',
                   display: 'flex', alignItems: 'center', gap: '0.45rem',
                 }}
               >
-                {submittingEval ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={16} />}
-                <span>Submit &amp; Lock Evaluation</span>
+                {submittingEval ? (
+                  <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : activeFormItem.evaluator_role === 'ceo' ? (
+                  <ShieldCheck size={16} />
+                ) : (
+                  <CheckCircle2 size={16} />
+                )}
+                <span>
+                  {activeFormItem.evaluator_role === 'ceo'
+                    ? 'Submit Evaluation & Apply CEO Final Decision'
+                    : 'Submit & Lock Evaluation'}
+                </span>
               </button>
             </div>
           ) : (
@@ -1022,6 +1091,20 @@ export const PortalProbation = () => {
                         ))}
                       </div>
                     </div>
+
+                    {ceoDecisionChoice === 'extend' && (
+                      <div style={{ marginBottom: '0.85rem', maxWidth: '280px' }}>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                          Proposed Extension End Date:
+                        </label>
+                        <input
+                          type="date"
+                          value={ceoExtensionDate}
+                          onChange={e => setCeoExtensionDate(e.target.value)}
+                          style={{ width: '100%', padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                    )}
 
                     <div style={{ marginBottom: '0.85rem' }}>
                       <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>

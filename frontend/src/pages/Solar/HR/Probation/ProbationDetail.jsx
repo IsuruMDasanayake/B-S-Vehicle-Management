@@ -102,7 +102,7 @@ export const ProbationDetail = () => {
 
   const isSuperAdmin = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
   const isHrAdmin    = isSuperAdmin || user?.role === 'solar_hr_admin' || user?.roles?.includes('solar_hr_admin');
-  const isCeo        = isSuperAdmin || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
+  const isCeo        = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
 
   const [loading, setLoading] = useState(true);
   const [evaluation, setEvaluation] = useState(null);
@@ -964,19 +964,12 @@ export const ProbationDetail = () => {
                   Approved by CEO: <strong>{evaluation.ceo_approver?.name || 'Eranda Ellepola'}</strong> on {formatDateTime(evaluation.ceo_approved_at)}
                 </div>
               </div>
-            ) : (isCeo || isHrAdmin) ? (
+            ) : isCeo ? (
               <form onSubmit={handleSubmitCeoDecision}>
                 <div style={{ marginBottom: '0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
-                      Select Final Decision
-                    </label>
-                    {isHrAdmin && !isCeo && (
-                      <span style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 600, background: '#ede9fe', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                        Admin Sign-Off (on behalf of CEO Eranda Ellepola)
-                      </span>
-                    )}
-                  </div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                    Select Final Decision
+                  </label>
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     {[
                       { key: 'confirm', label: 'Confirm Employment' },
@@ -1020,8 +1013,19 @@ export const ProbationDetail = () => {
                 </button>
               </form>
             ) : (
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                Awaiting final review and sign-off by Chief Executive Officer (Eranda Ellepola).
+              <div style={{
+                padding: '1rem 1.25rem', borderRadius: '8px', background: '#faf5ff',
+                border: '1px solid #e9d5ff', display: 'flex', alignItems: 'center', gap: '0.75rem'
+              }}>
+                <ShieldCheck size={24} style={{ color: '#7c3aed', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#581c87' }}>
+                    Awaiting Executive Review &amp; Sign-Off
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#6b21a8', marginTop: '0.2rem' }}>
+                    The final confirmation decision must be signed off by Chief Executive Officer (<strong>{evaluation.ceo_user?.name || 'Eranda Ellepola'}</strong>) via the CEO Employee Portal.
+                  </div>
+                </div>
               </div>
             )}
           </div>
