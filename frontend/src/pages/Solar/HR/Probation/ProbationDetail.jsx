@@ -588,7 +588,7 @@ export const ProbationDetail = () => {
         {/* Table Title Banner */}
         <div style={{
           padding: '1rem 1.25rem', background: '#0284c7', color: '#fff',
-          fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.2px',
+          fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.2px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <span>Final Summary Probation Evaluation Form</span>
@@ -621,45 +621,7 @@ export const ProbationDetail = () => {
                 </td>
               </tr>
 
-              {/* 2. Line Manager */}
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>
-                  Line Manager ({evaluation.line_manager?.full_name || 'Reporting Manager'})
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {lmForm?.status === 'submitted' ? lmForm.form_score : '⏳ Pending'}
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>30%</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                  {evaluation.line_manager_score !== null ? evaluation.line_manager_score : '—'}
-                </td>
-              </tr>
-
-              {/* 3. General Manager / Project Director */}
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>General Manager / Project Director</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {gmForm?.status === 'submitted' ? gmForm.form_score : '⏳ Pending'}
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                  {evaluation.gm_score !== null ? evaluation.gm_score : '—'}
-                </td>
-              </tr>
-
-              {/* 4. CEO */}
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>CEO</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {ceoFormObj?.status === 'submitted' ? ceoFormObj.form_score : '⏳ Pending'}
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                  {evaluation.ceo_score !== null ? evaluation.ceo_score : '—'}
-                </td>
-              </tr>
-
-              {/* 5. Individual Peer Evaluations */}
+              {/* 2. Individual Peer Evaluations */}
               {peerForms.map((pf, idx) => (
                 <tr key={pf.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
                   <td style={{ padding: '0.55rem 1.25rem 0.55rem 2.25rem', fontSize: '0.82rem', color: '#475569' }}>
@@ -680,6 +642,44 @@ export const ProbationDetail = () => {
                   )}
                 </tr>
               ))}
+
+              {/* 3. Line Manager */}
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>
+                  Line Manager ({evaluation.line_manager?.full_name || 'Reporting Manager'})
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
+                  {lmForm?.status === 'submitted' ? lmForm.form_score : '⏳ Pending'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>30%</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                  {evaluation.line_manager_score !== null ? evaluation.line_manager_score : '—'}
+                </td>
+              </tr>
+
+              {/* 4. General Manager / Project Director */}
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>General Manager / Project Director</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
+                  {gmForm?.status === 'submitted' ? gmForm.form_score : '⏳ Pending'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                  {evaluation.gm_score !== null ? evaluation.gm_score : '—'}
+                </td>
+              </tr>
+
+              {/* 5. CEO */}
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>CEO</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
+                  {ceoFormObj?.status === 'submitted' ? ceoFormObj.form_score : '⏳ Pending'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                  {evaluation.ceo_score !== null ? evaluation.ceo_score : '—'}
+                </td>
+              </tr>
 
               {/* 6. HR */}
               <tr style={{ borderBottom: '2px solid #cbd5e1' }}>
