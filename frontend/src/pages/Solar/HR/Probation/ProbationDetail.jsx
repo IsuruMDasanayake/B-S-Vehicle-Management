@@ -102,10 +102,11 @@ export const ProbationDetail = () => {
 
   const isSuperAdmin = user?.role === 'super_admin' || user?.roles?.includes('super_admin');
   const isHrAdmin    = isSuperAdmin || user?.role === 'solar_hr_admin' || user?.roles?.includes('solar_hr_admin');
-  const isCeo        = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
 
   const [loading, setLoading] = useState(true);
   const [evaluation, setEvaluation] = useState(null);
+
+  const isCeo = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
 
   // HR Review modal state
   const [hrForm, setHrForm] = useState({
