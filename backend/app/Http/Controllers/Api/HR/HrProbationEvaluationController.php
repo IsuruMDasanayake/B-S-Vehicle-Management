@@ -584,6 +584,9 @@ class HrProbationEvaluationController extends Controller
 
         DB::beginTransaction();
         try {
+            // Compute score
+            $score = $selfForm->computeFormScore($request->ratings);
+
             // Update self form
             $selfForm->update([
                 'ratings'               => $request->ratings,
