@@ -372,9 +372,26 @@ class SectionTemplatesSeeder extends Seeder
             ],
         ];
 
-        // Rename old "Orgarin" to "Drilling" if present
-        SectionTemplate::where('name', 'Orgarin')->update(['name' => 'Drilling']);
-        SolarSection::where('name', 'Orgarin')->update(['name' => 'Drilling']);
+        // Rename legacy names to official BOQ names
+        $legacyNameMap = [
+            'Ground Cleaning'                 => 'Ground Cleaning and Adjustment',
+            'Orgarin'                         => 'Drilling',
+            'MMS Super Structure'             => 'Structure - Installation (Tables)',
+            'Panel Installation'              => 'PV Module Installation',
+            'DC Cabling'                      => 'DC Cabling & Terminations',
+            'AC Cabling'                      => 'LV Cabling',
+            'Smart Transformer'               => 'Smart Transformer (MV Station) Equipment Installation',
+            'Final Termination'               => 'Final Termination & Testing',
+            'LV/MV Panel Board Installation'  => 'Switchyard & Panel Room Civil Works',
+            'Underground MV Cabling'          => 'Underground MV Cabling (33kV)',
+            'Four Paul Yard'                  => 'CEB Gantry Connection & Switchyard Accessories',
+            'Final Investigation'             => 'Testing, Commissioning & PAC',
+        ];
+
+        foreach ($legacyNameMap as $oldName => $newName) {
+            SolarSection::where('name', $oldName)->update(['name' => $newName]);
+            SectionTemplate::where('name', $oldName)->update(['name' => $newName]);
+        }
 
         foreach ($templates as $template) {
             SectionTemplate::updateOrCreate(
@@ -384,6 +401,10 @@ class SectionTemplatesSeeder extends Seeder
                 ])
             );
         }
+
+        // Remove any obsolete templates not in the 28 BOQ definitions
+        $validNames = array_column($templates, 'name');
+        SectionTemplate::whereNotIn('name', $validNames)->delete();
 
         // Backfill existing SolarSection records with category, unit, target_qty
         $allTemplates = SectionTemplate::all()->keyBy('name');
@@ -397,6 +418,6 @@ class SectionTemplatesSeeder extends Seeder
             }
         }
 
-        $this->command->info('Section templates seeded successfully: ' . count($templates) . ' BOQ milestones ready.');
+        $this->command->info('Section templates seeded successfully: ' . SectionTemplate::count() . ' BOQ milestones ready.');
     }
 }

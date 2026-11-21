@@ -1268,8 +1268,21 @@ const SolarProjectDetail = () => {
                   style={{ width: '100%' }}
                 >
                   <option value="">-- Select Template --</option>
-                  {templates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                  {Object.entries(
+                    templates.reduce((acc, t) => {
+                      const cat = t.category || 'General';
+                      if (!acc[cat]) acc[cat] = [];
+                      acc[cat].push(t);
+                      return acc;
+                    }, {})
+                  ).map(([cat, list]) => (
+                    <optgroup key={cat} label={`📂 ${cat}`}>
+                      {list.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} {t.target_qty ? `(${Number(t.target_qty).toLocaleString()} ${t.unit || ''})` : (t.unit ? `(${t.unit})` : '')}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
