@@ -46,6 +46,7 @@ class SolarUploadBatchController extends Controller
             'sub_section'       => 'nullable|string|max:255',
             'phase'             => 'nullable|in:before,after,general',
             'table_number'      => 'nullable|integer|min:1',
+            'quantity_done'     => 'nullable|numeric|min:0',
         ]);
 
         $solarUploadBatch->update($validated);

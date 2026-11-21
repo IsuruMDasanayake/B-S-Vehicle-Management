@@ -60,6 +60,7 @@ class SolarUploadController extends Controller
             'sub_section'       => 'nullable|string|max:255',
             'phase'             => 'nullable|in:before,after,general',
             'table_number'      => 'nullable|integer|min:1',
+            'quantity_done'     => 'nullable|numeric|min:0',
             'images'            => 'required|array|min:1|max:30',
             'images.*'          => 'required|image|mimes:jpeg,jpg,png,heic|max:20480', // 20MB max per image
             'uploaded_by'       => 'nullable|string|max:255',
@@ -71,6 +72,7 @@ class SolarUploadController extends Controller
             'sub_section'       => $request->sub_section,
             'phase'             => $request->phase ?? 'general',
             'table_number'      => $request->table_number,
+            'quantity_done'     => $request->quantity_done,
             'work_date'         => $request->work_date,
             'work_time'         => $request->work_time,
             'participants'      => $request->participants,

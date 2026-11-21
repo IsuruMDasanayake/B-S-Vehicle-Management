@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class SectionTemplate extends Model
 {
     protected $fillable = [
-        'name', 'sort_order', 'has_before_after',
+        'name', 'category', 'unit', 'target_qty', 'sort_order', 'has_before_after',
         'has_table_tracking', 'sub_sections', 'expected_images', 'notes',
     ];
 
@@ -15,5 +15,6 @@ class SectionTemplate extends Model
         'has_before_after'    => 'boolean',
         'has_table_tracking'  => 'boolean',
         'sub_sections'        => 'array',
+        'target_qty'          => 'float',
     ];
 }

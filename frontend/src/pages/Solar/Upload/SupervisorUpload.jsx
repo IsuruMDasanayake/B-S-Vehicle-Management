@@ -28,6 +28,7 @@ const SupervisorUpload = () => {
     sub_section: '',
     phase: 'general',
     table_number: '',
+    quantity_done: '',
     work_date: new Date().toISOString().split('T')[0], // today
     work_time: '',
     participants: '',
@@ -187,6 +188,7 @@ const SupervisorUpload = () => {
       setFormData(prev => ({
         ...prev,
         table_number: '',
+        quantity_done: '',
         participants: '',
         programme: '',
         has_issue: false,
@@ -424,6 +426,7 @@ const SupervisorUpload = () => {
       sub_section: batch.sub_section || '',
       phase: batch.phase || 'general',
       table_number: batch.table_number || '',
+      quantity_done: batch.quantity_done !== null && batch.quantity_done !== undefined ? batch.quantity_done : '',
       work_date: batch.work_date ? batch.work_date.split('T')[0] : '',
       work_time: batch.work_time ? batch.work_time.substring(0, 5) : '',
       participants: batch.participants || '',
@@ -459,6 +462,7 @@ const SupervisorUpload = () => {
       sub_section: '',
       phase: 'general',
       table_number: '',
+      quantity_done: '',
       work_date: new Date().toISOString().split('T')[0],
       work_time: '',
       participants: '',
@@ -585,19 +589,87 @@ const SupervisorUpload = () => {
             </select>
           </div>
 
-          {selectedProject && (
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Milestone / Section</label>
-              <select 
-                className="form-control" 
-                value={formData.solar_section_id} 
-                onChange={e => setFormData({...formData, solar_section_id: e.target.value, table_number: '', sub_section: ''})}
-                required
-                style={{ width: '100%' }}
-              >
-                <option value="">-- Choose Milestone --</option>
-                {selectedProject.sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+          {selectedProject && (() => {
+            const sectionsByCategory = (selectedProject.sections || []).reduce((acc, s) => {
+              const cat = s.category || 'General';
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(s);
+              return acc;
+            }, {});
+
+            return (
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Milestone / Section</label>
+                <select 
+                  className="form-control" 
+                  value={formData.solar_section_id} 
+                  onChange={e => setFormData({...formData, solar_section_id: e.target.value, table_number: '', sub_section: '', quantity_done: ''})}
+                  required
+                  style={{ width: '100%' }}
+                >
+                  <option value="">-- Choose Milestone --</option>
+                  {Object.entries(sectionsByCategory).map(([cat, list]) => (
+                    <optgroup key={cat} label={`📂 ${cat}`}>
+                      {list.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} {s.target_qty ? `(${Number(s.target_qty).toLocaleString()} ${s.unit || ''})` : (s.unit ? `(${s.unit})` : '')}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            );
+          })()}
+
+          {/* Selected Milestone Information */}
+          {selectedSection && (
+            <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>
+                  📌 {selectedSection.category || 'General'}
+                </span>
+                {selectedSection.target_qty && (
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0284c7' }}>
+                    Target: {Number(selectedSection.target_qty).toLocaleString()} {selectedSection.unit || 'units'}
+                  </span>
+                )}
+              </div>
+              {selectedSection.notes && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {selectedSection.notes}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BOQ Quantity Done Field */}
+          {selectedSection && (
+            <div className="form-group" style={{ marginBottom: '1rem', background: 'rgba(34,197,94,0.05)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid rgba(34,197,94,0.25)' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem', color: '#15803d' }}>
+                ⚡ Quantity Completed in this Work Batch ({selectedSection.unit || 'Units'})
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input 
+                  type="number" 
+                  step="any"
+                  className="form-control" 
+                  placeholder="Enter completed quantity (e.g. 5)"
+                  value={formData.quantity_done} 
+                  onChange={e => setFormData({...formData, quantity_done: e.target.value})}
+                  style={{ width: '100%', borderColor: '#86efac' }}
+                />
+                {selectedSection.unit && (
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#15803d', whiteSpace: 'nowrap', padding: '0 0.5rem' }}>
+                    {selectedSection.unit}
+                  </span>
+                )}
+              </div>
+              {selectedSection.target_qty && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  Target for this milestone: <strong>{Number(selectedSection.target_qty).toLocaleString()} {selectedSection.unit || ''}</strong>
+                </div>
+              )}
             </div>
           )}
 
@@ -893,6 +965,11 @@ const SupervisorUpload = () => {
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem' }}>
                         <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>🖼️ {item.images_count} Images</span>
+                        {item.quantity_done !== null && item.quantity_done !== undefined && (
+                          <span style={{ background: 'rgba(34,197,94,0.15)', color: '#15803d', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                            ⚡ {Number(item.quantity_done).toLocaleString()} {item.section?.unit || ''}
+                          </span>
+                        )}
                         {item.uploaded_by && <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>👤 By: {item.uploaded_by}</span>}
                         {item.table_number && <span style={{ background: 'var(--surface-2)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>Table {item.table_number}</span>}
                       </div>
@@ -1006,6 +1083,27 @@ const SupervisorUpload = () => {
                 <input type="text" className="form-control" placeholder="Your name" value={formData.uploaded_by} onChange={e => setFormData({...formData, uploaded_by: e.target.value})} style={{ width: '100%' }} />
               </div>
             </div>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Table Number</label>
+                <input type="number" className="form-control" value={formData.table_number} onChange={e => setFormData({...formData, table_number: e.target.value})} style={{ width: '100%' }} />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                  ⚡ Quantity Completed ({editingBatch.section?.unit || 'Units'})
+                </label>
+                <input 
+                  type="number" 
+                  step="any"
+                  placeholder="e.g. 5"
+                  className="form-control" 
+                  value={formData.quantity_done} 
+                  onChange={e => setFormData({...formData, quantity_done: e.target.value})} 
+                  style={{ width: '100%' }} 
+                />
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
               <div className="form-group" style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Workers / Participants</label>
