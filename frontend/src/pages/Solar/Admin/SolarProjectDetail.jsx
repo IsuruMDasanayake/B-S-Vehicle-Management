@@ -4,7 +4,16 @@ import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../../store/authStore';
 import ConfirmDeleteModal from '../../../components/ui/ConfirmDeleteModal';
-import { ChevronDown, ChevronUp, MinusCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, MinusCircle, Edit3, Layers, BarChart2, CheckCircle, Clock } from 'lucide-react';
+
+const CATEGORY_THEMES = {
+  'PV Installation': { color: '#0284c7', bg: 'rgba(2, 132, 199, 0.08)', border: '#38bdf8', icon: '☀️' },
+  'Inverter Installation': { color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.08)', border: '#a78bfa', icon: '⚡' },
+  'Earthing & Lightning': { color: '#d97706', bg: 'rgba(217, 119, 6, 0.08)', border: '#fbbf24', icon: '🛡️' },
+  'AC Electrical Works': { color: '#2563eb', bg: 'rgba(37, 99, 235, 0.08)', border: '#60a5fa', icon: '🔌' },
+  'HT Installation': { color: '#dc2626', bg: 'rgba(220, 38, 38, 0.08)', border: '#f87171', icon: '🏭' },
+  'Mobilisation & Acceptance': { color: '#059669', bg: 'rgba(5, 150, 105, 0.08)', border: '#34d399', icon: '📋' },
+};
 
 const SolarProjectDetail = () => {
   const { id } = useParams();
@@ -34,12 +43,66 @@ const SolarProjectDetail = () => {
   const [deleteMilestoneModal, setDeleteMilestoneModal] = useState({ isOpen: false, sectionId: null });
   const [flagReasonModal, setFlagReasonModal] = useState({ isOpen: false, imageId: null, reason: '' });
   const [expandedDailyUpdates, setExpandedDailyUpdates] = useState({});
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
+  const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [editMilestoneModal, setEditMilestoneModal] = useState({
+    isOpen: false,
+    section: null,
+    name: '',
+    category: '',
+    unit: '',
+    target_qty: '',
+    expected_images: 10,
+    notes: ''
+  });
 
   const toggleSection = (sectionId) => {
     setExpandedSections(prev => ({
       ...prev,
       [sectionId]: !prev[sectionId]
     }));
+  };
+
+  const toggleCategory = (catName) => {
+    setCollapsedCategories(prev => ({
+      ...prev,
+      [catName]: !prev[catName]
+    }));
+  };
+
+  const openEditMilestoneModal = (section) => {
+    setEditMilestoneModal({
+      isOpen: true,
+      section,
+      name: section.name || '',
+      category: section.category || 'PV Installation',
+      unit: section.unit || 'Nos',
+      target_qty: section.target_qty !== null && section.target_qty !== undefined ? section.target_qty : '',
+      expected_images: section.expected_images || 10,
+      notes: section.notes || ''
+    });
+  };
+
+  const handleUpdateMilestone = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.patch(`/solar/milestones/${editMilestoneModal.section.id}`, {
+        name: editMilestoneModal.name,
+        category: editMilestoneModal.category,
+        unit: editMilestoneModal.unit,
+        target_qty: editMilestoneModal.target_qty !== '' ? Number(editMilestoneModal.target_qty) : null,
+        expected_images: Number(editMilestoneModal.expected_images),
+        notes: editMilestoneModal.notes,
+      });
+      toast.success('Milestone settings updated successfully');
+      setEditMilestoneModal({ isOpen: false, section: null, name: '', category: '', unit: '', target_qty: '', expected_images: 10, notes: '' });
+      fetchProject();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update milestone settings');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const toggleDailyUpdate = (updateId) => {
@@ -149,6 +212,7 @@ const SolarProjectDetail = () => {
       sub_section: batch.sub_section || '',
       phase: batch.phase || 'general',
       table_number: batch.table_number || '',
+      quantity_done: batch.quantity_done !== null && batch.quantity_done !== undefined ? batch.quantity_done : '',
     });
   };
 
@@ -342,134 +406,472 @@ const SolarProjectDetail = () => {
         </button>
       </div>
 
-      {activeTab === 'milestones' && (
-      <>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0 }}>Project Milestones</h3>
-          {isSuperAdmin && (
-          <button 
-            onClick={() => setAddMilestoneModal({ isOpen: true, templateId: '', insertAfterOrder: 0 })}
-            className="btn btn-primary"
-            style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
-          >
-            + Add Milestone
-          </button>
-        )}
-      </div>
+      {activeTab === 'milestones' && (() => {
+        const sections = project.sections || [];
+        const sectionsWithTarget = sections.filter(s => s.target_qty && Number(s.target_qty) > 0);
+        const totalTargetCount = sectionsWithTarget.length;
+        const completedMilestonesCount = sectionsWithTarget.filter(s => (s.progress_percentage || 0) >= 100).length;
+        const overallBoqPercent = totalTargetCount > 0 
+          ? Math.round(sectionsWithTarget.reduce((sum, s) => sum + (s.progress_percentage || 0), 0) / totalTargetCount)
+          : 0;
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {project.sections?.map(section => {
-          const totalImages = section.upload_batches?.reduce((acc, batch) => acc + (batch.images?.length || 0), 0) || 0;
-          const isExpanded = expandedSections[section.id];
-          
-          return (
-            <div key={section.id} className="card" style={{ padding: '1.5rem' }}>
-              <div 
-                onClick={() => toggleSection(section.id)}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isExpanded ? '1rem' : '0', borderBottom: isExpanded ? '1px solid var(--border)' : 'none', paddingBottom: isExpanded ? '1rem' : '0', cursor: 'pointer' }}
-              >
-                <h4 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  {section.name}
-                </h4>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ background: 'var(--surface-2)', padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 600 }}>
-                    {totalImages} / {section.expected_images} Images
-                  </div>
-                  {isSuperAdmin && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteMilestoneModal({ isOpen: true, sectionId: section.id });
-                      }}
-                      className="btn btn-ghost" 
-                      style={{ padding: '0.25rem', color: '#ef4444' }}
-                      title="Remove Milestone"
-                    >
-                      <MinusCircle size={20} />
-                    </button>
-                  )}
+        const pvTableSection = sections.find(s => s.name?.toLowerCase().includes('module installation') || s.unit?.toLowerCase() === 'tables') || sections.find(s => s.category === 'PV Installation');
+        const inverterSection = sections.find(s => s.name?.toLowerCase().includes('inverter') || s.unit?.toLowerCase() === 'inverters');
+        const earthingMeshSection = sections.find(s => s.name?.toLowerCase().includes('mesh') || s.name?.toLowerCase().includes('conductor'));
+        const lvCableSection = sections.find(s => s.name?.toLowerCase().includes('lv cabling') || s.name?.toLowerCase().includes('lv cable'));
+        const mvCableSection = sections.find(s => s.name?.toLowerCase().includes('mv cabling') || s.name?.toLowerCase().includes('mv cable'));
+
+        const sectionsByCategory = sections.reduce((acc, section) => {
+          const cat = section.category || 'General';
+          if (!acc[cat]) acc[cat] = [];
+          acc[cat].push(section);
+          return acc;
+        }, {});
+
+        const availableCategories = ['All', ...Object.keys(sectionsByCategory)];
+        const visibleCategories = selectedCategoryFilter === 'All' 
+          ? Object.keys(sectionsByCategory) 
+          : [selectedCategoryFilter].filter(c => sectionsByCategory[c]);
+
+        return (
+          <>
+            {/* Top-Level BOQ Site Progress Summary Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              {/* Overall BOQ Card */}
+              <div className="card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(37,99,235,0.06), rgba(59,130,246,0.12))', border: '1px solid rgba(59,130,246,0.25)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Overall BOQ Progress</span>
+                  <BarChart2 size={18} style={{ color: '#2563eb' }} />
+                </div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#2563eb', marginBottom: '0.5rem' }}>
+                  {overallBoqPercent}%
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.08)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.5rem' }}>
+                  <div style={{ width: `${Math.min(100, overallBoqPercent)}%`, height: '100%', background: '#2563eb', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {completedMilestonesCount} / {totalTargetCount} milestones completed (100%)
                 </div>
               </div>
 
-              {isExpanded && (
-                <>
-                  {section.upload_batches?.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                      {section.upload_batches.map(batch => (
-                        <div key={batch.id} style={{ background: 'var(--surface-2)', padding: '1.5rem', borderRadius: 'var(--radius)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <div>
-                              <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-                                {new Date(batch.work_date).toLocaleDateString()} {batch.work_time && `at ${batch.work_time}`}
-                              </div>
-                              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                {batch.participants && <span>👷 {batch.participants}</span>}
-                                {batch.uploaded_by && <span>👤 Uploaded By: {batch.uploaded_by}</span>}
-                                {batch.weather && <span>🌤️ {batch.weather}</span>}
-                                {batch.phase !== 'general' && <span>⏱️ Phase: {batch.phase}</span>}
-                                {batch.table_number && <span>🏗️ Table: {batch.table_number}</span>}
-                                {batch.sub_section && <span>📂 {batch.sub_section}</span>}
-                              </div>
-                              {batch.programme && (
-                                <div style={{ marginTop: '0.75rem', fontSize: '0.95rem' }}>
-                                  <strong>Programme:</strong> {batch.programme}
+              {/* PV Tables Card */}
+              <div className="card" style={{ padding: '1.25rem', border: '1px solid rgba(2,132,199,0.25)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>☀️ PV Tables (384 Tables)</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0284c7' }}>{pvTableSection?.progress_percentage || 0}%</span>
+                </div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>
+                  {pvTableSection?.completed_quantity || 0} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ {pvTableSection?.target_qty || 384} Tables</span>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'var(--surface-2)', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, pvTableSection?.progress_percentage || 0)}%`, height: '100%', background: '#0284c7', borderRadius: '999px' }} />
+                </div>
+              </div>
+
+              {/* Inverters Card */}
+              <div className="card" style={{ padding: '1.25rem', border: '1px solid rgba(124,58,237,0.25)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>⚡ Inverters (32 Nos)</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#7c3aed' }}>{inverterSection?.progress_percentage || 0}%</span>
+                </div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>
+                  {inverterSection?.completed_quantity || 0} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ {inverterSection?.target_qty || 32} Inverters</span>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'var(--surface-2)', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, inverterSection?.progress_percentage || 0)}%`, height: '100%', background: '#7c3aed', borderRadius: '999px' }} />
+                </div>
+              </div>
+
+              {/* Earthing Mesh Card */}
+              <div className="card" style={{ padding: '1.25rem', border: '1px solid rgba(217,119,6,0.25)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>🛡️ Earthing Conductor</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#d97706' }}>{earthingMeshSection?.progress_percentage || 0}%</span>
+                </div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>
+                  {Number(earthingMeshSection?.completed_quantity || 0).toLocaleString()} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ {Number(earthingMeshSection?.target_qty || 20000).toLocaleString()} m</span>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'var(--surface-2)', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, earthingMeshSection?.progress_percentage || 0)}%`, height: '100%', background: '#d97706', borderRadius: '999px' }} />
+                </div>
+              </div>
+
+              {/* Cabling Card */}
+              <div className="card" style={{ padding: '1.25rem', border: '1px solid rgba(5,150,105,0.25)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>🔌 Power Cabling</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#059669' }}>
+                    {Math.round(((lvCableSection?.progress_percentage || 0) + (mvCableSection?.progress_percentage || 0)) / 2)}%
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>
+                  LV: {lvCableSection?.completed_quantity || 0} / {lvCableSection?.target_qty || 2000} m
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>
+                  MV: {mvCableSection?.completed_quantity || 0} / {mvCableSection?.target_qty || 300} m
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'var(--surface-2)', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, lvCableSection?.progress_percentage || 0)}%`, height: '100%', background: '#059669', borderRadius: '999px' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Pills and Add Button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Layers size={16} /> Filter BOQ:
+                </span>
+                {availableCategories.map(cat => {
+                  const isSelected = selectedCategoryFilter === cat;
+                  const count = cat === 'All' ? sections.length : (sectionsByCategory[cat]?.length || 0);
+                  const theme = CATEGORY_THEMES[cat];
+
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategoryFilter(cat)}
+                      style={{
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '999px',
+                        border: isSelected ? `2px solid ${theme?.color || 'var(--primary)'}` : '1px solid var(--border)',
+                        background: isSelected ? (theme?.bg || 'rgba(59,130,246,0.1)') : 'var(--surface)',
+                        color: isSelected ? (theme?.color || 'var(--primary)') : 'var(--text)',
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {theme?.icon && <span>{theme.icon}</span>}
+                      {cat}
+                      <span style={{ 
+                        background: isSelected ? (theme?.color || 'var(--primary)') : 'var(--surface-2)', 
+                        color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                        padding: '0.1rem 0.45rem', 
+                        borderRadius: '999px', 
+                        fontSize: '0.75rem', 
+                        fontWeight: 600 
+                      }}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {isSuperAdmin && (
+                <button 
+                  onClick={() => setAddMilestoneModal({ isOpen: true, templateId: '', insertAfterOrder: 0 })}
+                  className="btn btn-primary"
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  + Add Milestone
+                </button>
+              )}
+            </div>
+
+            {/* BOQ Grouped Category Sections */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              {visibleCategories.map(categoryName => {
+                const categorySections = sectionsByCategory[categoryName] || [];
+                const theme = CATEGORY_THEMES[categoryName] || { color: '#64748b', bg: 'rgba(100,116,139,0.08)', border: '#94a3b8', icon: '📌' };
+                const isCategoryCollapsed = collapsedCategories[categoryName];
+
+                // Category progress average
+                const targetedCategorySections = categorySections.filter(s => s.target_qty && Number(s.target_qty) > 0);
+                const categoryAvgProgress = targetedCategorySections.length > 0
+                  ? Math.round(targetedCategorySections.reduce((acc, s) => acc + (s.progress_percentage || 0), 0) / targetedCategorySections.length)
+                  : 0;
+
+                return (
+                  <div key={categoryName} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* Category Accordion Header */}
+                    <div 
+                      onClick={() => toggleCategory(categoryName)}
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '0.85rem 1.25rem', 
+                        background: theme.bg, 
+                        borderLeft: `5px solid ${theme.color}`, 
+                        borderRadius: 'var(--radius)',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontSize: '1.25rem' }}>{theme.icon}</span>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1.1rem', color: theme.color, fontWeight: 700 }}>
+                            {categoryName}
+                          </h4>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {categorySections.length} {categorySections.length === 1 ? 'milestone' : 'milestones'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                        {targetedCategorySections.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '120px', height: '8px', background: 'rgba(0,0,0,0.1)', borderRadius: '999px', overflow: 'hidden' }}>
+                              <div style={{ width: `${Math.min(100, categoryAvgProgress)}%`, height: '100%', background: theme.color, borderRadius: '999px' }} />
+                            </div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.color, minWidth: '40px' }}>
+                              {categoryAvgProgress}%
+                            </span>
+                          </div>
+                        )}
+                        <button type="button" className="btn btn-ghost" style={{ padding: '0.25rem', color: theme.color }}>
+                          {isCategoryCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Category Milestone Cards */}
+                    {!isCategoryCollapsed && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingLeft: '0.5rem' }}>
+                        {categorySections.map(section => {
+                          const totalImages = section.upload_batches?.reduce((acc, batch) => acc + (batch.images?.length || 0), 0) || 0;
+                          const isExpanded = expandedSections[section.id];
+                          const hasTarget = section.target_qty !== null && section.target_qty !== undefined && Number(section.target_qty) > 0;
+                          const progressPct = section.progress_percentage || 0;
+                          const isComplete = progressPct >= 100;
+
+                          return (
+                            <div 
+                              key={section.id} 
+                              className="card" 
+                              style={{ 
+                                padding: '1.25rem', 
+                                borderLeft: isComplete ? '4px solid #22c55e' : (progressPct > 0 ? '4px solid #3b82f6' : '1px solid var(--border)'),
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <div 
+                                onClick={() => toggleSection(section.id)}
+                                style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between', 
+                                  alignItems: 'flex-start', 
+                                  gap: '1rem',
+                                  cursor: 'pointer',
+                                  borderBottom: isExpanded ? '1px solid var(--border)' : 'none', 
+                                  paddingBottom: isExpanded ? '1rem' : '0'
+                                }}
+                              >
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                                    <h4 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                                      {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                      {section.name}
+                                    </h4>
+
+                                    {/* Category Badge */}
+                                    <span style={{ 
+                                      padding: '0.15rem 0.5rem', 
+                                      borderRadius: '999px', 
+                                      fontSize: '0.75rem', 
+                                      fontWeight: 600, 
+                                      background: theme.bg, 
+                                      color: theme.color,
+                                      border: `1px solid ${theme.border}`
+                                    }}>
+                                      {section.category || 'General'}
+                                    </span>
+
+                                    {/* Unit & Target Badge */}
+                                    {hasTarget ? (
+                                      <span style={{ 
+                                        padding: '0.15rem 0.5rem', 
+                                        borderRadius: '999px', 
+                                        fontSize: '0.75rem', 
+                                        fontWeight: 600, 
+                                        background: isComplete ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)', 
+                                        color: isComplete ? '#16a34a' : '#2563eb'
+                                      }}>
+                                        🎯 Target: {Number(section.target_qty).toLocaleString()} {section.unit || 'units'}
+                                      </span>
+                                    ) : (
+                                      section.unit && (
+                                        <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                                          Unit: {section.unit}
+                                        </span>
+                                      )
+                                    )}
+
+                                    {isComplete && (
+                                      <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, background: '#dcfce7', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <CheckCircle size={12} /> Complete
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Physical Progress Bar */}
+                                  <div style={{ marginTop: '0.5rem', maxWidth: '650px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                                      <span style={{ color: 'var(--text-muted)' }}>
+                                        Progress: <strong style={{ color: 'var(--text)' }}>{Number(section.completed_quantity || 0).toLocaleString()}</strong> / {hasTarget ? `${Number(section.target_qty).toLocaleString()} ${section.unit || 'units'}` : '—'}
+                                      </span>
+                                      <span style={{ fontWeight: 700, color: isComplete ? '#16a34a' : (progressPct > 0 ? '#2563eb' : 'var(--text-muted)') }}>
+                                        {progressPct}%
+                                      </span>
+                                    </div>
+                                    <div style={{ width: '100%', height: '8px', background: 'var(--surface-2)', borderRadius: '999px', overflow: 'hidden' }}>
+                                      <div 
+                                        style={{ 
+                                          width: `${Math.min(100, progressPct)}%`, 
+                                          height: '100%', 
+                                          background: isComplete ? '#22c55e' : (progressPct > 0 ? 'linear-gradient(90deg, #3b82f6, #0284c7)' : 'transparent'), 
+                                          borderRadius: '999px',
+                                          transition: 'width 0.4s ease'
+                                        }} 
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                              {batch.has_issue && (
-                                <div style={{ marginTop: '0.75rem', background: '#fef2f2', color: '#ef4444', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>
-                                  <strong>⚠️ Issue Reported:</strong> {batch.issue_description}
+
+                                {/* Right Side Actions & Image Count */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <div style={{ background: 'var(--surface-2)', padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                    📷 {totalImages} / {section.expected_images}
+                                  </div>
+
+                                  {isSuperAdmin && (
+                                    <>
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openEditMilestoneModal(section);
+                                        }}
+                                        className="btn btn-ghost" 
+                                        style={{ padding: '0.35rem', color: 'var(--primary)' }}
+                                        title="Edit Milestone BOQ Settings"
+                                      >
+                                        <Edit3 size={18} />
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeleteMilestoneModal({ isOpen: true, sectionId: section.id });
+                                        }}
+                                        className="btn btn-ghost" 
+                                        style={{ padding: '0.35rem', color: '#ef4444' }}
+                                        title="Remove Milestone"
+                                      >
+                                        <MinusCircle size={18} />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Expanded Batches Section */}
+                              {isExpanded && (
+                                <div style={{ marginTop: '1rem' }}>
+                                  {section.upload_batches?.length > 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                      {section.upload_batches.map(batch => (
+                                        <div key={batch.id} style={{ background: 'var(--surface-2)', padding: '1.25rem', borderRadius: 'var(--radius)' }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                            <div>
+                                              <div style={{ fontWeight: 600, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                                <span>{new Date(batch.work_date).toLocaleDateString()} {batch.work_time && `at ${batch.work_time}`}</span>
+                                                {batch.quantity_done !== null && batch.quantity_done !== undefined && (
+                                                  <span style={{ 
+                                                    background: 'rgba(34, 197, 94, 0.15)', 
+                                                    color: '#15803d', 
+                                                    padding: '0.2rem 0.6rem', 
+                                                    borderRadius: '999px', 
+                                                    fontWeight: 700, 
+                                                    fontSize: '0.85rem' 
+                                                  }}>
+                                                    ⚡ Completed: {Number(batch.quantity_done).toLocaleString()} {section.unit || 'units'}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                                {batch.participants && <span>👷 {batch.participants}</span>}
+                                                {batch.uploaded_by && <span>👤 Uploaded By: {batch.uploaded_by}</span>}
+                                                {batch.weather && <span>🌤️ {batch.weather}</span>}
+                                                {batch.phase !== 'general' && <span>⏱️ Phase: {batch.phase}</span>}
+                                                {batch.table_number && <span>🏗️ Table: {batch.table_number}</span>}
+                                                {batch.sub_section && <span>📂 {batch.sub_section}</span>}
+                                              </div>
+                                              {batch.programme && (
+                                                <div style={{ marginTop: '0.5rem', fontSize: '0.95rem' }}>
+                                                  <strong>Programme:</strong> {batch.programme}
+                                                </div>
+                                              )}
+                                              {batch.has_issue && (
+                                                <div style={{ marginTop: '0.5rem', background: '#fef2f2', color: '#ef4444', padding: '0.5rem 0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+                                                  <strong>⚠️ Issue Reported:</strong> {batch.issue_description}
+                                                </div>
+                                              )}
+                                            </div>
+                                            {isSuperAdmin && (
+                                              <div style={{ display: 'flex', gap: '0.5rem', height: 'fit-content' }}>
+                                                <button onClick={(e) => { e.stopPropagation(); openEditModal(batch); }} className="btn btn-ghost" style={{ color: '#3b82f6', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}>
+                                                  Edit Batch
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, batchId: batch.id }); }} className="btn btn-ghost" style={{ color: '#ef4444', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}>
+                                                  Delete Batch
+                                                </button>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                                            {batch.images?.map(img => (
+                                              <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: img.is_flagged ? '3px solid #ef4444' : '1px solid var(--border)' }}>
+                                                <img 
+                                                  src={img.image_url} 
+                                                  alt="Upload" 
+                                                  style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} 
+                                                  onClick={(e) => { e.stopPropagation(); setSelectedImage({ image: img, images: batch.images, currentIndex: batch.images.findIndex(i => i.id === img.id) }); }}
+                                                />
+                                                {img.is_flagged && (
+                                                  <div 
+                                                    title={img.flag_reason || 'Flagged by Admin'}
+                                                    style={{ position: 'absolute', top: '6px', left: '6px', background: '#ef4444', color: 'white', padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: 'bold', cursor: 'help' }}
+                                                  >
+                                                    FLAGGED
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                                      No field reports uploaded for this milestone yet.
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
-                            {isSuperAdmin && (
-                              <div style={{ display: 'flex', gap: '0.5rem', height: 'fit-content' }}>
-                                <button onClick={(e) => { e.stopPropagation(); openEditModal(batch); }} className="btn btn-ghost" style={{ color: '#3b82f6', padding: '0.5rem' }}>
-                                  Edit Batch
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, batchId: batch.id }); }} className="btn btn-ghost" style={{ color: '#ef4444', padding: '0.5rem' }}>
-                                  Delete Batch
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
-                            {batch.images?.map(img => (
-                              <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: img.is_flagged ? '3px solid #ef4444' : '1px solid var(--border)' }}>
-                                <img 
-                                  src={img.image_url} 
-                                  alt="Upload" 
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} 
-                                  onClick={(e) => { e.stopPropagation(); setSelectedImage({ image: img, images: batch.images, currentIndex: batch.images.findIndex(i => i.id === img.id) }); }}
-                                />
-                                {img.is_flagged && (
-                                  <div 
-                                    title={img.flag_reason || 'Flagged by Admin'}
-                                    style={{ position: 'absolute', top: '8px', left: '8px', background: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'help' }}
-                                  >
-                                    FLAGGED
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                      No field reports uploaded for this milestone yet.
-                    </div>
-                  )}
-                </>
-              )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-      </>
-      )}
+          </>
+        );
+      })()}
 
       {activeTab === 'daily_updates' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -729,6 +1131,18 @@ const SolarProjectDetail = () => {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Table Number</label>
                   <input type="number" className="form-control" value={editFormData.table_number} onChange={e => setEditFormData({...editFormData, table_number: e.target.value})} style={{ width: '100%' }} />
                 </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>⚡ Quantity Done</label>
+                  <input 
+                    type="number" 
+                    step="any" 
+                    placeholder="e.g. 5" 
+                    className="form-control" 
+                    value={editFormData.quantity_done || ''} 
+                    onChange={e => setEditFormData({...editFormData, quantity_done: e.target.value})} 
+                    style={{ width: '100%' }} 
+                  />
+                </div>
               </div>
 
               <div className="form-group">
@@ -912,6 +1326,134 @@ const SolarProjectDetail = () => {
                 <button type="button" onClick={() => setFlagReasonModal({ isOpen: false, imageId: null, reason: '' })} className="btn btn-ghost">Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ background: '#ef4444', color: 'white' }} disabled={submitting}>
                   {submitting ? 'Flagging...' : 'Flag Image'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Milestone BOQ Settings Modal */}
+      {editMilestoneModal.isOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem' }}>
+          <div className="card" style={{ padding: '2rem', width: '100%', maxWidth: '550px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Edit Milestone BOQ Settings</h2>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Configure targets, category, and engineering units</span>
+              </div>
+              <button 
+                onClick={() => setEditMilestoneModal({ isOpen: false, section: null, name: '', category: '', unit: '', target_qty: '', expected_images: 10, notes: '' })} 
+                className="btn btn-ghost" 
+                style={{ padding: '0.5rem' }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateMilestone} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Milestone Name *</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={editMilestoneModal.name} 
+                  onChange={e => setEditMilestoneModal(prev => ({ ...prev, name: e.target.value }))} 
+                  required 
+                  style={{ width: '100%' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>BOQ Category *</label>
+                  <select 
+                    className="form-control" 
+                    value={editMilestoneModal.category} 
+                    onChange={e => setEditMilestoneModal(prev => ({ ...prev, category: e.target.value }))}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="PV Installation">☀️ PV Installation</option>
+                    <option value="Inverter Installation">⚡ Inverter Installation</option>
+                    <option value="Earthing & Lightning">🛡️ Earthing & Lightning</option>
+                    <option value="AC Electrical Works">🔌 AC Electrical Works</option>
+                    <option value="HT Installation">🏭 HT Installation</option>
+                    <option value="Mobilisation & Acceptance">📋 Mobilisation & Acceptance</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Unit of Measure</label>
+                  <select 
+                    className="form-control" 
+                    value={editMilestoneModal.unit} 
+                    onChange={e => setEditMilestoneModal(prev => ({ ...prev, unit: e.target.value }))}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="Tables">Tables</option>
+                    <option value="Inverters">Inverters</option>
+                    <option value="Meters (m)">Meters (m)</option>
+                    <option value="Pits">Pits</option>
+                    <option value="Poles">Poles</option>
+                    <option value="Stations">Stations</option>
+                    <option value="Rooms">Rooms</option>
+                    <option value="Nos">Nos</option>
+                    <option value="Sets">Sets</option>
+                    <option value="Site">Site</option>
+                    <option value="Lot">Lot</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Target Quantity</label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    placeholder="e.g. 384"
+                    className="form-control" 
+                    value={editMilestoneModal.target_qty} 
+                    onChange={e => setEditMilestoneModal(prev => ({ ...prev, target_qty: e.target.value }))} 
+                    style={{ width: '100%' }} 
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Expected Photos</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    className="form-control" 
+                    value={editMilestoneModal.expected_images} 
+                    onChange={e => setEditMilestoneModal(prev => ({ ...prev, expected_images: e.target.value }))} 
+                    style={{ width: '100%' }} 
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Notes / BOQ Specs (optional)</label>
+                <textarea 
+                  className="form-control" 
+                  placeholder="e.g. 360 normal soil + 24 weathered rock tables..."
+                  value={editMilestoneModal.notes} 
+                  onChange={e => setEditMilestoneModal(prev => ({ ...prev, notes: e.target.value }))} 
+                  style={{ width: '100%', minHeight: '70px', resize: 'vertical' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '0.5rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setEditMilestoneModal({ isOpen: false, section: null, name: '', category: '', unit: '', target_qty: '', expected_images: 10, notes: '' })} 
+                  className="btn btn-ghost"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? 'Saving...' : 'Save Settings'}
                 </button>
               </div>
             </form>

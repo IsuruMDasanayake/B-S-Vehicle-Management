@@ -107,6 +107,7 @@ export const ProbationDetail = () => {
   const [evaluation, setEvaluation] = useState(null);
 
   const isCeo = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
+  const isFinalized = !!(evaluation?.ceo_decision || evaluation?.status === 'completed');
 
   // HR Review modal state
   const [hrForm, setHrForm] = useState({
@@ -152,6 +153,10 @@ export const ProbationDetail = () => {
   const [submittingHrMarks, setSubmittingHrMarks] = useState(false);
 
   const handleOpenHrMarksModal = () => {
+    if (isFinalized) {
+      toast.error('This evaluation dossier has been finalized by CEO final decision and cannot be edited.');
+      return;
+    }
     const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
     if (hrObj && hrObj.ratings && Object.keys(hrObj.ratings).length > 0) {
       setHrRatings(hrObj.ratings);
@@ -193,6 +198,10 @@ export const ProbationDetail = () => {
 
   const handleSubmitHrMarks = async (e) => {
     e.preventDefault();
+    if (isFinalized) {
+      toast.error('This evaluation dossier has been finalized by CEO final decision and cannot be edited.');
+      return;
+    }
     const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
     if (!hrObj) {
       toast.error('HR evaluator form not found for this dossier.');
@@ -448,7 +457,7 @@ export const ProbationDetail = () => {
               <Users size={17} style={{ color: '#0284c7' }} />
               <span>Peer Evaluators (2–3 Employees)</span>
             </div>
-            {pendingPeersApproval && isHrAdmin && (
+            {pendingPeersApproval && isHrAdmin && !isFinalized && (
               <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
                 Pending HR Approval
               </span>
@@ -486,7 +495,7 @@ export const ProbationDetail = () => {
                 </div>
               ))}
 
-              {pendingPeersApproval && isHrAdmin && (
+              {pendingPeersApproval && isHrAdmin && !isFinalized && (
                 <button
                   onClick={handleApprovePeers}
                   disabled={approvingPeers}
@@ -535,7 +544,7 @@ export const ProbationDetail = () => {
                 )}
               </div>
 
-              {isHrAdmin && (
+              {isHrAdmin && !isFinalized && (
                 <form onSubmit={handleSchedulePresentation} style={{ fontSize: '0.82rem' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <div>
@@ -588,7 +597,7 @@ export const ProbationDetail = () => {
         {/* Table Title Banner */}
         <div style={{
           padding: '1rem 1.25rem', background: '#0284c7', color: '#fff',
-          fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.2px',
+          fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.2px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <span>Final Summary Probation Evaluation Form</span>
@@ -621,45 +630,7 @@ export const ProbationDetail = () => {
                 </td>
               </tr>
 
-              {/* 2. Line Manager */}
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>
-                  Line Manager ({evaluation.line_manager?.full_name || 'Reporting Manager'})
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {lmForm?.status === 'submitted' ? lmForm.form_score : '⏳ Pending'}
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>30%</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                  {evaluation.line_manager_score !== null ? evaluation.line_manager_score : '—'}
-                </td>
-              </tr>
-
-              {/* 3. General Manager / Project Director */}
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>General Manager / Project Director</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {gmForm?.status === 'submitted' ? gmForm.form_score : '⏳ Pending'}
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                  {evaluation.gm_score !== null ? evaluation.gm_score : '—'}
-                </td>
-              </tr>
-
-              {/* 4. CEO */}
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>CEO</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {ceoFormObj?.status === 'submitted' ? ceoFormObj.form_score : '⏳ Pending'}
-                </td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
-                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                  {evaluation.ceo_score !== null ? evaluation.ceo_score : '—'}
-                </td>
-              </tr>
-
-              {/* 5. Individual Peer Evaluations */}
+              {/* 2. Individual Peer Evaluations */}
               {peerForms.map((pf, idx) => (
                 <tr key={pf.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
                   <td style={{ padding: '0.55rem 1.25rem 0.55rem 2.25rem', fontSize: '0.82rem', color: '#475569' }}>
@@ -681,6 +652,44 @@ export const ProbationDetail = () => {
                 </tr>
               ))}
 
+              {/* 3. Line Manager */}
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>
+                  Line Manager ({evaluation.line_manager?.full_name || 'Reporting Manager'})
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
+                  {lmForm?.status === 'submitted' ? lmForm.form_score : '⏳ Pending'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>30%</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                  {evaluation.line_manager_score !== null ? evaluation.line_manager_score : '—'}
+                </td>
+              </tr>
+
+              {/* 4. General Manager / Project Director */}
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>General Manager / Project Director</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
+                  {gmForm?.status === 'submitted' ? gmForm.form_score : '⏳ Pending'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                  {evaluation.gm_score !== null ? evaluation.gm_score : '—'}
+                </td>
+              </tr>
+
+              {/* 5. CEO */}
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>CEO</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
+                  {ceoFormObj?.status === 'submitted' ? ceoFormObj.form_score : '⏳ Pending'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                  {evaluation.ceo_score !== null ? evaluation.ceo_score : '—'}
+                </td>
+              </tr>
+
               {/* 6. HR */}
               <tr style={{ borderBottom: '2px solid #cbd5e1' }}>
                 <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>HR</td>
@@ -688,7 +697,7 @@ export const ProbationDetail = () => {
                   {hrFormObj?.status === 'submitted' ? (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{ fontWeight: 800 }}>{hrFormObj.form_score}</span>
-                      {isHrAdmin && (
+                      {isHrAdmin && !isFinalized && (
                         <button
                           type="button"
                           onClick={handleOpenHrMarksModal}
@@ -704,7 +713,7 @@ export const ProbationDetail = () => {
                   ) : (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                       <span style={{ color: '#d97706', fontWeight: 600 }}>⏳ Pending</span>
-                      {isHrAdmin && (
+                      {isHrAdmin && !isFinalized && (
                         <button
                           type="button"
                           onClick={handleOpenHrMarksModal}
@@ -837,7 +846,7 @@ export const ProbationDetail = () => {
           )}
 
           {/* Notice if HR 10% Evaluation Marks are still pending */}
-          {isHrAdmin && hrFormObj?.status !== 'submitted' && (
+          {isHrAdmin && hrFormObj?.status !== 'submitted' && !isFinalized && (
             <div style={{
               padding: '0.85rem 1rem', borderRadius: '8px', background: '#fffbeb', border: '1px solid #fde68a',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem',
@@ -861,7 +870,7 @@ export const ProbationDetail = () => {
           )}
 
           {/* HR Review Form (Active if HR hasn't finalized yet) */}
-          {isHrAdmin && !evaluation.hr_recommendation && (
+          {isHrAdmin && !evaluation.hr_recommendation && !isFinalized && (
             <form onSubmit={handleSubmitHrReview} style={{
               background: '#f0f9ff', padding: '1.25rem', borderRadius: '10px',
               border: '1px solid #bae6fd', marginBottom: '1.5rem',

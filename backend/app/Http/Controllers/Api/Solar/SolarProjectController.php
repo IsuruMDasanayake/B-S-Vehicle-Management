@@ -52,6 +52,9 @@ class SolarProjectController extends Controller
                 SolarSection::create([
                     'solar_project_id'   => $project->id,
                     'name'               => $template->name,
+                    'category'           => $template->category,
+                    'unit'               => $template->unit,
+                    'target_qty'         => $template->target_qty,
                     'sort_order'         => $template->sort_order,
                     'has_before_after'   => $template->has_before_after,
                     'has_table_tracking' => $template->has_table_tracking,
@@ -107,6 +110,9 @@ class SolarProjectController extends Controller
         $validated = $request->validate([
             'section_template_id' => 'required|exists:section_templates,id',
             'insert_after_order'  => 'required|integer|min:0',
+            'target_qty'          => 'nullable|numeric|min:0',
+            'unit'                => 'nullable|string|max:50',
+            'category'            => 'nullable|string|max:100',
         ]);
 
         $template = SectionTemplate::findOrFail($validated['section_template_id']);
@@ -122,6 +128,9 @@ class SolarProjectController extends Controller
             $newSection = SolarSection::create([
                 'solar_project_id'   => $project->id,
                 'name'               => $template->name,
+                'category'           => $request->category ?? $template->category,
+                'unit'               => $request->unit ?? $template->unit,
+                'target_qty'         => $request->target_qty ?? $template->target_qty,
                 'sort_order'         => $validated['insert_after_order'] + 1,
                 'has_before_after'   => $template->has_before_after,
                 'has_table_tracking' => $template->has_table_tracking,
@@ -143,6 +152,30 @@ class SolarProjectController extends Controller
             DB::rollBack();
             return response()->json(['message' => 'Failed to add milestone', 'error' => $e->getMessage()], 500);
         }
+    }
+
+    public function updateMilestone(Request $request, SolarSection $solarSection)
+    {
+        $user = auth()->user();
+        if (!$user || ($user->role !== 'super_admin' && !$user->hasRole('super_admin'))) {
+            return response()->json(['message' => 'Unauthorized. Super Admin access required.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name'            => 'sometimes|required|string|max:255',
+            'category'        => 'nullable|string|max:100',
+            'unit'            => 'nullable|string|max:50',
+            'target_qty'      => 'nullable|numeric|min:0',
+            'expected_images' => 'nullable|integer|min:1',
+            'notes'           => 'nullable|string',
+        ]);
+
+        $solarSection->update($validated);
+
+        return response()->json([
+            'message' => 'Milestone updated successfully',
+            'data'    => $solarSection->fresh(),
+        ]);
     }
 
     public function deleteMilestone(SolarSection $solarSection)

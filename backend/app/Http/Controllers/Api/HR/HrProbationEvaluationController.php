@@ -674,6 +674,9 @@ class HrProbationEvaluationController extends Controller
         ]);
 
         $evaluation = HrProbationEvaluation::with('employee')->findOrFail($id);
+        if ($evaluation->ceo_decision || $evaluation->status === 'completed') {
+            return response()->json(['message' => 'This evaluation dossier is already finalized by CEO final decision and cannot be modified.'], 422);
+        }
         $peerIds = array_unique($request->peer_employee_ids);
 
         DB::beginTransaction();
@@ -744,6 +747,9 @@ class HrProbationEvaluationController extends Controller
         ]);
 
         $evaluation = HrProbationEvaluation::with('employee.user')->findOrFail($id);
+        if ($evaluation->ceo_decision || $evaluation->status === 'completed') {
+            return response()->json(['message' => 'This evaluation dossier is already finalized by CEO final decision.'], 422);
+        }
 
         $presReq = in_array($request->status, ['scheduled', 'declined']) ? true : false;
         $evaluation->update([
@@ -860,7 +866,11 @@ class HrProbationEvaluationController extends Controller
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        if ($form->status === 'submitted') {
+        if ($form->evaluation && ($form->evaluation->ceo_decision || $form->evaluation->status === 'completed')) {
+            return response()->json(['message' => 'This evaluation dossier is already finalized by CEO final decision and cannot be modified.'], 422);
+        }
+
+        if ($form->status === 'submitted' && $form->evaluator_role !== 'hr') {
             return response()->json(['message' => 'This form has already been submitted and locked.'], 422);
         }
 
@@ -974,6 +984,9 @@ class HrProbationEvaluationController extends Controller
         ]);
 
         $evaluation = HrProbationEvaluation::with('employee')->findOrFail($id);
+        if ($evaluation->ceo_decision || $evaluation->status === 'completed') {
+            return response()->json(['message' => 'This evaluation dossier is already finalized by CEO final decision and cannot be modified.'], 422);
+        }
 
         $evaluation->update([
             'hr_recommendation'       => $request->hr_recommendation,
