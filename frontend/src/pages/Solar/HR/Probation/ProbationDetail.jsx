@@ -272,15 +272,21 @@ export const ProbationDetail = () => {
 
   useEffect(() => {
     if (isHrAdmin) {
-      api.get('/hr/employees', { params: { per_page: 500, status: 'active' } })
-        .then(res => setEmployeesList(res.data?.data || res.data || []))
+      api.get('/hr/employees')
+        .then(res => {
+          const raw = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+          // Include all active and probation employees; exclude only resigned and terminated
+          const eligible = raw.filter(e => e.status !== 'resigned' && e.status !== 'terminated');
+          setEmployeesList(eligible);
+        })
         .catch(() => {});
     }
   }, [isHrAdmin]);
 
   const handleStartEditPeers = () => {
     const peerForms = (evaluation?.forms || []).filter(f => f.evaluator_role === 'peer');
-    const existing = peerForms.map(f => String(f.evaluator_employee_id || ''));
+    const sorted = [...peerForms].sort((a, b) => (a.peer_index || 0) - (b.peer_index || 0));
+    const existing = sorted.map(f => String(f.evaluator_employee_id || f.evaluator_employee?.id || ''));
     while (existing.length < 3) {
       existing.push('');
     }
@@ -546,64 +552,83 @@ export const ProbationDetail = () => {
             Nominated by the probationary employee during self-evaluation, subject to HR verification and adjustments.
           </p>
 
-          {isEditingPeers ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ padding: '0.5rem 0.75rem', background: '#f0f9ff', borderRadius: '6px', fontSize: '0.76rem', color: '#0369a1', border: '1px solid #bae6fd' }}>
-                ℹ️ Select 2 to 3 peer evaluators. The probationary employee and reporting line manager are excluded.
-              </div>
+          {isEditingPeers ? (() => {
+            // Build comprehensive colleague list that always includes current nominated peers
+            const combinedList = [...employeesList];
+            (evaluation?.forms || []).forEach(f => {
+              if (f.evaluator_role === 'peer' && f.evaluator_employee_id) {
+                if (!combinedList.some(e => String(e.id) === String(f.evaluator_employee_id))) {
+                  combinedList.push({
+                    id: f.evaluator_employee_id,
+                    full_name: f.evaluator_name || 'Staff Member',
+                    employee_id: f.evaluator_employee?.employee_id || '',
+                    department: f.evaluator_employee?.department,
+                    designation: f.evaluator_employee?.designation,
+                  });
+                }
+              }
+            });
+            const selectableColleagues = combinedList
+              .filter(emp => String(emp.id) !== String(evaluation?.employee_id) && String(emp.id) !== String(evaluation?.line_manager_id))
+              .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
 
-              {[0, 1, 2].map(idx => (
-                <div key={idx} style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, marginBottom: '0.3rem', color: '#1e293b' }}>
-                    Peer {idx + 1} {idx < 2 ? <span style={{ color: '#dc2626' }}>* (Required)</span> : <span style={{ color: 'var(--text-muted)' }}>(Optional 3rd)</span>}
-                  </label>
-                  <select
-                    value={editPeerIds[idx] || ''}
-                    onChange={e => {
-                      const updated = [...editPeerIds];
-                      updated[idx] = e.target.value;
-                      setEditPeerIds(updated);
-                    }}
-                    style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem', background: '#fff' }}
-                  >
-                    <option value="">-- Select Colleague --</option>
-                    {employeesList
-                      .filter(emp => emp.id !== evaluation.employee_id && emp.id !== evaluation.line_manager_id)
-                      .map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.full_name} ({emp.employee_id}) · {emp.designation?.title || emp.department?.name || 'Staff'}
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ padding: '0.5rem 0.75rem', background: '#f0f9ff', borderRadius: '6px', fontSize: '0.76rem', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                  ℹ️ Select 2 to 3 peer evaluators. The probationary employee and reporting line manager are excluded.
+                </div>
+
+                {[0, 1, 2].map(idx => (
+                  <div key={idx} style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, marginBottom: '0.3rem', color: '#1e293b' }}>
+                      Peer {idx + 1} {idx < 2 ? <span style={{ color: '#dc2626' }}>* (Required)</span> : <span style={{ color: 'var(--text-muted)' }}>(Optional 3rd)</span>}
+                    </label>
+                    <select
+                      value={String(editPeerIds[idx] || '')}
+                      onChange={e => {
+                        const updated = [...editPeerIds];
+                        updated[idx] = e.target.value;
+                        setEditPeerIds(updated);
+                      }}
+                      style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem', background: '#fff' }}
+                    >
+                      <option value="">-- Select Colleague --</option>
+                      {selectableColleagues.map(emp => (
+                        <option key={emp.id} value={String(emp.id)}>
+                          {emp.full_name} {emp.employee_id ? `(${emp.employee_id})` : ''} · {emp.designation?.title || emp.department?.name || 'Staff'}{emp.status === 'probation' ? ' · [Probation]' : ''}
                         </option>
                       ))}
-                  </select>
-                </div>
-              ))}
+                    </select>
+                  </div>
+                ))}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingPeers(false)}
-                  className="btn btn-ghost"
-                  style={{ padding: '0.45rem 1rem', fontSize: '0.8rem' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSavePeers}
-                  disabled={savingPeers}
-                  className="btn btn-primary"
-                  style={{
-                    background: '#0284c7', borderColor: '#0284c7',
-                    padding: '0.45rem 1.25rem', fontSize: '0.8rem', fontWeight: 600,
-                    display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  }}
-                >
-                  {savingPeers ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={14} />}
-                  <span>{savingPeers ? 'Saving...' : 'Save & Approve Peers'}</span>
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingPeers(false)}
+                    className="btn btn-ghost"
+                    style={{ padding: '0.45rem 1rem', fontSize: '0.8rem' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSavePeers}
+                    disabled={savingPeers}
+                    className="btn btn-primary"
+                    style={{
+                      background: '#0284c7', borderColor: '#0284c7',
+                      padding: '0.45rem 1.25rem', fontSize: '0.8rem', fontWeight: 600,
+                      display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    }}
+                  >
+                    {savingPeers ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={14} />}
+                    <span>{savingPeers ? 'Saving...' : 'Save & Approve Peers'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : peerForms.length === 0 ? (
+            );
+          })() : peerForms.length === 0 ? (
             <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               <p style={{ margin: '0 0 0.5rem' }}>Awaiting employee's self-evaluation to nominate 2–3 peers.</p>
               {isHrAdmin && !isFinalized && (
