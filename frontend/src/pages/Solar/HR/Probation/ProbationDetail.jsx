@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   UserCheck, ArrowLeft, Printer, ShieldCheck, Clock, CheckCircle2,
   AlertCircle, AlertTriangle, Users, Award, Calendar, ExternalLink,
-  Loader2, ThumbsUp, ThumbsDown, HelpCircle, FileText, X
+  Loader2, ThumbsUp, ThumbsDown, HelpCircle, FileText, X, Edit3
 } from 'lucide-react';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
@@ -133,8 +133,12 @@ export const ProbationDetail = () => {
   });
   const [schedulingPres, setSchedulingPres] = useState(false);
 
-  // Peer Approval state
+  // Peer Approval / Edit state
   const [approvingPeers, setApprovingPeers] = useState(false);
+  const [isEditingPeers, setIsEditingPeers] = useState(false);
+  const [editPeerIds, setEditPeerIds] = useState(['', '', '']);
+  const [savingPeers, setSavingPeers] = useState(false);
+  const [employeesList, setEmployeesList] = useState([]);
 
   // HR Evaluation Marks Form Modal state
   const [hrMarksModalOpen, setHrMarksModalOpen] = useState(false);
@@ -265,6 +269,51 @@ export const ProbationDetail = () => {
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  useEffect(() => {
+    if (isHrAdmin) {
+      api.get('/hr/employees', { params: { per_page: 500, status: 'active' } })
+        .then(res => setEmployeesList(res.data?.data || res.data || []))
+        .catch(() => {});
+    }
+  }, [isHrAdmin]);
+
+  const handleStartEditPeers = () => {
+    const peerForms = (evaluation?.forms || []).filter(f => f.evaluator_role === 'peer');
+    const existing = peerForms.map(f => String(f.evaluator_employee_id || ''));
+    while (existing.length < 3) {
+      existing.push('');
+    }
+    setEditPeerIds([existing[0] || '', existing[1] || '', existing[2] || '']);
+    setIsEditingPeers(true);
+  };
+
+  const handleSavePeers = async () => {
+    const valid = editPeerIds.filter(Boolean);
+    if (valid.length < 2) {
+      toast.error('Please select at least 2 peer evaluators.');
+      return;
+    }
+    const unique = [...new Set(valid)];
+    if (unique.length !== valid.length) {
+      toast.error('Please select distinct colleagues for each peer nomination.');
+      return;
+    }
+
+    setSavingPeers(true);
+    try {
+      await api.patch(`/hr/probation/evaluations/${id}/peers`, {
+        peer_employee_ids: unique.map(Number),
+      });
+      toast.success('Peer evaluators updated and approved successfully!');
+      setIsEditingPeers(false);
+      fetchDetail();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update peer evaluators.');
+    } finally {
+      setSavingPeers(false);
+    }
+  };
 
   const handleApprovePeers = async () => {
     if (!evaluation) return;
@@ -452,25 +501,121 @@ export const ProbationDetail = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
         {/* Peer Evaluators Approval Block */}
         <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700, fontSize: '0.92rem' }}>
               <Users size={17} style={{ color: '#0284c7' }} />
               <span>Peer Evaluators (2–3 Employees)</span>
             </div>
-            {pendingPeersApproval && isHrAdmin && !isFinalized && (
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
-                Pending HR Approval
-              </span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {pendingPeersApproval && isHrAdmin && !isFinalized && !isEditingPeers && (
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
+                  Pending HR Approval
+                </span>
+              )}
+              {isHrAdmin && !isFinalized && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isEditingPeers) {
+                      setIsEditingPeers(false);
+                    } else {
+                      handleStartEditPeers();
+                    }
+                  }}
+                  className="btn btn-ghost"
+                  style={{
+                    padding: '0.25rem 0.65rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: isEditingPeers ? '#64748b' : '#0284c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    border: '1px solid #e0f2fe',
+                    background: isEditingPeers ? '#f1f5f9' : '#f0f9ff'
+                  }}
+                >
+                  <Edit3 size={13} />
+                  <span>{isEditingPeers ? 'Cancel' : 'Edit Peers'}</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.85rem' }}>
-            Nominated by the probationary employee during self-evaluation, subject to HR verification.
+            Nominated by the probationary employee during self-evaluation, subject to HR verification and adjustments.
           </p>
 
-          {peerForms.length === 0 ? (
+          {isEditingPeers ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ padding: '0.5rem 0.75rem', background: '#f0f9ff', borderRadius: '6px', fontSize: '0.76rem', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                ℹ️ Select 2 to 3 peer evaluators. The probationary employee and reporting line manager are excluded.
+              </div>
+
+              {[0, 1, 2].map(idx => (
+                <div key={idx} style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, marginBottom: '0.3rem', color: '#1e293b' }}>
+                    Peer {idx + 1} {idx < 2 ? <span style={{ color: '#dc2626' }}>* (Required)</span> : <span style={{ color: 'var(--text-muted)' }}>(Optional 3rd)</span>}
+                  </label>
+                  <select
+                    value={editPeerIds[idx] || ''}
+                    onChange={e => {
+                      const updated = [...editPeerIds];
+                      updated[idx] = e.target.value;
+                      setEditPeerIds(updated);
+                    }}
+                    style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem', background: '#fff' }}
+                  >
+                    <option value="">-- Select Colleague --</option>
+                    {employeesList
+                      .filter(emp => emp.id !== evaluation.employee_id && emp.id !== evaluation.line_manager_id)
+                      .map(emp => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.full_name} ({emp.employee_id}) · {emp.designation?.title || emp.department?.name || 'Staff'}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              ))}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPeers(false)}
+                  className="btn btn-ghost"
+                  style={{ padding: '0.45rem 1rem', fontSize: '0.8rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePeers}
+                  disabled={savingPeers}
+                  className="btn btn-primary"
+                  style={{
+                    background: '#0284c7', borderColor: '#0284c7',
+                    padding: '0.45rem 1.25rem', fontSize: '0.8rem', fontWeight: 600,
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  }}
+                >
+                  {savingPeers ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={14} />}
+                  <span>{savingPeers ? 'Saving...' : 'Save & Approve Peers'}</span>
+                </button>
+              </div>
+            </div>
+          ) : peerForms.length === 0 ? (
             <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Awaiting employee's self-evaluation to nominate 2–3 peers.
+              <p style={{ margin: '0 0 0.5rem' }}>Awaiting employee's self-evaluation to nominate 2–3 peers.</p>
+              {isHrAdmin && !isFinalized && (
+                <button
+                  type="button"
+                  onClick={handleStartEditPeers}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.85rem', color: '#0284c7', borderColor: '#0284c7' }}
+                >
+                  + Nominate / Assign Peers Manually
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -495,18 +640,35 @@ export const ProbationDetail = () => {
                 </div>
               ))}
 
-              {pendingPeersApproval && isHrAdmin && !isFinalized && (
-                <button
-                  onClick={handleApprovePeers}
-                  disabled={approvingPeers}
-                  className="btn btn-primary"
-                  style={{
-                    marginTop: '0.5rem', background: '#0284c7', borderColor: '#0284c7',
-                    padding: '0.5rem 1rem', fontSize: '0.8rem', fontWeight: 600,
-                  }}
-                >
-                  {approvingPeers ? 'Approving...' : 'Approve Nominated Peers'}
-                </button>
+              {isHrAdmin && !isFinalized && (
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {pendingPeersApproval && (
+                    <button
+                      type="button"
+                      onClick={handleApprovePeers}
+                      disabled={approvingPeers}
+                      className="btn btn-primary"
+                      style={{
+                        flex: 1, background: '#0284c7', borderColor: '#0284c7',
+                        padding: '0.5rem 1rem', fontSize: '0.8rem', fontWeight: 600,
+                      }}
+                    >
+                      {approvingPeers ? 'Approving...' : 'Approve Nominated Peers'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleStartEditPeers}
+                    className="btn btn-outline"
+                    style={{
+                      flex: pendingPeersApproval ? undefined : 1,
+                      padding: '0.5rem 1rem', fontSize: '0.8rem', fontWeight: 600,
+                      color: '#0284c7', borderColor: '#0284c7'
+                    }}
+                  >
+                    Edit / Change Peers
+                  </button>
+                </div>
               )}
             </div>
           )}
