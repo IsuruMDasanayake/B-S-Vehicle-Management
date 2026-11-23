@@ -679,6 +679,13 @@ class HrProbationEvaluationController extends Controller
         }
         $peerIds = array_unique($request->peer_employee_ids);
 
+        if (in_array($evaluation->employee_id, $peerIds)) {
+            return response()->json(['message' => 'The probationary employee cannot be their own peer evaluator.'], 422);
+        }
+        if ($evaluation->line_manager_id && in_array($evaluation->line_manager_id, $peerIds)) {
+            return response()->json(['message' => 'The reporting Line Manager cannot be selected as a peer evaluator.'], 422);
+        }
+
         DB::beginTransaction();
         try {
             // Delete existing peer forms that are not yet submitted
