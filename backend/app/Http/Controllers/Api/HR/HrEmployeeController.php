@@ -177,14 +177,14 @@ class HrEmployeeController extends Controller
         }
 
         $employee = HrEmployee::with(['department', 'designation', 'manager.designation'])
-            ->withCount(['subordinates' => fn($q) => $q->where('status', 'active')])
+            ->withCount(['subordinates' => fn($q) => $q->whereNotIn('status', ['resigned', 'terminated'])])
             ->where('user_id', $user->id)
             ->first();
 
         // 1. If not linked by user_id, search by company_email or personal_email and link
         if (!$employee && !empty($user->email)) {
             $employee = HrEmployee::with(['department', 'designation', 'manager.designation'])
-                ->withCount(['subordinates' => fn($q) => $q->where('status', 'active')])
+                ->withCount(['subordinates' => fn($q) => $q->whereNotIn('status', ['resigned', 'terminated'])])
                 ->where(function($q) use ($user) {
                     $q->where('company_email', $user->email)
                       ->orWhere('personal_email', $user->email);

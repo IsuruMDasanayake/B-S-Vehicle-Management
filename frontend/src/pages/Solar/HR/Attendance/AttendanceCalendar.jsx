@@ -42,9 +42,10 @@ const AttendanceCalendar = () => {
     try {
       const params = { department_id: deptFilter || undefined };
 
-      // Fetch all employees
+      // Fetch all employees (exclude resigned/terminated)
       const empRes = await api.get('/hr/employees', { params });
-      setEmployees(empRes.data);
+      const currentEmployees = (empRes.data || []).filter(e => e.status !== 'resigned' && e.status !== 'terminated');
+      setEmployees(currentEmployees);
 
       // Fetch attendance map for the whole month in one request!
       const mapRes = await api.get('/hr/attendance/calendar', { params: { month: monthStr, ...params } });

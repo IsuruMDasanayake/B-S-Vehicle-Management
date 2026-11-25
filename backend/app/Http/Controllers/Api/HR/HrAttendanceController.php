@@ -611,7 +611,7 @@ class HrAttendanceController extends Controller
                     ->whereDate('start_date', '<=', $date)
                     ->whereDate('end_date', '>=', $date),
             ])
-            ->where('status', 'active');
+            ->whereNotIn('status', ['resigned', 'terminated']);
 
         if ($deptId) $query->where('department_id', $deptId);
 
@@ -742,7 +742,7 @@ class HrAttendanceController extends Controller
                 ->where('leave_type', '!=', 'short')
                 ->whereDate('start_date', '<=', $monthEnd->toDateString())
                 ->whereDate('end_date', '>=', $monthStart->toDateString()),
-        ])->where('status', 'active');
+        ])->whereNotIn('status', ['resigned', 'terminated']);
 
         if ($deptId) $query->where('department_id', $deptId);
 
@@ -796,7 +796,7 @@ class HrAttendanceController extends Controller
                 ->where('leave_type', '!=', 'short')
                 ->whereDate('start_date', '<=', $monthEnd->toDateString())
                 ->whereDate('end_date', '>=', $monthStart->toDateString()),
-        ])->where('status', 'active');
+        ])->whereNotIn('status', ['resigned', 'terminated']);
 
         if ($deptId) $query->where('department_id', $deptId);
 
