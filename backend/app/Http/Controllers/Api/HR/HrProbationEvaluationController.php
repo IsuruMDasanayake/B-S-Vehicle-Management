@@ -167,9 +167,18 @@ class HrProbationEvaluationController extends Controller
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
+        // Auto-sync active evaluations where employee reporting manager might have changed
+        $activeEvalsToSync = HrProbationEvaluation::whereNull('ceo_decision')
+            ->where('status', '!=', 'completed')
+            ->get();
+        foreach ($activeEvalsToSync as $actEval) {
+            $actEval->syncLineManagerWithEmployee();
+        }
+
         $query = HrProbationEvaluation::with([
             'employee.department',
             'employee.designation',
+            'employee.manager',
             'lineManager',
             'gmUser',
             'ceoUser',
@@ -395,6 +404,7 @@ class HrProbationEvaluationController extends Controller
         $evaluation = HrProbationEvaluation::with([
             'employee.department',
             'employee.designation',
+            'employee.manager',
             'lineManager',
             'gmUser',
             'ceoUser',
@@ -404,6 +414,17 @@ class HrProbationEvaluationController extends Controller
             'forms.evaluatorEmployee',
             'forms.evaluatorUser',
         ])->findOrFail($id);
+
+        if ($evaluation->syncLineManagerWithEmployee()) {
+            $evaluation->load([
+                'employee.department',
+                'employee.designation',
+                'employee.manager',
+                'lineManager',
+                'forms.evaluatorEmployee',
+                'forms.evaluatorUser',
+            ]);
+        }
 
         $isHrUser  = $this->isHr($user);
         $isCeoUser = $this->isCeo($user) || $evaluation->ceo_user_id === $user->id;
@@ -457,17 +478,43 @@ class HrProbationEvaluationController extends Controller
         $user  = $request->user();
         $meEmp = $this->resolveEmployee($request);
 
+        // Auto-sync active subordinate evaluations where user/meEmp is the manager
+        if ($meEmp) {
+            $subordinateIds = HrEmployee::where('manager_id', $meEmp->id)->pluck('id');
+            if ($subordinateIds->isNotEmpty()) {
+                $subEvals = HrProbationEvaluation::whereIn('employee_id', $subordinateIds)
+                    ->whereNull('ceo_decision')
+                    ->where('status', '!=', 'completed')
+                    ->get();
+                foreach ($subEvals as $subEval) {
+                    $subEval->syncLineManagerWithEmployee();
+                }
+            }
+        }
+
         // 1. Where I am the probationer
         $myProbationEvaluation = null;
         if ($meEmp) {
             $myProbationEvaluation = HrProbationEvaluation::with([
                 'employee.department',
                 'employee.designation',
+                'employee.manager',
+                'lineManager',
                 'forms',
             ])
             ->where('employee_id', $meEmp->id)
             ->latest('id')
             ->first();
+
+            if ($myProbationEvaluation && $myProbationEvaluation->syncLineManagerWithEmployee()) {
+                $myProbationEvaluation->load([
+                    'employee.department',
+                    'employee.designation',
+                    'employee.manager',
+                    'lineManager',
+                    'forms',
+                ]);
+            }
         }
 
         // 2. Forms assigned to me to evaluate others (exclude self-evaluation, which has its own top section)

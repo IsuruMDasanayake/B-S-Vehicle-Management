@@ -473,7 +473,7 @@ export const ProbationDetail = () => {
                 </span>
               </div>
               <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {emp.designation?.name || 'Designation'} · {emp.department?.name || 'Department'} · Reporting to: <strong>{evaluation.line_manager?.full_name || 'Line Manager'}</strong>
+                {emp.designation?.name || 'Designation'} · {emp.department?.name || 'Department'} · Reporting to: <strong>{evaluation.line_manager?.full_name || emp.manager?.full_name || 'Line Manager'}</strong>
               </p>
             </div>
           </div>
@@ -842,7 +842,7 @@ export const ProbationDetail = () => {
               {/* 3. Line Manager */}
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                 <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>
-                  Line Manager ({evaluation.line_manager?.full_name || 'Reporting Manager'})
+                  Line Manager ({evaluation.line_manager?.full_name || emp.manager?.full_name || 'Reporting Manager'})
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
                   {lmForm?.status === 'submitted' ? lmForm.form_score : '⏳ Pending'}

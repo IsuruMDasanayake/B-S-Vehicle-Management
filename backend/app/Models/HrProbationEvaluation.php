@@ -221,4 +221,110 @@ class HrProbationEvaluation extends Model
 
         $this->save();
     }
+
+    /**
+     * Synchronize evaluation line_manager_id and its evaluator form with the employee's current manager.
+     * Only applies to active evaluations (not finalized by CEO decision or marked completed).
+     *
+     * @return bool True if an update took place, false otherwise.
+     */
+    public function syncLineManagerWithEmployee(): bool
+    {
+        if ($this->ceo_decision || $this->status === 'completed') {
+            return false;
+        }
+
+        $employee = $this->employee ?: HrEmployee::find($this->employee_id);
+        if (!$employee) {
+            return false;
+        }
+
+        $currentEmpManagerId = $employee->manager_id ? (int) $employee->manager_id : null;
+        $currentEvalManagerId = $this->line_manager_id ? (int) $this->line_manager_id : null;
+
+        $lmForm = $this->forms()->where('evaluator_role', 'line_manager')->first();
+
+        $formMatches = false;
+        if ($lmForm) {
+            $formEmpId = $lmForm->evaluator_employee_id ? (int) $lmForm->evaluator_employee_id : null;
+            if ($currentEmpManagerId === $formEmpId) {
+                $formMatches = true;
+            }
+        } else if ($currentEmpManagerId === null) {
+            $formMatches = true;
+        }
+
+        // If line_manager_id and form are already in sync with employee->manager_id, nothing to do
+        if ($currentEmpManagerId === $currentEvalManagerId && $formMatches) {
+            return false;
+        }
+
+        $newManager = $currentEmpManagerId ? HrEmployee::with('user')->find($currentEmpManagerId) : null;
+
+        // Auto-link newManager's user_id if missing
+        $newManagerUserId = $newManager?->user_id;
+        if ($newManager && !$newManagerUserId && !empty($newManager->company_email)) {
+            $matchedUser = User::where('email', $newManager->company_email)
+                ->orWhere('email', $newManager->personal_email)
+                ->first();
+            if ($matchedUser) {
+                $newManagerUserId = $matchedUser->id;
+                $newManager->update(['user_id' => $matchedUser->id]);
+            }
+        }
+
+        $this->update([
+            'line_manager_id' => $newManager?->id,
+        ]);
+
+        if ($newManager) {
+            if ($lmForm) {
+                if ($lmForm->status !== 'submitted') {
+                    $lmForm->update([
+                        'evaluator_employee_id' => $newManager->id,
+                        'evaluator_user_id'     => $newManagerUserId,
+                        'evaluator_name'        => $newManager->full_name,
+                        'status'                => 'pending',
+                    ]);
+                } else {
+                    // Previously submitted by old manager: reset for new manager
+                    $lmForm->update([
+                        'evaluator_employee_id' => $newManager->id,
+                        'evaluator_user_id'     => $newManagerUserId,
+                        'evaluator_name'        => $newManager->full_name,
+                        'status'                => 'pending',
+                        'form_score'            => null,
+                        'ratings'               => null,
+                        'general_comments'      => null,
+                        'recommendation'        => null,
+                        'submitted_at'          => null,
+                    ]);
+                    $this->recalculateScores();
+                }
+            } else {
+                HrProbationEvaluatorForm::create([
+                    'probation_evaluation_id' => $this->id,
+                    'evaluator_role'          => 'line_manager',
+                    'evaluator_employee_id'   => $newManager->id,
+                    'evaluator_user_id'       => $newManagerUserId,
+                    'evaluator_name'          => $newManager->full_name,
+                    'status'                  => 'pending',
+                ]);
+            }
+
+            // Remove peer form if new line manager was previously nominated as peer
+            $this->forms()
+                ->where('evaluator_role', 'peer')
+                ->where('evaluator_employee_id', $newManager->id)
+                ->where('status', '!=', 'submitted')
+                ->delete();
+        } else {
+            // Manager removed from employee profile
+            if ($lmForm && $lmForm->status !== 'submitted') {
+                $lmForm->delete();
+            }
+        }
+
+        return true;
+    }
 }
