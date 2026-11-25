@@ -27,6 +27,22 @@ class HrEmployee extends Model
 
     protected $appends = ['photo_url'];
 
+    protected static function booted()
+    {
+        static::saved(function (HrEmployee $employee) {
+            if ($employee->wasChanged('manager_id')) {
+                $activeEvaluations = HrProbationEvaluation::where('employee_id', $employee->id)
+                    ->whereNull('ceo_decision')
+                    ->where('status', '!=', 'completed')
+                    ->get();
+
+                foreach ($activeEvaluations as $eval) {
+                    $eval->syncLineManagerWithEmployee();
+                }
+            }
+        });
+    }
+
     // ─── Relationships ────────────────────────────────────────────────────────
 
     public function department()

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\HR;
 
 use App\Http\Controllers\Controller;
 use App\Models\HrEmployee;
+use App\Models\HrProbationEvaluation;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -144,6 +145,15 @@ class HrEmployeeController extends Controller
 
         $hrEmployee->update($validated);
         $hrEmployee->load(['department', 'designation', 'manager']);
+
+        // Auto-sync active probation evaluations if reporting manager was updated
+        $activeEvaluations = HrProbationEvaluation::where('employee_id', $hrEmployee->id)
+            ->whereNull('ceo_decision')
+            ->where('status', '!=', 'completed')
+            ->get();
+        foreach ($activeEvaluations as $eval) {
+            $eval->syncLineManagerWithEmployee();
+        }
 
         return response()->json(['message' => 'Employee updated', 'data' => $hrEmployee]);
     }
