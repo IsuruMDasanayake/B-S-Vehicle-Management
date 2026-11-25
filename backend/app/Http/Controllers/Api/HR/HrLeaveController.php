@@ -352,7 +352,7 @@ class HrLeaveController extends Controller
 
         $year = $request->get('year', Carbon::now()->year);
         $employees = HrEmployee::with(['department', 'designation'])
-            ->where('status', 'active')
+            ->whereNotIn('status', ['resigned', 'terminated'])
             ->orderBy('full_name')
             ->get();
 

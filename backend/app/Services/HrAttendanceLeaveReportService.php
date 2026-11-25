@@ -429,7 +429,7 @@ class HrAttendanceLeaveReportService
             'leaves'      => fn($q) => $q->where('status', 'approved')
                 ->whereDate('start_date', '<=', $end->toDateString())
                 ->whereDate('end_date', '>=', $start->toDateString()),
-        ])->where('status', 'active')->orderBy('full_name');
+        ])->whereNotIn('status', ['resigned', 'terminated'])->orderBy('full_name');
 
         if ($deptId) {
             $empQuery->where('department_id', $deptId);
