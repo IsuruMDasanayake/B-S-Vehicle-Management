@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   UserCheck, ArrowLeft, Printer, ShieldCheck, Clock, CheckCircle2,
   AlertCircle, AlertTriangle, Users, Award, Calendar, ExternalLink,
-  Loader2, ThumbsUp, ThumbsDown, HelpCircle, FileText, X, Edit3
+  Loader2, ThumbsUp, ThumbsDown, HelpCircle, FileText, X, Edit3, Eye
 } from 'lucide-react';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
@@ -40,6 +40,40 @@ const formatDateTime = (val) => {
     return formatDate(val);
   }
 };
+
+// 5 Self-Evaluation Criteria (Image 1)
+const SELF_CRITERIA = [
+  {
+    id: 1,
+    title: 'Personal Achievements & Contributions',
+    prompt: 'How satisfied are you with your overall achievements and contributions to the company during probation?',
+    weight: 20,
+  },
+  {
+    id: 2,
+    title: 'Overcoming Challenges',
+    prompt: 'How effectively have you identified and managed difficulties encountered in your role?',
+    weight: 20,
+  },
+  {
+    id: 3,
+    title: 'Adaptation to the Work Environment',
+    prompt: 'How successfully have you adjusted to the company’s working environment, culture and operational practices?',
+    weight: 20,
+  },
+  {
+    id: 4,
+    title: 'Personal Motivation & Commitment',
+    prompt: 'How would you assess your motivation, engagement and commitment to continuing your career with Circle Engineering?',
+    weight: 20,
+  },
+  {
+    id: 5,
+    title: 'Readiness for Employment Confirmation',
+    prompt: 'How confident are you in your ability to independently handle your responsibilities after probation?',
+    weight: 20,
+  },
+];
 
 // 7 Standardized Evaluator Criteria (Image 2)
 const EVALUATOR_CRITERIA = [
@@ -95,6 +129,89 @@ const RATING_SCALE = [
   { rating: 1, label: '1 - Unsatisfactory', desc: 'Fails to meet essential performance requirements.' },
 ];
 
+const getRatingVal = (ratings, critId) => {
+  if (!ratings) return null;
+  const entry = ratings[critId] ?? ratings[String(critId)];
+  if (entry && typeof entry === 'object' && 'rating' in entry) {
+    return Number(entry.rating);
+  }
+  if (typeof entry === 'number' || (typeof entry === 'string' && entry.trim() !== '')) {
+    const n = Number(entry);
+    return isNaN(n) ? null : n;
+  }
+  return null;
+};
+
+const getCommentVal = (ratings, critId) => {
+  if (!ratings) return '';
+  const entry = ratings[critId] ?? ratings[String(critId)];
+  if (entry && typeof entry === 'object' && entry.comments) {
+    return entry.comments;
+  }
+  return '';
+};
+
+const getRatingBadge = (rating) => {
+  if (!rating) return { text: 'Not Rated', bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' };
+  switch (Number(rating)) {
+    case 5:
+      return { text: '5 - Outstanding', bg: '#dcfce7', color: '#15803d', border: '#86efac' };
+    case 4:
+      return { text: '4 - Exceeds Expectations', bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc' };
+    case 3:
+      return { text: '3 - Meets Expectations', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
+    case 2:
+      return { text: '2 - Needs Improvement', bg: '#ffedd5', color: '#c2410c', border: '#fed7aa' };
+    case 1:
+      return { text: '1 - Unsatisfactory', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
+    default:
+      return { text: `${rating} / 5`, bg: '#f1f5f9', color: '#334155', border: '#cbd5e1' };
+  }
+};
+
+const getRoleDisplayTitle = (role, peerIndex) => {
+  switch (role) {
+    case 'self':
+      return 'Employee Self-Evaluation Form';
+    case 'peer':
+      return `Peer Evaluation Form ${peerIndex ? `(Peer #${peerIndex})` : ''}`;
+    case 'line_manager':
+      return 'Line Manager Performance Evaluation Form';
+    case 'gm_pd':
+      return 'General Manager / Project Director Evaluation Form';
+    case 'ceo':
+      return 'Chief Executive Officer Evaluation Form';
+    case 'hr':
+      return 'HR Performance Evaluation Form';
+    default:
+      return `${(role || '').replace(/_/g, ' ').toUpperCase()} Form`;
+  }
+};
+
+const getRoleWeight = (role) => {
+  switch (role) {
+    case 'self': return '10%';
+    case 'peer': return '10% (Combined)';
+    case 'line_manager': return '30%';
+    case 'gm_pd': return '20%';
+    case 'ceo': return '20%';
+    case 'hr': return '10%';
+    default: return '—';
+  }
+};
+
+const getRoleGradient = (role) => {
+  switch (role) {
+    case 'self': return 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+    case 'peer': return 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)';
+    case 'line_manager': return 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)';
+    case 'gm_pd': return 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)';
+    case 'ceo': return 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)';
+    case 'hr': return 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+    default: return 'linear-gradient(135deg, #475569 0%, #334155 100%)';
+  }
+};
+
 export const ProbationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -105,6 +222,7 @@ export const ProbationDetail = () => {
 
   const [loading, setLoading] = useState(true);
   const [evaluation, setEvaluation] = useState(null);
+  const [viewingForm, setViewingForm] = useState(null);
 
   const isCeo = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
   const isFinalized = !!(evaluation?.ceo_decision || evaluation?.status === 'completed');
@@ -694,13 +812,31 @@ export const ProbationDetail = () => {
                       ({pf.status === 'submitted' ? 'Submitted' : 'Pending'})
                     </span>
                   </div>
-                  <span style={{
-                    fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px',
-                    background: pf.peer_approval_status === 'approved' ? '#dcfce7' : '#fef3c7',
-                    color: pf.peer_approval_status === 'approved' ? '#15803d' : '#b45309',
-                  }}>
-                    {pf.peer_approval_status === 'approved' ? 'Approved by HR' : 'Pending Review'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {isHrAdmin && pf.status === 'submitted' && (
+                      <button
+                        type="button"
+                        onClick={() => setViewingForm(pf)}
+                        className="btn btn-ghost"
+                        style={{
+                          padding: '0.2rem 0.55rem', fontSize: '0.72rem', fontWeight: 600,
+                          color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd',
+                          borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer'
+                        }}
+                        title={`View Peer ${idx + 1} Submitted Evaluation Form`}
+                      >
+                        <Eye size={12} />
+                        <span>View Form</span>
+                      </button>
+                    )}
+                    <span style={{
+                      fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px',
+                      background: pf.peer_approval_status === 'approved' ? '#dcfce7' : '#fef3c7',
+                      color: pf.peer_approval_status === 'approved' ? '#15803d' : '#b45309',
+                    }}>
+                      {pf.peer_approval_status === 'approved' ? 'Approved by HR' : 'Pending Review'}
+                    </span>
+                  </div>
                 </div>
               ))}
 
@@ -841,6 +977,7 @@ export const ProbationDetail = () => {
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>Form Result /100</th>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>Weight</th>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>Weighted Marks</th>
+                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', width: '135px' }}>Evaluation Form</th>
               </tr>
             </thead>
             <tbody>
@@ -848,11 +985,44 @@ export const ProbationDetail = () => {
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                 <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>Employee Self-Evaluation</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {selfForm?.status === 'submitted' ? selfForm.form_score : '⏳ Pending'}
+                  {selfForm?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(selfForm)}
+                      style={{
+                        background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer',
+                        fontWeight: 800, fontSize: '0.95rem', textDecoration: 'underline', padding: 0,
+                      }}
+                      title="Click to view submitted self-evaluation form"
+                    >
+                      {selfForm.form_score}
+                    </button>
+                  ) : '⏳ Pending'}
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>10%</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
                   {evaluation.self_score !== null ? evaluation.self_score : '—'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>
+                  {selfForm?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(selfForm)}
+                      className="btn btn-ghost"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        padding: '0.28rem 0.7rem', fontSize: '0.76rem', fontWeight: 600,
+                        color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd',
+                        borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s ease',
+                      }}
+                      title="View Employee Self-Evaluation Form"
+                    >
+                      <Eye size={13} />
+                      <span>View Form</span>
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '0.76rem' }}>—</span>
+                  )}
                 </td>
               </tr>
 
@@ -863,7 +1033,19 @@ export const ProbationDetail = () => {
                     Peer Evaluation {idx + 1} ({pf.evaluator_name})
                   </td>
                   <td style={{ padding: '0.55rem 1.25rem', textAlign: 'center', fontSize: '0.82rem' }}>
-                    {pf.status === 'submitted' ? pf.form_score : '⏳ Pending'}
+                    {pf.status === 'submitted' ? (
+                      <button
+                        type="button"
+                        onClick={() => setViewingForm(pf)}
+                        style={{
+                          background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer',
+                          fontWeight: 700, fontSize: '0.85rem', textDecoration: 'underline', padding: 0,
+                        }}
+                        title={`Click to view peer ${idx + 1} evaluation form`}
+                      >
+                        {pf.form_score}
+                      </button>
+                    ) : '⏳ Pending'}
                   </td>
                   {idx === 0 && (
                     <>
@@ -875,6 +1057,27 @@ export const ProbationDetail = () => {
                       </td>
                     </>
                   )}
+                  <td style={{ padding: '0.55rem 1.25rem', textAlign: 'center' }}>
+                    {pf.status === 'submitted' ? (
+                      <button
+                        type="button"
+                        onClick={() => setViewingForm(pf)}
+                        className="btn btn-ghost"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                          padding: '0.24rem 0.65rem', fontSize: '0.74rem', fontWeight: 600,
+                          color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd',
+                          borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s ease',
+                        }}
+                        title={`View Peer ${idx + 1} Submitted Form`}
+                      >
+                        <Eye size={12} />
+                        <span>View Form</span>
+                      </button>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: '0.74rem' }}>—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
 
@@ -885,8 +1088,18 @@ export const ProbationDetail = () => {
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
                   {lmForm?.status === 'submitted' ? (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontWeight: 800 }}>{lmForm.form_score}</span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => setViewingForm(lmForm)}
+                        style={{
+                          background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer',
+                          fontWeight: 800, fontSize: '0.95rem', textDecoration: 'underline', padding: 0,
+                        }}
+                        title="Click to view Line Manager evaluation form"
+                      >
+                        {lmForm.form_score}
+                      </button>
                       {canEditLmMarks && (
                         <button
                           type="button"
@@ -925,17 +1138,71 @@ export const ProbationDetail = () => {
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
                   {evaluation.line_manager_score !== null ? evaluation.line_manager_score : '—'}
                 </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>
+                  {lmForm?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(lmForm)}
+                      className="btn btn-ghost"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        padding: '0.28rem 0.7rem', fontSize: '0.76rem', fontWeight: 600,
+                        color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd',
+                        borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s ease',
+                      }}
+                      title="View Line Manager Evaluation Form"
+                    >
+                      <Eye size={13} />
+                      <span>View Form</span>
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '0.76rem' }}>—</span>
+                  )}
+                </td>
               </tr>
 
               {/* 4. General Manager / Project Director */}
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                 <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>General Manager / Project Director</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {gmForm?.status === 'submitted' ? gmForm.form_score : '⏳ Pending'}
+                  {gmForm?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(gmForm)}
+                      style={{
+                        background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer',
+                        fontWeight: 800, fontSize: '0.95rem', textDecoration: 'underline', padding: 0,
+                      }}
+                      title="Click to view GM/PD evaluation form"
+                    >
+                      {gmForm.form_score}
+                    </button>
+                  ) : '⏳ Pending'}
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
                   {evaluation.gm_score !== null ? evaluation.gm_score : '—'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>
+                  {gmForm?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(gmForm)}
+                      className="btn btn-ghost"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        padding: '0.28rem 0.7rem', fontSize: '0.76rem', fontWeight: 600,
+                        color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd',
+                        borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s ease',
+                      }}
+                      title="View General Manager Evaluation Form"
+                    >
+                      <Eye size={13} />
+                      <span>View Form</span>
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '0.76rem' }}>—</span>
+                  )}
                 </td>
               </tr>
 
@@ -943,11 +1210,44 @@ export const ProbationDetail = () => {
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                 <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>CEO</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {ceoFormObj?.status === 'submitted' ? ceoFormObj.form_score : '⏳ Pending'}
+                  {ceoFormObj?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(ceoFormObj)}
+                      style={{
+                        background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer',
+                        fontWeight: 800, fontSize: '0.95rem', textDecoration: 'underline', padding: 0,
+                      }}
+                      title="Click to view CEO evaluation form"
+                    >
+                      {ceoFormObj.form_score}
+                    </button>
+                  ) : '⏳ Pending'}
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>20%</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
                   {evaluation.ceo_score !== null ? evaluation.ceo_score : '—'}
+                </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>
+                  {ceoFormObj?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(ceoFormObj)}
+                      className="btn btn-ghost"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        padding: '0.28rem 0.7rem', fontSize: '0.76rem', fontWeight: 600,
+                        color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd',
+                        borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s ease',
+                      }}
+                      title="View CEO Evaluation Form"
+                    >
+                      <Eye size={13} />
+                      <span>View Form</span>
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '0.76rem' }}>—</span>
+                  )}
                 </td>
               </tr>
 
@@ -956,8 +1256,18 @@ export const ProbationDetail = () => {
                 <td style={{ padding: '0.75rem 1.25rem', fontWeight: 600 }}>HR</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
                   {hrFormObj?.status === 'submitted' ? (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontWeight: 800 }}>{hrFormObj.form_score}</span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => setViewingForm(hrFormObj)}
+                        style={{
+                          background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer',
+                          fontWeight: 800, fontSize: '0.95rem', textDecoration: 'underline', padding: 0,
+                        }}
+                        title="Click to view HR evaluation form"
+                      >
+                        {hrFormObj.form_score}
+                      </button>
                       {isHrAdmin && !isFinalized && (
                         <button
                           type="button"
@@ -996,6 +1306,27 @@ export const ProbationDetail = () => {
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
                   {evaluation.hr_score !== null ? evaluation.hr_score : '—'}
                 </td>
+                <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>
+                  {hrFormObj?.status === 'submitted' ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(hrFormObj)}
+                      className="btn btn-ghost"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        padding: '0.28rem 0.7rem', fontSize: '0.76rem', fontWeight: 600,
+                        color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd',
+                        borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s ease',
+                      }}
+                      title="View HR Evaluation Form"
+                    >
+                      <Eye size={13} />
+                      <span>View Form</span>
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '0.76rem' }}>—</span>
+                  )}
+                </td>
               </tr>
 
               {/* FINAL TOTAL */}
@@ -1009,6 +1340,7 @@ export const ProbationDetail = () => {
                 }}>
                   {evaluation.final_score !== null ? evaluation.final_score : '—'}
                 </td>
+                <td style={{ padding: '1rem 1.25rem' }}></td>
               </tr>
             </tbody>
           </table>
@@ -1302,6 +1634,438 @@ export const ProbationDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* MODAL: VIEW SUBMITTED EVALUATION FORM (HR & SUPER ADMIN DETAILED VIEW) */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {viewingForm && (() => {
+        const isSelf = viewingForm.evaluator_role === 'self';
+        const roleTitle = getRoleDisplayTitle(viewingForm.evaluator_role, viewingForm.peer_index);
+        const roleWeight = getRoleWeight(viewingForm.evaluator_role);
+        const headerGradient = getRoleGradient(viewingForm.evaluator_role);
+        const criteriaList = isSelf ? SELF_CRITERIA : EVALUATOR_CRITERIA;
+
+        const evaluatorDisplayName = isSelf
+          ? emp.full_name
+          : viewingForm.evaluator_name || viewingForm.evaluator_employee?.full_name || viewingForm.evaluator_user?.name || 'Evaluator';
+
+        const evaluatorDesignation = isSelf
+          ? (emp.designation?.name || 'Probationary Staff')
+          : viewingForm.evaluator_employee?.designation?.name || viewingForm.evaluator_employee?.designation || (viewingForm.evaluator_role === 'ceo' ? 'Chief Executive Officer' : viewingForm.evaluator_role === 'gm_pd' ? 'General Manager / Project Director' : viewingForm.evaluator_role === 'hr' ? 'HR Department' : 'Evaluator');
+
+        const evaluatorDepartment = isSelf
+          ? (emp.department?.name || 'Department')
+          : viewingForm.evaluator_employee?.department?.name || viewingForm.evaluator_employee?.department || '';
+
+        const scoreNum = Number(viewingForm.form_score || 0);
+
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+          }}>
+            <div style={{
+              background: '#fff', borderRadius: '16px', maxWidth: '960px', width: '100%',
+              maxHeight: '92vh', overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0',
+              display: 'flex', flexDirection: 'column',
+            }}>
+              {/* Modal Header */}
+              <div style={{
+                padding: '1.25rem 1.5rem', background: headerGradient,
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: '0.75rem', position: 'sticky', top: 0, zIndex: 10,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <FileText size={22} style={{ color: '#fff' }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px' }}>
+                        {roleTitle}
+                      </h3>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.6rem', borderRadius: '999px', background: 'rgba(255,255,255,0.25)', color: '#fff' }}>
+                        Weight: {roleWeight}
+                      </span>
+                    </div>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.95)' }}>
+                      Evaluator: <strong>{evaluatorDisplayName}</strong>
+                      {evaluatorDesignation && ` · ${evaluatorDesignation}`}
+                      {evaluatorDepartment && ` (${evaluatorDepartment})`}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    background: 'rgba(255,255,255,0.2)', padding: '0.35rem 0.85rem', borderRadius: '8px',
+                    textAlign: 'right', border: '1px solid rgba(255,255,255,0.3)',
+                  }}>
+                    <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>
+                      Form Result
+                    </div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                      {viewingForm.form_score} <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/ 100</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="btn btn-ghost"
+                    style={{
+                      background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+                      color: '#fff', padding: '0.45rem 0.75rem', borderRadius: '8px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem',
+                    }}
+                    title="Print this evaluation form"
+                  >
+                    <Printer size={15} />
+                    <span>Print</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewingForm(null)}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+                      color: '#fff', cursor: 'pointer', padding: '0.45rem', borderRadius: '8px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                    title="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: '1.5rem' }}>
+                {/* Employee Dossier Context Card */}
+                <div style={{
+                  padding: '0.85rem 1.25rem', borderRadius: '10px', background: '#f8fafc',
+                  border: '1px solid #e2e8f0', marginBottom: '1.5rem',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
+                }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>
+                      Probationary Employee Under Evaluation
+                    </span>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginTop: '0.1rem' }}>
+                      {emp.full_name} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0284c7' }}>({emp.employee_id})</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                      {emp.designation?.name || 'Staff'} · {emp.department?.name || 'Department'} · Reporting to: <strong>{evaluation.line_manager?.full_name || emp.manager?.full_name || 'Line Manager'}</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.8rem' }}>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Submitted At</span>
+                      <strong>{formatDateTime(viewingForm.submitted_at)}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Status</span>
+                      <span style={{
+                        padding: '0.15rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
+                        background: viewingForm.status === 'submitted' ? '#dcfce7' : '#fef3c7',
+                        color: viewingForm.status === 'submitted' ? '#15803d' : '#b45309',
+                      }}>
+                        {viewingForm.status === 'submitted' ? '✓ SUBMITTED' : 'PENDING'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Probation End</span>
+                      <strong style={{ color: '#dc2626' }}>{formatDate(evaluation.probation_end_date)}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section A: Criteria & Ratings Table */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                      {isSelf ? 'Section A: Self-Assessment Performance Criteria (5 Core Competencies)' : 'Section A: Standardized Performance Criteria (7 Core Competencies)'}
+                    </h4>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                      Rating Scale: 1 (Unsatisfactory) to 5 (Outstanding)
+                    </span>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#1e293b' }}>
+                          <th style={{ padding: '0.75rem 1rem', width: '45px', textAlign: 'center' }}>No.</th>
+                          <th style={{ padding: '0.75rem 1rem' }}>Criterion &amp; Performance Prompt</th>
+                          <th style={{ padding: '0.75rem 1rem', width: '75px', textAlign: 'center' }}>Weight</th>
+                          <th style={{ padding: '0.75rem 1rem', width: '220px', textAlign: 'center' }}>Evaluator Rating</th>
+                          <th style={{ padding: '0.75rem 1rem', width: '85px', textAlign: 'center' }}>Marks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {criteriaList.map(crit => {
+                          const r = getRatingVal(viewingForm.ratings, crit.id);
+                          const c = getCommentVal(viewingForm.ratings, crit.id);
+                          const badge = getRatingBadge(r);
+                          const marks = r !== null ? ((crit.weight * r) / 5).toFixed(1) : '—';
+
+                          return (
+                            <tr key={crit.id} style={{ borderBottom: '1px solid #f1f5f9', verticalAlign: 'top' }}>
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontWeight: 800, color: '#0284c7' }}>
+                                {crit.id}
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <strong style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', marginBottom: '0.2rem' }}>
+                                  {crit.title}
+                                </strong>
+                                <p style={{ margin: 0, fontSize: '0.78rem', color: '#475569', lineHeight: 1.45 }}>
+                                  {crit.prompt}
+                                </p>
+                                {c && (
+                                  <div style={{
+                                    marginTop: '0.45rem', padding: '0.45rem 0.75rem',
+                                    borderRadius: '6px', background: '#f8fafc', border: '1px solid #e2e8f0',
+                                    fontSize: '0.77rem', color: '#1e293b',
+                                  }}>
+                                    💬 <strong>Evaluator Criterion Comment:</strong> {c}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontWeight: 600, color: '#475569' }}>
+                                {crit.weight}%
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '0.3rem 0.75rem', borderRadius: '6px', fontWeight: 700, fontSize: '0.78rem',
+                                  background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`,
+                                }}>
+                                  {badge.text}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontWeight: 800, fontSize: '0.92rem', color: '#0f172a' }}>
+                                {marks}
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        {/* Summary / Total Row */}
+                        <tr style={{ background: '#f8fafc', fontWeight: 800, fontSize: '0.92rem', borderTop: '2px solid #cbd5e1' }}>
+                          <td colSpan={2} style={{ padding: '0.85rem 1rem', color: '#0f172a' }}>
+                            TOTAL EVALUATION SCORE
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                            100%
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem' }}></td>
+                          <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '1.1rem', color: scoreNum >= 80 ? '#15803d' : '#dc2626' }}>
+                            {viewingForm.form_score}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Section B: Qualitative Assessment & Evidence */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isSelf ? 'Section B: Qualitative Self-Assessment & Reflections' : 'Section B: Evaluator Observations, Feedback & Recommendations'}
+                  </h4>
+
+                  {isSelf ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {/* B.1 Significant Achievements */}
+                      <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0369a1', marginBottom: '0.35rem' }}>
+                          1. Significant Achievements &amp; Contributions During Probation
+                        </div>
+                        <div style={{
+                          fontSize: '0.85rem', color: '#1e293b', lineHeight: 1.5,
+                          whiteSpace: 'pre-wrap', background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1',
+                        }}>
+                          {viewingForm.achievements_evidence || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No written achievements recorded.</span>}
+                        </div>
+                      </div>
+
+                      {/* B.2 Challenges Encountered */}
+                      <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0369a1', marginBottom: '0.35rem' }}>
+                          2. Difficulties / Challenges Encountered &amp; Support Received
+                        </div>
+                        <div style={{
+                          fontSize: '0.85rem', color: '#1e293b', lineHeight: 1.5,
+                          whiteSpace: 'pre-wrap', background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1',
+                        }}>
+                          {viewingForm.challenges_support || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No written challenges recorded.</span>}
+                        </div>
+                      </div>
+
+                      {/* B.3 Nominated Peers */}
+                      <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0369a1', marginBottom: '0.35rem' }}>
+                          3. Nominated Peer Evaluators (2–3 Colleagues)
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                          {peerForms.length > 0 ? (
+                            peerForms.map((p, idx) => (
+                              <div key={p.id} style={{
+                                padding: '0.45rem 0.85rem', borderRadius: '8px', background: '#fff',
+                                border: '1px solid #cbd5e1', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem'
+                              }}>
+                                <Users size={14} style={{ color: '#0284c7' }} />
+                                <span>Peer {idx + 1}: <strong>{p.evaluator_name || 'Staff Member'}</strong></span>
+                                <span style={{
+                                  fontSize: '0.68rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '999px',
+                                  background: p.status === 'submitted' ? '#dcfce7' : '#fef3c7',
+                                  color: p.status === 'submitted' ? '#15803d' : '#b45309',
+                                }}>
+                                  {p.status === 'submitted' ? 'Submitted' : 'Pending'}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No peers nominated yet.</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {/* General Evaluator Comments */}
+                      <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                          General Performance Observations &amp; Feedback Remarks
+                        </div>
+                        <div style={{
+                          fontSize: '0.85rem', color: '#1e293b', lineHeight: 1.5,
+                          whiteSpace: 'pre-wrap', background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1',
+                        }}>
+                          {viewingForm.general_comments || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No general comments provided.</span>}
+                        </div>
+                      </div>
+
+                      {/* Evaluator Recommendation (for LM, GM, CEO, HR) */}
+                      {viewingForm.recommendation && (
+                        <div style={{
+                          padding: '1rem', borderRadius: '10px',
+                          background: viewingForm.recommendation === 'confirm' ? '#f0fdf4' : viewingForm.recommendation === 'extend' ? '#fffbeb' : '#fef2f2',
+                          border: `1px solid ${viewingForm.recommendation === 'confirm' ? '#86efac' : viewingForm.recommendation === 'extend' ? '#fde68a' : '#fca5a5'}`,
+                        }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                            Evaluator Recommendation
+                          </div>
+                          <div style={{
+                            fontSize: '1.05rem', fontWeight: 800,
+                            color: viewingForm.recommendation === 'confirm' ? '#15803d' : viewingForm.recommendation === 'extend' ? '#b45309' : '#b91c1c',
+                          }}>
+                            {viewingForm.recommendation === 'confirm' && '✓ Confirm Employment'}
+                            {viewingForm.recommendation === 'extend' && '⏳ Extend Probation Period'}
+                            {viewingForm.recommendation === 'do_not_confirm' && '✗ Do Not Confirm (Exit / Termination Process)'}
+                          </div>
+
+                          {viewingForm.proposed_extension_date && (
+                            <div style={{ marginTop: '0.45rem', fontSize: '0.82rem', color: '#334155' }}>
+                              Proposed Extension End Date: <strong>{formatDate(viewingForm.proposed_extension_date)}</strong>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Specific CEO Notes / Presentation directives */}
+                      {viewingForm.evaluator_role === 'ceo' && (
+                        <div style={{ background: '#faf5ff', padding: '1rem', borderRadius: '10px', border: '1px solid #e9d5ff' }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#7c3aed', marginBottom: '0.35rem' }}>
+                            Executive Directive &amp; Presentation Requirement
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: '#581c87' }}>
+                            10-Minute Presentation: <strong>{evaluation.presentation_requested ? 'Requested by CEO' : 'Not Requested'}</strong>
+                            {evaluation.presentation_notes && (
+                              <div style={{ marginTop: '0.25rem' }}>
+                                Directive / Topic: <em>{evaluation.presentation_notes}</em>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer Controls */}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  paddingTop: '1rem', borderTop: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '0.75rem',
+                }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Viewing official probation evaluation dossier record.
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    {/* Quick Edit shortcut if user is authorized to edit LM or HR marks */}
+                    {viewingForm.evaluator_role === 'line_manager' && canEditLmMarks && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingForm(null);
+                          handleOpenLmMarksModal();
+                        }}
+                        className="btn btn-outline"
+                        style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', color: '#0284c7', borderColor: '#0284c7', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                      >
+                        <Edit3 size={14} />
+                        <span>Edit Line Manager Marks</span>
+                      </button>
+                    )}
+
+                    {viewingForm.evaluator_role === 'hr' && isHrAdmin && !isFinalized && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingForm(null);
+                          handleOpenHrMarksModal();
+                        }}
+                        className="btn btn-outline"
+                        style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', color: '#0284c7', borderColor: '#0284c7', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                      >
+                        <Edit3 size={14} />
+                        <span>Edit HR Marks</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="btn btn-ghost"
+                      style={{ border: '1px solid #cbd5e1', padding: '0.45rem 1rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <Printer size={14} />
+                      <span>Print Form</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewingForm(null)}
+                      className="btn btn-primary"
+                      style={{ background: '#0284c7', borderColor: '#0284c7', padding: '0.45rem 1.25rem', fontSize: '0.8rem', fontWeight: 600 }}
+                    >
+                      Close Form
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ──────────────────────────────────────────────────────────────────── */}
       {/* MODAL: HR EVALUATION MARKS FORM (10% WEIGHT, 7 CRITERIA)            */}
