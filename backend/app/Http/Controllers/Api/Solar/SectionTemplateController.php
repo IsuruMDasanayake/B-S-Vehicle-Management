@@ -27,14 +27,19 @@ class SectionTemplateController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'sort_order' => 'required|integer|min:1',
-            'has_before_after' => 'boolean',
+            'name'               => 'required|string|max:255',
+            'category'           => 'nullable|string|max:100',
+            'unit'               => 'nullable|string|max:50',
+            'target_qty'         => 'nullable|numeric|min:0',
+            'sort_order'         => 'required|integer|min:1',
+            'has_before_after'   => 'boolean',
             'has_table_tracking' => 'boolean',
-            'sub_sections' => 'nullable|array',
-            'sub_sections.*' => 'string|max:255',
-            'expected_images' => 'required|integer|min:1',
-            'notes' => 'nullable|string'
+            'sub_sections'       => 'nullable|array',
+            'sub_sections.*'     => 'string|max:255',
+            'checklist_rules'    => 'nullable|array',
+            'checklist_rules.*'  => 'string|max:500',
+            'expected_images'    => 'required|integer|min:1',
+            'notes'              => 'nullable|string',
         ]);
 
         $template = SectionTemplate::create($validated);
@@ -49,14 +54,19 @@ class SectionTemplateController extends Controller
     public function update(Request $request, SectionTemplate $template)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'sort_order' => 'required|integer|min:1',
-            'has_before_after' => 'boolean',
+            'name'               => 'required|string|max:255',
+            'category'           => 'nullable|string|max:100',
+            'unit'               => 'nullable|string|max:50',
+            'target_qty'         => 'nullable|numeric|min:0',
+            'sort_order'         => 'required|integer|min:1',
+            'has_before_after'   => 'boolean',
             'has_table_tracking' => 'boolean',
-            'sub_sections' => 'nullable|array',
-            'sub_sections.*' => 'string|max:255',
-            'expected_images' => 'required|integer|min:1',
-            'notes' => 'nullable|string'
+            'sub_sections'       => 'nullable|array',
+            'sub_sections.*'     => 'string|max:255',
+            'checklist_rules'    => 'nullable|array',
+            'checklist_rules.*'  => 'string|max:500',
+            'expected_images'    => 'required|integer|min:1',
+            'notes'              => 'nullable|string',
         ]);
 
         $template->update($validated);

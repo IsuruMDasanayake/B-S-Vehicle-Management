@@ -56,6 +56,10 @@ const SupervisorUpload = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
 
+  // Rule-based image uploads
+  const [ruleFiles, setRuleFiles] = useState({}); // { [ruleName]: [File] }
+  const [rulePreviewUrls, setRulePreviewUrls] = useState({}); // { [ruleName]: [url] }
+
   useEffect(() => {
     const fetchSiteData = async () => {
       try {
@@ -115,6 +119,43 @@ const SupervisorUpload = () => {
   const selectedSection = selectedProject?.sections?.find(s => s.id === parseInt(formData.solar_section_id));
   const tableConfig = selectedProject?.project_tables || [];
 
+  const getSectionChecklistRules = (section) => {
+    if (!section?.checklist_rules) return [];
+    if (Array.isArray(section.checklist_rules)) return section.checklist_rules;
+    try {
+      return JSON.parse(section.checklist_rules);
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const handleRuleFileChange = (rule, e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    const currentFiles = ruleFiles[rule] || [];
+    const newFiles = [...currentFiles, ...files];
+    const newUrls = newFiles.map(f => URL.createObjectURL(f));
+
+    setRuleFiles(prev => ({ ...prev, [rule]: newFiles }));
+    setRulePreviewUrls(prev => ({ ...prev, [rule]: newUrls }));
+  };
+
+  const removeRuleFile = (rule, fileIndex) => {
+    const currentFiles = ruleFiles[rule] || [];
+    const currentUrls = rulePreviewUrls[rule] || [];
+
+    if (currentUrls[fileIndex]) {
+      URL.revokeObjectURL(currentUrls[fileIndex]);
+    }
+
+    const updatedFiles = currentFiles.filter((_, idx) => idx !== fileIndex);
+    const updatedUrls = currentUrls.filter((_, idx) => idx !== fileIndex);
+
+    setRuleFiles(prev => ({ ...prev, [rule]: updatedFiles }));
+    setRulePreviewUrls(prev => ({ ...prev, [rule]: updatedUrls }));
+  };
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     
@@ -145,7 +186,23 @@ const SupervisorUpload = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.solar_section_id) return toast.error('Please select a milestone section.');
-    if (selectedFiles.length === 0) return toast.error('Please select at least one image.');
+    
+    const activeRules = getSectionChecklistRules(selectedSection);
+    const hasRules = activeRules.length > 0;
+
+    let totalImageCount = 0;
+    if (hasRules) {
+      activeRules.forEach(r => {
+        totalImageCount += (ruleFiles[r] || []).length;
+      });
+      totalImageCount += selectedFiles.length;
+    } else {
+      totalImageCount = selectedFiles.length;
+    }
+
+    if (totalImageCount === 0) {
+      return toast.error('Please select at least one verification image.');
+    }
     
     if (selectedSection?.has_table_tracking && !formData.table_number) {
       return toast.error('Table number is required for this milestone.');
@@ -169,9 +226,23 @@ const SupervisorUpload = () => {
       }
     });
 
-    selectedFiles.forEach(file => {
-      fd.append('images[]', file);
-    });
+    if (hasRules) {
+      activeRules.forEach(rule => {
+        const files = ruleFiles[rule] || [];
+        files.forEach(file => {
+          fd.append('images[]', file);
+          fd.append('image_rules[]', rule);
+        });
+      });
+      selectedFiles.forEach(file => {
+        fd.append('images[]', file);
+        fd.append('image_rules[]', '');
+      });
+    } else {
+      selectedFiles.forEach(file => {
+        fd.append('images[]', file);
+      });
+    }
 
     try {
       await api.post(`/upload/${token}/submit`, fd, {
@@ -194,6 +265,8 @@ const SupervisorUpload = () => {
         has_issue: false,
         issue_description: '',
       }));
+      setRuleFiles({});
+      setRulePreviewUrls({});
       setSelectedFiles([]);
       setPreviewUrls([]);
       
@@ -784,30 +857,173 @@ const SupervisorUpload = () => {
         </div>
 
         {/* Image Upload */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '1rem' }}>3. Images *</h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
-            {previewUrls.map((url, i) => (
-              <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                <img src={url} alt={`Preview ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button type="button" onClick={() => removeFile(i)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}>✕</button>
-              </div>
-            ))}
-            
-            <label style={{ aspectRatio: '1', borderRadius: 'var(--radius)', border: '2px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
-              <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📸</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Add Photo</span>
-              <input type="file" multiple accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-            </label>
-          </div>
-          
-          {selectedSection?.expected_images && (
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-               Expected for this task: ~{selectedSection.expected_images} images
-             </div>
-          )}
-        </div>
+        {(() => {
+          const activeRules = getSectionChecklistRules(selectedSection);
+          const hasRules = activeRules.length > 0;
+
+          return (
+            <div className="card" style={{ padding: '1.25rem' }}>
+              <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span>3. Verification Images *</span>
+                {hasRules && (
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0284c7', background: 'rgba(2, 132, 199, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
+                    {activeRules.length} Rule Placeholders
+                  </span>
+                )}
+              </h3>
+              
+              {hasRules ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Capture or upload photographic evidence for the specific checklist items below:
+                  </div>
+
+                  {activeRules.map((rule, rIdx) => {
+                    const files = ruleFiles[rule] || [];
+                    const previews = rulePreviewUrls[rule] || [];
+                    const hasUploaded = previews.length > 0;
+
+                    return (
+                      <div 
+                        key={rIdx} 
+                        style={{ 
+                          background: hasUploaded ? 'rgba(34, 197, 94, 0.04)' : 'var(--surface-2)', 
+                          border: hasUploaded ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid var(--border)', 
+                          borderRadius: 'var(--radius)', 
+                          padding: '0.85rem 1rem' 
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: previews.length > 0 ? '0.75rem' : 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', flex: 1 }}>
+                            <span style={{ 
+                              background: hasUploaded ? '#16a34a' : 'var(--primary)', 
+                              color: 'white', 
+                              fontWeight: 700, 
+                              fontSize: '0.75rem', 
+                              padding: '0.15rem 0.45rem', 
+                              borderRadius: '4px',
+                              marginTop: '0.1rem',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {rIdx + 1 < 10 ? `0${rIdx + 1}` : rIdx + 1}
+                            </span>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)' }}>
+                                {rule}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: hasUploaded ? '#15803d' : 'var(--text-muted)', marginTop: '0.15rem', fontWeight: hasUploaded ? 600 : 400 }}>
+                                {hasUploaded ? `✓ ${previews.length} photo(s) selected` : 'Awaiting evidence photo'}
+                              </div>
+                            </div>
+                          </div>
+
+                          <label style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '0.35rem', 
+                            padding: '0.35rem 0.65rem', 
+                            background: hasUploaded ? '#16a34a' : 'var(--primary)', 
+                            color: 'white', 
+                            borderRadius: 'var(--radius)', 
+                            fontSize: '0.8rem', 
+                            fontWeight: 600, 
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                          }}>
+                            <span>📸 {hasUploaded ? '+ More' : 'Add Photo'}</span>
+                            <input 
+                              type="file" 
+                              multiple 
+                              accept="image/*" 
+                              onChange={(e) => handleRuleFileChange(rule, e)} 
+                              style={{ display: 'none' }} 
+                            />
+                          </label>
+                        </div>
+
+                        {previews.length > 0 && (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(75px, 1fr))', gap: '0.5rem', marginTop: '0.5rem' }}>
+                            {previews.map((url, pIdx) => (
+                              <div key={pIdx} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                <img src={url} alt={`Preview ${pIdx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <button 
+                                  type="button" 
+                                  onClick={() => removeRuleFile(rule, pIdx)} 
+                                  style={{ 
+                                    position: 'absolute', 
+                                    top: '3px', 
+                                    right: '3px', 
+                                    background: 'rgba(0,0,0,0.65)', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '50%', 
+                                    width: '20px', 
+                                    height: '20px', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    cursor: 'pointer', 
+                                    fontSize: '11px' 
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Optional Extra General Photos */}
+                  <div style={{ marginTop: '0.5rem', borderTop: '1px dashed var(--border)', paddingTop: '0.75rem' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                      Additional / Overview Photos (Optional)
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                      {previewUrls.map((url, i) => (
+                        <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                          <img src={url} alt={`General Preview ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={() => removeFile(i)} style={{ position: 'absolute', top: '3px', right: '3px', background: 'rgba(0,0,0,0.65)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '11px' }}>✕</button>
+                        </div>
+                      ))}
+                      <label style={{ aspectRatio: '1', borderRadius: 'var(--radius)', border: '2px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                        <span style={{ fontSize: '1.25rem' }}>➕</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>Extra</span>
+                        <input type="file" multiple accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem', marginTop: '0.75rem' }}>
+                    {previewUrls.map((url, i) => (
+                      <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        <img src={url} alt={`Preview ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button type="button" onClick={() => removeFile(i)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                      </div>
+                    ))}
+                    
+                    <label style={{ aspectRatio: '1', borderRadius: 'var(--radius)', border: '2px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📸</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Add Photo</span>
+                      <input type="file" multiple accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                  
+                  {selectedSection?.expected_images && (
+                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                       Expected for this task: ~{selectedSection.expected_images} images
+                     </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Submit */}
         <button 

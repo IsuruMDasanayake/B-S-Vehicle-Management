@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SolarUploadBatch extends Model
 {
     protected $fillable = [
-        'solar_section_id', 'sub_section', 'phase', 'table_number', 'quantity_done',
+        'solar_section_id', 'sub_section', 'checklist_rule', 'phase', 'table_number', 'quantity_done',
         'work_date', 'work_time', 'participants', 'uploaded_by', 'programme',
         'weather', 'has_issue', 'issue_description',
     ];

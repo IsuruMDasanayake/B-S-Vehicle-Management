@@ -59,6 +59,7 @@ class SolarProjectController extends Controller
                     'has_before_after'   => $template->has_before_after,
                     'has_table_tracking' => $template->has_table_tracking,
                     'sub_sections'       => $template->sub_sections,
+                    'checklist_rules'    => $template->checklist_rules,
                     'expected_images'    => $template->expected_images,
                     'notes'              => $template->notes,
                 ]);
@@ -135,6 +136,7 @@ class SolarProjectController extends Controller
                 'has_before_after'   => $template->has_before_after,
                 'has_table_tracking' => $template->has_table_tracking,
                 'sub_sections'       => $template->sub_sections,
+                'checklist_rules'    => $template->checklist_rules,
                 'expected_images'    => $template->expected_images,
                 'notes'              => $template->notes,
             ]);
@@ -162,12 +164,14 @@ class SolarProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'name'            => 'sometimes|required|string|max:255',
-            'category'        => 'nullable|string|max:100',
-            'unit'            => 'nullable|string|max:50',
-            'target_qty'      => 'nullable|numeric|min:0',
-            'expected_images' => 'nullable|integer|min:1',
-            'notes'           => 'nullable|string',
+            'name'               => 'sometimes|required|string|max:255',
+            'category'           => 'nullable|string|max:100',
+            'unit'               => 'nullable|string|max:50',
+            'target_qty'         => 'nullable|numeric|min:0',
+            'expected_images'    => 'nullable|integer|min:1',
+            'checklist_rules'    => 'nullable|array',
+            'checklist_rules.*'  => 'string|max:500',
+            'notes'              => 'nullable|string',
         ]);
 
         $solarSection->update($validated);
