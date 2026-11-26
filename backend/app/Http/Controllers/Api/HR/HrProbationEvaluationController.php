@@ -880,7 +880,11 @@ class HrProbationEvaluationController extends Controller
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        if ($form->status === 'submitted') {
+        if ($form->evaluation && ($form->evaluation->ceo_decision || $form->evaluation->status === 'completed')) {
+            return response()->json(['message' => 'This evaluation dossier is already finalized by CEO final decision and cannot be modified.'], 422);
+        }
+
+        if ($form->status === 'submitted' && !in_array($form->evaluator_role, ['hr', 'line_manager'])) {
             return response()->json(['message' => 'This form is already submitted and locked.'], 422);
         }
 
@@ -924,7 +928,7 @@ class HrProbationEvaluationController extends Controller
             return response()->json(['message' => 'This evaluation dossier is already finalized by CEO final decision and cannot be modified.'], 422);
         }
 
-        if ($form->status === 'submitted' && $form->evaluator_role !== 'hr') {
+        if ($form->status === 'submitted' && !in_array($form->evaluator_role, ['hr', 'line_manager'])) {
             return response()->json(['message' => 'This form has already been submitted and locked.'], 422);
         }
 
