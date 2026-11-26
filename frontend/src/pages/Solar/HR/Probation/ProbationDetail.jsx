@@ -108,6 +108,12 @@ export const ProbationDetail = () => {
 
   const isCeo = (evaluation?.ceo_user_id && evaluation.ceo_user_id === user?.id) || (user?.email && user.email.toLowerCase() === 'eranda@circlegroup.lk');
   const isFinalized = !!(evaluation?.ceo_decision || evaluation?.status === 'completed');
+  const isLineManagerUser = !!(evaluation?.line_manager_id && user && (
+    Number(evaluation.line_manager?.user_id) === Number(user.id) ||
+    (evaluation.line_manager?.personal_email && evaluation.line_manager.personal_email.toLowerCase() === user.email?.toLowerCase()) ||
+    (evaluation.line_manager?.company_email && evaluation.line_manager.company_email.toLowerCase() === user.email?.toLowerCase())
+  ));
+  const canEditLmMarks = (isLineManagerUser || isHrAdmin) && !isFinalized;
 
   // HR Review modal state
   const [hrForm, setHrForm] = useState({
@@ -140,8 +146,9 @@ export const ProbationDetail = () => {
   const [savingPeers, setSavingPeers] = useState(false);
   const [employeesList, setEmployeesList] = useState([]);
 
-  // HR Evaluation Marks Form Modal state
+  // HR / Line Manager Evaluation Marks Form Modal state
   const [hrMarksModalOpen, setHrMarksModalOpen] = useState(false);
+  const [evalModalRole, setEvalModalRole] = useState('hr'); // 'hr' | 'line_manager'
   const [hrRatings, setHrRatings] = useState({
     1: { rating: 4, comments: '' },
     2: { rating: 4, comments: '' },
@@ -161,19 +168,50 @@ export const ProbationDetail = () => {
       toast.error('This evaluation dossier has been finalized by CEO final decision and cannot be edited.');
       return;
     }
+    setEvalModalRole('hr');
     const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
     if (hrObj && hrObj.ratings && Object.keys(hrObj.ratings).length > 0) {
       setHrRatings(hrObj.ratings);
+    } else {
+      setHrRatings({
+        1: { rating: 4, comments: '' },
+        2: { rating: 4, comments: '' },
+        3: { rating: 4, comments: '' },
+        4: { rating: 4, comments: '' },
+        5: { rating: 4, comments: '' },
+        6: { rating: 4, comments: '' },
+        7: { rating: 4, comments: '' },
+      });
     }
-    if (hrObj?.general_comments) {
-      setHrComments(hrObj.general_comments);
+    setHrComments(hrObj?.general_comments || '');
+    setHrRecommendation(hrObj?.recommendation || 'confirm');
+    setHrExtensionDate(hrObj?.proposed_extension_date ? hrObj.proposed_extension_date.split('T')[0] : '');
+    setHrMarksModalOpen(true);
+  };
+
+  const handleOpenLmMarksModal = () => {
+    if (isFinalized) {
+      toast.error('This evaluation dossier has been finalized by CEO final decision and cannot be edited.');
+      return;
     }
-    if (hrObj?.recommendation) {
-      setHrRecommendation(hrObj.recommendation);
+    setEvalModalRole('line_manager');
+    const lmObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'line_manager');
+    if (lmObj && lmObj.ratings && Object.keys(lmObj.ratings).length > 0) {
+      setHrRatings(lmObj.ratings);
+    } else {
+      setHrRatings({
+        1: { rating: 4, comments: '' },
+        2: { rating: 4, comments: '' },
+        3: { rating: 4, comments: '' },
+        4: { rating: 4, comments: '' },
+        5: { rating: 4, comments: '' },
+        6: { rating: 4, comments: '' },
+        7: { rating: 4, comments: '' },
+      });
     }
-    if (hrObj?.proposed_extension_date) {
-      setHrExtensionDate(hrObj.proposed_extension_date.split('T')[0]);
-    }
+    setHrComments(lmObj?.general_comments || '');
+    setHrRecommendation(lmObj?.recommendation || 'confirm');
+    setHrExtensionDate(lmObj?.proposed_extension_date ? lmObj.proposed_extension_date.split('T')[0] : '');
     setHrMarksModalOpen(true);
   };
 
@@ -206,26 +244,27 @@ export const ProbationDetail = () => {
       toast.error('This evaluation dossier has been finalized by CEO final decision and cannot be edited.');
       return;
     }
-    const hrObj = (evaluation?.forms || []).find(f => f.evaluator_role === 'hr');
-    if (!hrObj) {
-      toast.error('HR evaluator form not found for this dossier.');
+    const targetObj = (evaluation?.forms || []).find(f => f.evaluator_role === evalModalRole);
+    if (!targetObj) {
+      toast.error(`${evalModalRole === 'line_manager' ? 'Line Manager' : 'HR'} evaluator form not found for this dossier.`);
       return;
     }
 
     setSubmittingHrMarks(true);
     try {
-      await api.post(`/hr/probation/forms/${hrObj.id}/submit`, {
+      await api.post(`/hr/probation/forms/${targetObj.id}/submit`, {
         ratings: hrRatings,
         recommendation: hrRecommendation,
         proposed_extension_date: hrExtensionDate || null,
         general_comments: hrComments,
       });
 
-      toast.success('HR Evaluation Marks (10%) submitted successfully!');
+      const label = evalModalRole === 'line_manager' ? 'Line Manager Evaluation Marks (30%)' : 'HR Evaluation Marks (10%)';
+      toast.success(`${label} submitted successfully!`);
       setHrMarksModalOpen(false);
       fetchDetail();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit HR marks.');
+      toast.error(err.response?.data?.message || 'Failed to submit marks.');
     } finally {
       setSubmittingHrMarks(false);
     }
@@ -845,7 +884,42 @@ export const ProbationDetail = () => {
                   Line Manager ({evaluation.line_manager?.full_name || emp.manager?.full_name || 'Reporting Manager'})
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', color: '#0369a1', fontWeight: 700 }}>
-                  {lmForm?.status === 'submitted' ? lmForm.form_score : '⏳ Pending'}
+                  {lmForm?.status === 'submitted' ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontWeight: 800 }}>{lmForm.form_score}</span>
+                      {canEditLmMarks && (
+                        <button
+                          type="button"
+                          onClick={handleOpenLmMarksModal}
+                          style={{
+                            background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer',
+                            fontSize: '0.72rem', textDecoration: 'underline', padding: 0,
+                          }}
+                        >
+                          (Edit)
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      <span style={{ color: '#d97706', fontWeight: 600 }}>⏳ Pending</span>
+                      {canEditLmMarks && (
+                        <button
+                          type="button"
+                          onClick={handleOpenLmMarksModal}
+                          className="btn btn-primary"
+                          style={{
+                            background: '#0284c7', borderColor: '#0284c7',
+                            padding: '0.25rem 0.65rem', fontSize: '0.74rem', fontWeight: 700,
+                            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                          }}
+                        >
+                          <Award size={13} />
+                          <span>Enter Marks</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center' }}>30%</td>
                 <td style={{ padding: '0.75rem 1.25rem', textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
@@ -1257,10 +1331,11 @@ export const ProbationDetail = () => {
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>
-                    HR Performance Evaluation (10% Weight)
+                    {evalModalRole === 'line_manager' ? 'Line Manager Performance Evaluation (30% Weight)' : 'HR Performance Evaluation (10% Weight)'}
                   </h3>
                   <p style={{ margin: 0, fontSize: '0.76rem', color: '#ffffff' }}>
                     Employee: {emp.full_name} ({emp.employee_id}) · {emp.designation?.name || 'Staff'} · {emp.department?.name || 'Department'}
+                    {evalModalRole === 'line_manager' && ` · Evaluator: ${evaluation.line_manager?.full_name || emp.manager?.full_name || 'Line Manager'}`}
                   </p>
                 </div>
               </div>
@@ -1434,7 +1509,7 @@ export const ProbationDetail = () => {
                   rows={3}
                   value={hrComments}
                   onChange={e => setHrComments(e.target.value)}
-                  placeholder="Enter overall HR evaluation observations, conduct remarks, and justification..."
+                  placeholder={evalModalRole === 'line_manager' ? "Enter line manager observations, performance feedback, and justification..." : "Enter overall HR evaluation observations, conduct remarks, and justification..."}
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
                 />
               </div>
@@ -1461,7 +1536,13 @@ export const ProbationDetail = () => {
                   }}
                 >
                   {submittingHrMarks ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Award size={16} />}
-                  <span>{submittingHrMarks ? 'Saving Marks...' : 'Submit & Lock HR Marks'}</span>
+                  <span>
+                    {submittingHrMarks
+                      ? 'Saving Marks...'
+                      : evalModalRole === 'line_manager'
+                      ? (lmForm?.status === 'submitted' ? 'Update Line Manager Marks (30%)' : 'Submit Line Manager Marks (30%)')
+                      : (hrFormObj?.status === 'submitted' ? 'Update HR Marks (10%)' : 'Submit HR Marks (10%)')}
+                  </span>
                 </button>
               </div>
             </form>

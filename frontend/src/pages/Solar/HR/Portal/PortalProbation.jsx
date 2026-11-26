@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   UserCheck, Award, Clock, CheckCircle2, AlertCircle, ArrowLeft,
-  Loader2, Save, Send, Users, ChevronRight, FileText, ExternalLink, ShieldCheck
+  Loader2, Save, Send, Users, ChevronRight, FileText, ExternalLink, ShieldCheck,
+  Edit3, Eye
 } from 'lucide-react';
 import api from '../../../../services/api';
 import useAuthStore from '../../../../store/authStore';
@@ -318,8 +319,16 @@ export const PortalProbation = () => {
         presentation_notes: isCeo ? ceoPresentationNotes : undefined,
       };
 
+      const isAlreadySubmitted = activeFormItem.status === 'submitted';
       const res = await api.post(`/hr/probation/forms/${activeFormItem.id}/submit`, payload);
-      toast.success(res.data?.message || (isCeo ? 'Evaluation submitted and CEO Final Decision recorded!' : 'Evaluation submitted and locked successfully!'));
+      toast.success(
+        res.data?.message ||
+        (isCeo
+          ? 'Evaluation submitted and CEO Final Decision recorded!'
+          : isAlreadySubmitted
+          ? 'Evaluation marks updated successfully!'
+          : 'Evaluation submitted and locked successfully!')
+      );
       setActiveFormMode(null);
       fetchData();
     } catch (err) {
@@ -568,7 +577,10 @@ export const PortalProbation = () => {
   // VIEW: Active Standardized Evaluator Form (Image 2)
   // ───────────────────────────────────────────────────────────────────────────
   if (activeFormMode === 'evaluator' && activeFormItem) {
-    const isLocked = activeFormItem.status === 'submitted';
+    const isFinalized = !!(activeFormItem.evaluation?.ceo_decision || activeFormItem.evaluation?.status === 'completed');
+    const canEditMarks = (activeFormItem.evaluator_role === 'line_manager' || activeFormItem.evaluator_role === 'hr') && !isFinalized;
+    const isLocked = activeFormItem.status === 'submitted' && !canEditMarks;
+    const isAlreadySubmitted = activeFormItem.status === 'submitted';
     const evalTarget = activeFormItem.evaluation?.employee;
     const isManagerRole = inArrayRole(activeFormItem.evaluator_role, ['line_manager', 'gm_pd', 'hr']);
 
@@ -593,6 +605,25 @@ export const PortalProbation = () => {
               Evaluator Stream: <strong>{formatRoleName(activeFormItem.evaluator_role)}</strong>
             </p>
           </div>
+
+          {/* Notice if editing previously submitted form */}
+          {isAlreadySubmitted && canEditMarks && (
+            <div style={{
+              background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px',
+              padding: '0.65rem 1rem', marginBottom: '1.25rem', color: '#1d4ed8', fontSize: '0.82rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <CheckCircle2 size={16} style={{ color: '#2563eb' }} />
+                <span>
+                  You previously submitted this evaluation. You may edit and update your marks and recommendation at any time <strong>before the CEO's final decision</strong>.
+                </span>
+              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, background: '#dbeafe', color: '#1e40af', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                Current Score: {calculateEvalScore()} / 100
+              </span>
+            </div>
+          )}
 
           {/* Info Banner */}
           <div style={{
@@ -877,13 +908,17 @@ export const PortalProbation = () => {
                 <span>
                   {activeFormItem.evaluator_role === 'ceo'
                     ? 'Submit Evaluation & Apply CEO Final Decision'
+                    : isAlreadySubmitted
+                    ? 'Update Evaluation Marks'
                     : 'Submit & Lock Evaluation'}
                 </span>
               </button>
             </div>
           ) : (
             <div style={{ padding: '0.75rem', background: '#dcfce7', borderRadius: '8px', color: '#15803d', fontWeight: 700, textAlign: 'center', fontSize: '0.88rem' }}>
-              ✓ Evaluation Form Submitted &amp; Locked
+              {isFinalized
+                ? '🔒 Evaluation Finalized by CEO Decision (Locked)'
+                : '✓ Evaluation Form Submitted & Locked'}
             </div>
           )}
         </form>
@@ -1273,22 +1308,79 @@ export const PortalProbation = () => {
             <span>Completed Evaluations ({completedForms.length})</span>
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.75rem' }}>
-            {completedForms.map(item => (
-              <div key={item.id} className="card" style={{ padding: '1rem', background: '#f8fafc' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>{item.evaluation?.employee?.full_name}</strong>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Evaluated as {formatRoleName(item.evaluator_role)} · {formatDateTime(item.submitted_at)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.75rem' }}>
+            {completedForms.map(item => {
+              const isCeoDone = !!(item.evaluation?.ceo_decision || item.evaluation?.status === 'completed');
+              const canEdit = (item.evaluator_role === 'line_manager' || item.evaluator_role === 'hr') && !isCeoDone;
+
+              return (
+                <div key={item.id} className="card" style={{ padding: '1rem', background: '#f8fafc', border: canEdit ? '1px solid #bae6fd' : '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>{item.evaluation?.employee?.full_name}</strong>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        Evaluated as {formatRoleName(item.evaluator_role)} · {formatDateTime(item.submitted_at)}
+                      </div>
+                      {item.form_score !== null && item.form_score !== undefined && (
+                        <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0369a1', marginTop: '0.2rem' }}>
+                          Score: {item.form_score} / 100
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d' }}>
+                        Submitted ✓
+                      </span>
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEvaluatorForm(item)}
+                          className="btn btn-ghost"
+                          style={{
+                            padding: '0.3rem 0.65rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: '#0284c7',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            border: '1px solid #0284c7',
+                            background: '#f0f9ff',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Edit3 size={13} />
+                          <span>Edit Marks</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEvaluatorForm(item)}
+                          className="btn btn-ghost"
+                          style={{
+                            padding: '0.3rem 0.65rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: '#64748b',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            border: '1px solid #cbd5e1',
+                            background: '#fff',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Eye size={13} />
+                          <span>View Form</span>
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d' }}>
-                    Submitted ✓
-                  </span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
