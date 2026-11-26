@@ -23,13 +23,18 @@ const SolarMilestoneTemplates = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    category: 'PV Installation',
+    unit: 'Tables',
+    target_qty: 384,
     sort_order: 1,
     has_before_after: false,
     has_table_tracking: false,
     expected_images: 10,
     sub_sections: '',
+    checklist_rules: [],
     notes: ''
   });
+  const [newRuleText, setNewRuleText] = useState('');
 
   useEffect(() => {
     // Only super admins can access this page
@@ -54,33 +59,76 @@ const SolarMilestoneTemplates = () => {
   const openModal = (template = null) => {
     if (template) {
       setEditingTemplate(template);
+      const parsedRules = Array.isArray(template.checklist_rules) 
+        ? template.checklist_rules 
+        : (typeof template.checklist_rules === 'string' ? JSON.parse(template.checklist_rules || '[]') : []);
+
       setFormData({
         name: template.name,
+        category: template.category || 'PV Installation',
+        unit: template.unit || 'Tables',
+        target_qty: template.target_qty !== null && template.target_qty !== undefined ? template.target_qty : 384,
         sort_order: template.sort_order,
         has_before_after: template.has_before_after,
         has_table_tracking: template.has_table_tracking,
         expected_images: template.expected_images,
         sub_sections: Array.isArray(template.sub_sections) ? template.sub_sections.join(', ') : (template.sub_sections || ''),
+        checklist_rules: parsedRules,
         notes: template.notes || ''
       });
     } else {
       setEditingTemplate(null);
       setFormData({
         name: '',
+        category: 'PV Installation',
+        unit: 'Tables',
+        target_qty: 384,
         sort_order: templates.length + 1,
         has_before_after: false,
         has_table_tracking: false,
         expected_images: 10,
         sub_sections: '',
+        checklist_rules: [],
         notes: ''
       });
     }
+    setNewRuleText('');
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingTemplate(null);
+    setNewRuleText('');
+  };
+
+  const handleAddRule = () => {
+    const trimmed = newRuleText.trim();
+    if (!trimmed) return;
+    if (formData.checklist_rules.includes(trimmed)) {
+      toast.error('This rule already exists');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      checklist_rules: [...prev.checklist_rules, trimmed]
+    }));
+    setNewRuleText('');
+  };
+
+  const handleRemoveRule = (indexToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      checklist_rules: prev.checklist_rules.filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
+  const handleMoveRule = (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= formData.checklist_rules.length) return;
+    const updated = [...formData.checklist_rules];
+    const item = updated.splice(fromIndex, 1)[0];
+    updated.splice(toIndex, 0, item);
+    setFormData(prev => ({ ...prev, checklist_rules: updated }));
   };
 
   const handleSubmit = async (e) => {
@@ -164,9 +212,9 @@ const SolarMilestoneTemplates = () => {
               <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>Order</th>
                 <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>Milestone Name</th>
-                <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>Expected Images</th>
+                <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>Category & BOQ</th>
+                <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>Checklist & Image Rules</th>
                 <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>Tracking Modes</th>
-                <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>Sub-sections</th>
                 <th style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -178,43 +226,92 @@ const SolarMilestoneTemplates = () => {
                   </td>
                 </tr>
               ) : (
-                filteredTemplates.map(template => (
-                  <tr key={template.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 0.2s' }}>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: 'bold' }}>{template.sort_order}</td>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: 500 }}>{template.name}</td>
-                    <td style={{ padding: '1rem 1.5rem' }}>{template.expected_images}</td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {template.has_before_after && <span style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>Before/After</span>}
-                        {template.has_table_tracking && <span style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>Table Tracking</span>}
-                        {!template.has_before_after && !template.has_table_tracking && <span style={{ color: 'var(--text-muted)' }}>General</span>}
-                      </div>
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.85rem' }}>
-                      {Array.isArray(template.sub_sections) ? template.sub_sections.join(', ') : '-'}
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                        <button 
-                          onClick={() => openModal(template)} 
-                          className="btn btn-ghost" 
-                          style={{ padding: '0.5rem', color: '#3b82f6' }}
-                          title="Edit Template"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button 
-                          onClick={() => setDeleteModal({ isOpen: true, templateId: template.id })}
-                          className="btn btn-ghost" 
-                          style={{ padding: '0.5rem', color: '#ef4444' }}
-                          title="Delete Template"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredTemplates.map(template => {
+                  const rules = Array.isArray(template.checklist_rules) 
+                    ? template.checklist_rules 
+                    : (typeof template.checklist_rules === 'string' ? JSON.parse(template.checklist_rules || '[]') : []);
+
+                  return (
+                    <tr key={template.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 0.2s' }}>
+                      <td style={{ padding: '1rem 1.5rem', fontWeight: 'bold' }}>{template.sort_order}</td>
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>{template.name}</div>
+                        {template.notes && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{template.notes}</div>}
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        <span style={{ 
+                          display: 'inline-block',
+                          background: 'rgba(2,132,199,0.1)', 
+                          color: '#0284c7', 
+                          padding: '0.2rem 0.5rem', 
+                          borderRadius: '4px', 
+                          fontSize: '0.75rem', 
+                          fontWeight: 600,
+                          marginBottom: '0.25rem'
+                        }}>
+                          {template.category || 'PV Installation'}
+                        </span>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          Target: <strong>{template.target_qty !== null && template.target_qty !== undefined ? Number(template.target_qty).toLocaleString() : '-'}</strong> {template.unit || ''}
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        {rules.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '0.35rem', 
+                              background: 'rgba(16,185,129,0.12)', 
+                              color: '#059669', 
+                              padding: '0.25rem 0.6rem', 
+                              borderRadius: '999px', 
+                              fontSize: '0.78rem', 
+                              fontWeight: 700, 
+                              width: 'fit-content' 
+                            }}>
+                              📸 {rules.length} Rule Placeholders
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              {rules.slice(0, 2).join(', ')}{rules.length > 2 ? ` +${rules.length - 2} more` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                            General photos (~{template.expected_images || 10})
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {template.has_before_after && <span style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600 }}>Before/After</span>}
+                          {template.has_table_tracking && <span style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600 }}>Table Tracking</span>}
+                          {!template.has_before_after && !template.has_table_tracking && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Standard</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                          <button 
+                            onClick={() => openModal(template)} 
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.5rem', color: '#3b82f6' }}
+                            title="Edit Template"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button 
+                            onClick={() => setDeleteModal({ isOpen: true, templateId: template.id })}
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.5rem', color: '#ef4444' }}
+                            title="Delete Template"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -248,6 +345,7 @@ const SolarMilestoneTemplates = () => {
                     value={formData.name} 
                     onChange={e => setFormData({...formData, name: e.target.value})}
                     required 
+                    placeholder="e.g. 01 Table Leg Marking"
                     style={{ width: '100%' }}
                   />
                 </div>
@@ -266,8 +364,190 @@ const SolarMilestoneTemplates = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 2 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Category *</label>
+                  <select 
+                    className="form-control" 
+                    value={formData.category} 
+                    onChange={e => setFormData({...formData, category: e.target.value})}
+                    required
+                    style={{ width: '100%' }}
+                  >
+                    <option value="PV Installation">☀️ PV Installation</option>
+                    <option value="Inverter Installation">⚡ Inverter Installation</option>
+                    <option value="Earthing & Lightning">🛡️ Earthing & Lightning</option>
+                    <option value="AC Electrical Works">🔌 AC Electrical Works</option>
+                    <option value="HT Installation">🏭 HT Installation</option>
+                    <option value="Mobilisation & Acceptance">📋 Mobilisation & Acceptance</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Expected Images *</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Unit of Measure</label>
+                  <select 
+                    className="form-control" 
+                    value={formData.unit} 
+                    onChange={e => setFormData({...formData, unit: e.target.value})}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="Tables">Tables</option>
+                    <option value="Inverters">Inverters</option>
+                    <option value="Meters (m)">Meters (m)</option>
+                    <option value="Pits">Pits</option>
+                    <option value="Poles">Poles</option>
+                    <option value="Stations">Stations</option>
+                    <option value="Rooms">Rooms</option>
+                    <option value="Nos">Nos</option>
+                    <option value="Sets">Sets</option>
+                    <option value="Site">Site</option>
+                    <option value="Lot">Lot</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Target Qty</label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    className="form-control" 
+                    value={formData.target_qty} 
+                    onChange={e => setFormData({...formData, target_qty: e.target.value})}
+                    placeholder="384"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Checklist & Image Rules Builder */}
+              <div style={{ 
+                background: 'var(--surface-2)', 
+                border: '1px solid var(--border)', 
+                borderRadius: 'var(--radius)', 
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      📸 Checklist & Image Verification Rules
+                    </h4>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Field supervisors will be provided dedicated photo upload placeholders for each rule.
+                    </span>
+                  </div>
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: 700, 
+                    background: 'var(--primary)', 
+                    color: 'white', 
+                    padding: '0.2rem 0.5rem', 
+                    borderRadius: '999px' 
+                  }}>
+                    {formData.checklist_rules.length} Rules
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Enter inspection or photographic rule (e.g. Pile/leg location marking)..."
+                    value={newRuleText}
+                    onChange={e => setNewRuleText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddRule();
+                      }
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleAddRule} 
+                    className="btn btn-primary"
+                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
+                  >
+                    <Plus size={16} /> Add Rule
+                  </button>
+                </div>
+
+                {formData.checklist_rules.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto', marginTop: '0.5rem' }}>
+                    {formData.checklist_rules.map((rule, idx) => (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between', 
+                          background: 'var(--surface)', 
+                          padding: '0.5rem 0.75rem', 
+                          borderRadius: 'var(--radius)', 
+                          border: '1px solid var(--border)',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1, marginRight: '0.5rem' }}>
+                          <span style={{ 
+                            background: 'rgba(59,130,246,0.1)', 
+                            color: '#3b82f6', 
+                            fontWeight: 700, 
+                            fontSize: '0.75rem', 
+                            padding: '0.15rem 0.4rem', 
+                            borderRadius: '4px',
+                            minWidth: '22px',
+                            textAlign: 'center'
+                          }}>
+                            {idx + 1}
+                          </span>
+                          <span style={{ color: 'var(--text)', wordBreak: 'break-word' }}>{rule}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <button 
+                            type="button" 
+                            onClick={() => handleMoveRule(idx, idx - 1)} 
+                            disabled={idx === 0}
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.8rem', opacity: idx === 0 ? 0.3 : 1 }}
+                            title="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => handleMoveRule(idx, idx + 1)} 
+                            disabled={idx === formData.checklist_rules.length - 1}
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.8rem', opacity: idx === formData.checklist_rules.length - 1 ? 0.3 : 1 }}
+                            title="Move Down"
+                          >
+                            ▼
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveRule(idx)} 
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.2rem 0.4rem', color: '#ef4444' }}
+                            title="Delete Rule"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.5rem', textAlign: 'center' }}>
+                    No specific checklist rules added. Supervisors will submit general photos for this milestone.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Expected Images (Fallback) *</label>
                   <input 
                     type="number" 
                     className="form-control" 

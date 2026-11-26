@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SolarImage extends Model
 {
     protected $fillable = [
-        'solar_upload_batch_id', 'image_path', 'image_url',
+        'solar_upload_batch_id', 'checklist_rule', 'image_path', 'image_url',
         'original_name', 'file_size', 'is_flagged', 'flag_reason',
     ];
 

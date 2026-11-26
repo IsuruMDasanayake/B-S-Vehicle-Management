@@ -58,11 +58,14 @@ class SolarUploadController extends Controller
             'has_issue'         => 'nullable|boolean',
             'issue_description' => 'nullable|string|max:1000',
             'sub_section'       => 'nullable|string|max:255',
+            'checklist_rule'    => 'nullable|string|max:500',
             'phase'             => 'nullable|in:before,after,general',
             'table_number'      => 'nullable|integer|min:1',
             'quantity_done'     => 'nullable|numeric|min:0',
-            'images'            => 'required|array|min:1|max:30',
+            'images'            => 'required|array|min:1|max:50',
             'images.*'          => 'required|image|mimes:jpeg,jpg,png,heic|max:20480', // 20MB max per image
+            'image_rules'       => 'nullable|array',
+            'image_rules.*'     => 'nullable|string|max:500',
             'uploaded_by'       => 'nullable|string|max:255',
         ]);
 
@@ -70,6 +73,7 @@ class SolarUploadController extends Controller
         $batch = SolarUploadBatch::create([
             'solar_section_id'  => $request->solar_section_id,
             'sub_section'       => $request->sub_section,
+            'checklist_rule'    => $request->checklist_rule,
             'phase'             => $request->phase ?? 'general',
             'table_number'      => $request->table_number,
             'quantity_done'     => $request->quantity_done,
@@ -84,8 +88,9 @@ class SolarUploadController extends Controller
         ]);
 
         $savedImages = [];
+        $imageRules = $request->input('image_rules', []);
 
-        foreach ($request->file('images') as $file) {
+        foreach ($request->file('images') as $index => $file) {
             // Build a clean directory path: solar-images/{site_id}/{YYYY-MM-DD}/
             $dateFolder = now()->format('Y-m-d');
             $folder     = "solar-images/site-{$site->id}/{$dateFolder}";
@@ -109,9 +114,11 @@ class SolarUploadController extends Controller
 
             $fileSize = filesize($fullPath);
             $publicUrl = url("storage/{$relativePath}");
+            $ruleForImage = $imageRules[$index] ?? $request->checklist_rule ?? null;
 
             $image = SolarImage::create([
                 'solar_upload_batch_id' => $batch->id,
+                'checklist_rule'        => $ruleForImage,
                 'image_path'            => $relativePath,
                 'image_url'             => $publicUrl,
                 'original_name'         => $file->getClientOriginalName(),

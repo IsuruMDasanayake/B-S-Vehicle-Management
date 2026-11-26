@@ -4,7 +4,7 @@ import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../../store/authStore';
 import ConfirmDeleteModal from '../../../components/ui/ConfirmDeleteModal';
-import { ChevronDown, ChevronUp, MinusCircle, Edit3, Layers, BarChart2, CheckCircle, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, MinusCircle, Edit3, Layers, BarChart2, CheckCircle, Clock, Plus, Trash2 } from 'lucide-react';
 
 const CATEGORY_THEMES = {
   'PV Installation': { color: '#0284c7', bg: 'rgba(2, 132, 199, 0.08)', border: '#38bdf8', icon: '☀️' },
@@ -53,8 +53,10 @@ const SolarProjectDetail = () => {
     unit: '',
     target_qty: '',
     expected_images: 10,
+    checklist_rules: [],
     notes: ''
   });
+  const [newMilestoneRuleText, setNewMilestoneRuleText] = useState('');
 
   const toggleSection = (sectionId) => {
     setExpandedSections(prev => ({
@@ -71,6 +73,10 @@ const SolarProjectDetail = () => {
   };
 
   const openEditMilestoneModal = (section) => {
+    const rules = Array.isArray(section.checklist_rules)
+      ? section.checklist_rules
+      : (typeof section.checklist_rules === 'string' ? JSON.parse(section.checklist_rules || '[]') : []);
+
     setEditMilestoneModal({
       isOpen: true,
       section,
@@ -79,8 +85,39 @@ const SolarProjectDetail = () => {
       unit: section.unit || 'Nos',
       target_qty: section.target_qty !== null && section.target_qty !== undefined ? section.target_qty : '',
       expected_images: section.expected_images || 10,
+      checklist_rules: rules,
       notes: section.notes || ''
     });
+    setNewMilestoneRuleText('');
+  };
+
+  const handleAddMilestoneRule = () => {
+    const trimmed = newMilestoneRuleText.trim();
+    if (!trimmed) return;
+    if (editMilestoneModal.checklist_rules.includes(trimmed)) {
+      toast.error('This rule already exists');
+      return;
+    }
+    setEditMilestoneModal(prev => ({
+      ...prev,
+      checklist_rules: [...prev.checklist_rules, trimmed]
+    }));
+    setNewMilestoneRuleText('');
+  };
+
+  const handleRemoveMilestoneRule = (idx) => {
+    setEditMilestoneModal(prev => ({
+      ...prev,
+      checklist_rules: prev.checklist_rules.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleMoveMilestoneRule = (fromIdx, toIdx) => {
+    if (toIdx < 0 || toIdx >= editMilestoneModal.checklist_rules.length) return;
+    const updated = [...editMilestoneModal.checklist_rules];
+    const item = updated.splice(fromIdx, 1)[0];
+    updated.splice(toIdx, 0, item);
+    setEditMilestoneModal(prev => ({ ...prev, checklist_rules: updated }));
   };
 
   const handleUpdateMilestone = async (e) => {
@@ -93,10 +130,11 @@ const SolarProjectDetail = () => {
         unit: editMilestoneModal.unit,
         target_qty: editMilestoneModal.target_qty !== '' ? Number(editMilestoneModal.target_qty) : null,
         expected_images: Number(editMilestoneModal.expected_images),
+        checklist_rules: editMilestoneModal.checklist_rules,
         notes: editMilestoneModal.notes,
       });
       toast.success('Milestone settings updated successfully');
-      setEditMilestoneModal({ isOpen: false, section: null, name: '', category: '', unit: '', target_qty: '', expected_images: 10, notes: '' });
+      setEditMilestoneModal({ isOpen: false, section: null, name: '', category: '', unit: '', target_qty: '', expected_images: 10, checklist_rules: [], notes: '' });
       fetchProject();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update milestone settings');
@@ -775,91 +813,264 @@ const SolarProjectDetail = () => {
                                 </div>
                               </div>
 
-                              {/* Expanded Batches Section */}
-                              {isExpanded && (
-                                <div style={{ marginTop: '1rem' }}>
-                                  {section.upload_batches?.length > 0 ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                                      {section.upload_batches.map(batch => (
-                                        <div key={batch.id} style={{ background: 'var(--surface-2)', padding: '1.25rem', borderRadius: 'var(--radius)' }}>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                                            <div>
-                                              <div style={{ fontWeight: 600, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                                <span>{new Date(batch.work_date).toLocaleDateString()} {batch.work_time && `at ${batch.work_time}`}</span>
-                                                {batch.quantity_done !== null && batch.quantity_done !== undefined && (
-                                                  <span style={{ 
-                                                    background: 'rgba(34, 197, 94, 0.15)', 
-                                                    color: '#15803d', 
-                                                    padding: '0.2rem 0.6rem', 
-                                                    borderRadius: '999px', 
-                                                    fontWeight: 700, 
-                                                    fontSize: '0.85rem' 
-                                                  }}>
-                                                    ⚡ Completed: {Number(batch.quantity_done).toLocaleString()} {section.unit || 'units'}
-                                                  </span>
-                                                )}
-                                              </div>
-                                              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                                {batch.participants && <span>👷 {batch.participants}</span>}
-                                                {batch.uploaded_by && <span>👤 Uploaded By: {batch.uploaded_by}</span>}
-                                                {batch.weather && <span>🌤️ {batch.weather}</span>}
-                                                {batch.phase !== 'general' && <span>⏱️ Phase: {batch.phase}</span>}
-                                                {batch.table_number && <span>🏗️ Table: {batch.table_number}</span>}
-                                                {batch.sub_section && <span>📂 {batch.sub_section}</span>}
-                                              </div>
-                                              {batch.programme && (
-                                                <div style={{ marginTop: '0.5rem', fontSize: '0.95rem' }}>
-                                                  <strong>Programme:</strong> {batch.programme}
-                                                </div>
-                                              )}
-                                              {batch.has_issue && (
-                                                <div style={{ marginTop: '0.5rem', background: '#fef2f2', color: '#ef4444', padding: '0.5rem 0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>
-                                                  <strong>⚠️ Issue Reported:</strong> {batch.issue_description}
-                                                </div>
-                                              )}
-                                            </div>
-                                            {isSuperAdmin && (
-                                              <div style={{ display: 'flex', gap: '0.5rem', height: 'fit-content' }}>
-                                                <button onClick={(e) => { e.stopPropagation(); openEditModal(batch); }} className="btn btn-ghost" style={{ color: '#3b82f6', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}>
-                                                  Edit Batch
-                                                </button>
-                                                <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, batchId: batch.id }); }} className="btn btn-ghost" style={{ color: '#ef4444', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}>
-                                                  Delete Batch
-                                                </button>
-                                              </div>
-                                            )}
-                                          </div>
+                              {/* Expanded Batches & Checklist Gallery Section */}
+                              {isExpanded && (() => {
+                                const sectionRules = Array.isArray(section.checklist_rules)
+                                  ? section.checklist_rules
+                                  : (typeof section.checklist_rules === 'string' ? JSON.parse(section.checklist_rules || '[]') : []);
 
-                                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem' }}>
-                                            {batch.images?.map(img => (
-                                              <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: img.is_flagged ? '3px solid #ef4444' : '1px solid var(--border)' }}>
-                                                <img 
-                                                  src={img.image_url} 
-                                                  alt="Upload" 
-                                                  style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} 
-                                                  onClick={(e) => { e.stopPropagation(); setSelectedImage({ image: img, images: batch.images, currentIndex: batch.images.findIndex(i => i.id === img.id) }); }}
-                                                />
-                                                {img.is_flagged && (
-                                                  <div 
-                                                    title={img.flag_reason || 'Flagged by Admin'}
-                                                    style={{ position: 'absolute', top: '6px', left: '6px', background: '#ef4444', color: 'white', padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: 'bold', cursor: 'help' }}
-                                                  >
-                                                    FLAGGED
+                                const allImages = (section.upload_batches || []).flatMap(b => b.images || []);
+
+                                return (
+                                  <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    {/* 1. Checklist Rules & Verification Placeholders */}
+                                    {sectionRules.length > 0 && (
+                                      <div style={{ 
+                                        background: 'var(--surface-2)', 
+                                        borderRadius: 'var(--radius)', 
+                                        padding: '1.25rem', 
+                                        border: '1px solid var(--border)' 
+                                      }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontSize: '1.1rem' }}>📋</span>
+                                            <div>
+                                              <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: 'var(--text)' }}>
+                                                Checklist Rules & Image Verification Gallery
+                                              </h4>
+                                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                Inspection rules and photographic evidence uploaded from the field
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <span style={{ 
+                                              fontSize: '0.78rem', 
+                                              fontWeight: 700, 
+                                              background: 'rgba(2, 132, 199, 0.1)', 
+                                              color: '#0284c7', 
+                                              padding: '0.2rem 0.6rem', 
+                                              borderRadius: '999px' 
+                                            }}>
+                                              {sectionRules.length} Rule Placeholders
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                                          {sectionRules.map((rule, rIdx) => {
+                                            const ruleImages = allImages.filter(img => img.checklist_rule === rule);
+                                            const isVerified = ruleImages.length > 0;
+
+                                            return (
+                                              <div 
+                                                key={rIdx} 
+                                                style={{ 
+                                                  background: 'var(--surface)', 
+                                                  border: isVerified ? '1px solid rgba(34, 197, 94, 0.3)' : '1px dashed var(--border)', 
+                                                  borderRadius: 'var(--radius)', 
+                                                  padding: '0.85rem 1rem' 
+                                                }}
+                                              >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isVerified ? '0.75rem' : 0, flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                    <span style={{ 
+                                                      background: isVerified ? '#16a34a' : 'var(--border)', 
+                                                      color: isVerified ? 'white' : 'var(--text-muted)', 
+                                                      fontWeight: 700, 
+                                                      fontSize: '0.75rem', 
+                                                      padding: '0.15rem 0.45rem', 
+                                                      borderRadius: '4px',
+                                                      minWidth: '22px',
+                                                      textAlign: 'center'
+                                                    }}>
+                                                      {rIdx + 1 < 10 ? `0${rIdx + 1}` : rIdx + 1}
+                                                    </span>
+                                                    <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)' }}>
+                                                      {rule}
+                                                    </span>
+                                                  </div>
+                                                  <span style={{ 
+                                                    fontSize: '0.78rem', 
+                                                    fontWeight: 600, 
+                                                    background: isVerified ? 'rgba(34, 197, 94, 0.12)' : 'rgba(156, 163, 175, 0.12)', 
+                                                    color: isVerified ? '#15803d' : 'var(--text-muted)', 
+                                                    padding: '0.2rem 0.55rem', 
+                                                    borderRadius: '999px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.3rem'
+                                                  }}>
+                                                    {isVerified ? `✓ ${ruleImages.length} Photo(s)` : '⏳ Awaiting Photos'}
+                                                  </span>
+                                                </div>
+
+                                                {isVerified ? (
+                                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.6rem' }}>
+                                                    {ruleImages.map(img => (
+                                                      <div 
+                                                        key={img.id} 
+                                                        style={{ 
+                                                          position: 'relative', 
+                                                          aspectRatio: '1', 
+                                                          borderRadius: 'var(--radius)', 
+                                                          overflow: 'hidden', 
+                                                          border: img.is_flagged ? '3px solid #ef4444' : '1px solid var(--border)',
+                                                          cursor: 'pointer' 
+                                                        }}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setSelectedImage({ image: img, images: allImages, currentIndex: allImages.findIndex(i => i.id === img.id) });
+                                                        }}
+                                                      >
+                                                        <img src={img.image_url} alt={rule} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        {img.is_flagged && (
+                                                          <div 
+                                                            title={img.flag_reason || 'Flagged by Admin'}
+                                                            style={{ position: 'absolute', top: '4px', left: '4px', background: '#ef4444', color: 'white', padding: '1px 4px', borderRadius: '3px', fontSize: '8px', fontWeight: 'bold' }}
+                                                          >
+                                                            FLAGGED
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                ) : (
+                                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.35rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <span>📷</span> Placeholder awaiting field photo upload for this inspection item
                                                   </div>
                                                 )}
                                               </div>
-                                            ))}
-                                          </div>
+                                            );
+                                          })}
+
+                                          {/* Uncategorized / General Milestone Photos */}
+                                          {(() => {
+                                            const uncategorized = allImages.filter(img => !img.checklist_rule || !sectionRules.includes(img.checklist_rule));
+                                            if (uncategorized.length === 0) return null;
+                                            return (
+                                              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', marginTop: '0.5rem' }}>
+                                                <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                                                  📷 Additional / Overview Milestone Photos ({uncategorized.length})
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.6rem' }}>
+                                                  {uncategorized.map(img => (
+                                                    <div 
+                                                      key={img.id} 
+                                                      style={{ 
+                                                        position: 'relative', 
+                                                        aspectRatio: '1', 
+                                                        borderRadius: 'var(--radius)', 
+                                                        overflow: 'hidden', 
+                                                        border: img.is_flagged ? '3px solid #ef4444' : '1px solid var(--border)',
+                                                        cursor: 'pointer' 
+                                                      }}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedImage({ image: img, images: allImages, currentIndex: allImages.findIndex(i => i.id === img.id) });
+                                                      }}
+                                                    >
+                                                      <img src={img.image_url} alt="Milestone Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic', padding: '0.5rem 0' }}>
-                                      No field reports uploaded for this milestone yet.
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                                      </div>
+                                    )}
+
+                                    {/* 2. Work Batches Reports History */}
+                                    {section.upload_batches?.length > 0 ? (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                          Field Submission History ({section.upload_batches.length} Submissions)
+                                        </div>
+                                        {section.upload_batches.map(batch => (
+                                          <div key={batch.id} style={{ background: 'var(--surface-2)', padding: '1.25rem', borderRadius: 'var(--radius)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                              <div>
+                                                <div style={{ fontWeight: 600, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                                  <span>{new Date(batch.work_date).toLocaleDateString()} {batch.work_time && `at ${batch.work_time}`}</span>
+                                                  {batch.quantity_done !== null && batch.quantity_done !== undefined && (
+                                                    <span style={{ 
+                                                      background: 'rgba(34, 197, 94, 0.15)', 
+                                                      color: '#15803d', 
+                                                      padding: '0.2rem 0.6rem', 
+                                                      borderRadius: '999px', 
+                                                      fontWeight: 700, 
+                                                      fontSize: '0.85rem' 
+                                                    }}>
+                                                      ⚡ Completed: {Number(batch.quantity_done).toLocaleString()} {section.unit || 'units'}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                                  {batch.participants && <span>👷 {batch.participants}</span>}
+                                                  {batch.uploaded_by && <span>👤 Uploaded By: {batch.uploaded_by}</span>}
+                                                  {batch.weather && <span>🌤️ {batch.weather}</span>}
+                                                  {batch.phase !== 'general' && <span>⏱️ Phase: {batch.phase}</span>}
+                                                  {batch.table_number && <span>🏗️ Table: {batch.table_number}</span>}
+                                                  {batch.sub_section && <span>📂 {batch.sub_section}</span>}
+                                                </div>
+                                                {batch.programme && (
+                                                  <div style={{ marginTop: '0.5rem', fontSize: '0.95rem' }}>
+                                                    <strong>Programme:</strong> {batch.programme}
+                                                  </div>
+                                                )}
+                                                {batch.has_issue && (
+                                                  <div style={{ marginTop: '0.5rem', background: '#fef2f2', color: '#ef4444', padding: '0.5rem 0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+                                                    <strong>⚠️ Issue Reported:</strong> {batch.issue_description}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              {isSuperAdmin && (
+                                                <div style={{ display: 'flex', gap: '0.5rem', height: 'fit-content' }}>
+                                                  <button onClick={(e) => { e.stopPropagation(); openEditModal(batch); }} className="btn btn-ghost" style={{ color: '#3b82f6', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}>
+                                                    Edit Batch
+                                                  </button>
+                                                  <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, batchId: batch.id }); }} className="btn btn-ghost" style={{ color: '#ef4444', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}>
+                                                    Delete Batch
+                                                  </button>
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            {/* Batch photos if no checklist rules (or fallback) */}
+                                            {(!sectionRules || sectionRules.length === 0) && (
+                                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                                                {batch.images?.map(img => (
+                                                  <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', border: img.is_flagged ? '3px solid #ef4444' : '1px solid var(--border)' }}>
+                                                    <img 
+                                                      src={img.image_url} 
+                                                      alt="Upload" 
+                                                      style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} 
+                                                      onClick={(e) => { e.stopPropagation(); setSelectedImage({ image: img, images: batch.images, currentIndex: batch.images.findIndex(i => i.id === img.id) }); }}
+                                                    />
+                                                    {img.is_flagged && (
+                                                      <div 
+                                                        title={img.flag_reason || 'Flagged by Admin'}
+                                                        style={{ position: 'absolute', top: '6px', left: '6px', background: '#ef4444', color: 'white', padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: 'bold', cursor: 'help' }}
+                                                      >
+                                                        FLAGGED
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                                        No field reports uploaded for this milestone yet.
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}
@@ -1444,6 +1655,134 @@ const SolarProjectDetail = () => {
                     style={{ width: '100%' }} 
                   />
                 </div>
+              </div>
+
+              {/* Checklist & Image Rules Builder */}
+              <div style={{ 
+                background: 'var(--surface-2)', 
+                border: '1px solid var(--border)', 
+                borderRadius: 'var(--radius)', 
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      📸 Inspection Rules & Photo Placeholders
+                    </h4>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Placeholders will show up for field supervisors to submit photos against.
+                    </span>
+                  </div>
+                  <span style={{ 
+                    fontSize: '0.72rem', 
+                    fontWeight: 700, 
+                    background: 'var(--primary)', 
+                    color: 'white', 
+                    padding: '0.15rem 0.45rem', 
+                    borderRadius: '999px' 
+                  }}>
+                    {editMilestoneModal.checklist_rules?.length || 0} Rules
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Add inspection or evidence rule..."
+                    value={newMilestoneRuleText}
+                    onChange={e => setNewMilestoneRuleText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddMilestoneRule();
+                      }
+                    }}
+                    style={{ flex: 1, fontSize: '0.85rem' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleAddMilestoneRule} 
+                    className="btn btn-primary"
+                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+                  >
+                    <Plus size={15} /> Add
+                  </button>
+                </div>
+
+                {editMilestoneModal.checklist_rules?.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '180px', overflowY: 'auto', marginTop: '0.35rem' }}>
+                    {editMilestoneModal.checklist_rules.map((rule, idx) => (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between', 
+                          background: 'var(--surface)', 
+                          padding: '0.4rem 0.65rem', 
+                          borderRadius: 'var(--radius)', 
+                          border: '1px solid var(--border)',
+                          fontSize: '0.82rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, marginRight: '0.5rem' }}>
+                          <span style={{ 
+                            background: 'rgba(59,130,246,0.1)', 
+                            color: '#3b82f6', 
+                            fontWeight: 700, 
+                            fontSize: '0.72rem', 
+                            padding: '0.1rem 0.35rem', 
+                            borderRadius: '3px',
+                            minWidth: '20px',
+                            textAlign: 'center'
+                          }}>
+                            {idx + 1}
+                          </span>
+                          <span style={{ color: 'var(--text)', wordBreak: 'break-word' }}>{rule}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                          <button 
+                            type="button" 
+                            onClick={() => handleMoveMilestoneRule(idx, idx - 1)} 
+                            disabled={idx === 0}
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.15rem 0.35rem', fontSize: '0.75rem', opacity: idx === 0 ? 0.3 : 1 }}
+                            title="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => handleMoveMilestoneRule(idx, idx + 1)} 
+                            disabled={idx === editMilestoneModal.checklist_rules.length - 1}
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.15rem 0.35rem', fontSize: '0.75rem', opacity: idx === editMilestoneModal.checklist_rules.length - 1 ? 0.3 : 1 }}
+                            title="Move Down"
+                          >
+                            ▼
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveMilestoneRule(idx)} 
+                            className="btn btn-ghost" 
+                            style={{ padding: '0.15rem 0.35rem', color: '#ef4444' }}
+                            title="Delete Rule"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.35rem', textAlign: 'center' }}>
+                    No specific checklist rules configured.
+                  </div>
+                )}
               </div>
 
               <div className="form-group">

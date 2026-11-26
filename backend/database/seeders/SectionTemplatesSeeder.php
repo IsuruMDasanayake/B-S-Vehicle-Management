@@ -12,127 +12,159 @@ class SectionTemplatesSeeder extends Seeder
     {
         $templates = [
             // ─────────────────────────────────────────────────────────────
-            // 1. PV Installation (Total 384 Tables: 360 Normal Soil + 24 Weathered Rock)
+            // 1. PV Installation (7 Standard Sub-categories)
             // ─────────────────────────────────────────────────────────────
             [
                 'category'           => 'PV Installation',
-                'name'               => 'Ground Cleaning and Adjustment',
+                'name'               => '01 Table Leg Marking',
                 'unit'               => 'Tables',
                 'target_qty'         => 384,
                 'sort_order'         => 1,
                 'has_before_after'   => false,
-                'has_table_tracking' => false,
+                'has_table_tracking' => true,
                 'sub_sections'       => null,
-                'expected_images'    => 10,
-                'notes'              => 'Site clearing, bush cutting, and ground leveling.',
+                'checklist_rules'    => [
+                    'Approved layout / setting-out drawing verification',
+                    'Survey benchmark and reference level verification',
+                    'Pile/leg location marking and grid alignment',
+                    'Leg spacing and row-to-row distance verification',
+                    'Diagonal measurement and alignment inspection',
+                    'Photographic evidence – marked leg locations',
+                ],
+                'expected_images'    => 6,
+                'notes'              => 'Setting out & marking individual table leg locations.',
             ],
             [
                 'category'           => 'PV Installation',
-                'name'               => 'Pile Testing',
-                'unit'               => 'Piles/Tests',
-                'target_qty'         => 10,
+                'name'               => '02 Drilling',
+                'unit'               => 'Tables',
+                'target_qty'         => 384,
                 'sort_order'         => 2,
-                'has_before_after'   => false,
-                'has_table_tracking' => false,
-                'sub_sections'       => null,
-                'expected_images'    => 10,
-                'notes'              => 'Vertical and lateral pull-out load testing on sample test piles.',
+                'has_before_after'   => true,
+                'has_table_tracking' => true,
+                'sub_sections'       => ['Normal Soil', 'Weathered Rock'],
+                'checklist_rules'    => [
+                    'Drilling equipment and method verification',
+                    'Drilling location verification against approved layout',
+                    'Drilled hole diameter verification',
+                    'Drilling depth measurement and recording',
+                    'Verticality / bore alignment inspection',
+                    'Photographic evidence – drilling process and completed holes',
+                ],
+                'expected_images'    => 6,
+                'notes'              => 'Augering / Rock drilling for pile foundations.',
             ],
             [
                 'category'           => 'PV Installation',
-                'name'               => 'Total Setting-Out',
+                'name'               => '03 Casting',
                 'unit'               => 'Tables',
                 'target_qty'         => 384,
                 'sort_order'         => 3,
-                'has_before_after'   => false,
-                'has_table_tracking' => false,
+                'has_before_after'   => true,
+                'has_table_tracking' => true,
                 'sub_sections'       => null,
-                'expected_images'    => 10,
-                'notes'              => 'Total station boundary, table rows, and invert coordinates setting-out.',
+                'checklist_rules'    => [
+                    'Reinforcement / embedded component inspection, if applicable',
+                    'Concrete mix design and approval verification',
+                    'Concrete delivery and batch details recording',
+                    'Concrete slump test and sampling, as applicable',
+                    'Concrete pouring and compaction inspection',
+                    'Pile / foundation top level verification',
+                    'Curing procedure and duration monitoring',
+                    'Photographic evidence – before, during and after casting',
+                ],
+                'expected_images'    => 8,
+                'notes'              => 'Concrete casting with vertical GI poles inserted.',
             ],
             [
                 'category'           => 'PV Installation',
-                'name'               => 'Pile Marking',
+                'name'               => '04 Capping',
                 'unit'               => 'Tables',
                 'target_qty'         => 384,
                 'sort_order'         => 4,
-                'has_before_after'   => false,
-                'has_table_tracking' => true,
-                'sub_sections'       => null,
-                'expected_images'    => 12,
-                'notes'              => 'Setting out & marking individual pile points per table.',
-            ],
-            [
-                'category'           => 'PV Installation',
-                'name'               => 'Drilling',
-                'unit'               => 'Tables',
-                'target_qty'         => 384,
-                'sort_order'         => 5,
-                'has_before_after'   => true,
-                'has_table_tracking' => true,
-                'sub_sections'       => ['Normal Soil (360 Tables)', 'Weathered Rock (24 Tables)'],
-                'expected_images'    => 12,
-                'notes'              => 'Augering / Rock drilling for pile foundations (Before and After drill hole images).',
-            ],
-            [
-                'category'           => 'PV Installation',
-                'name'               => 'Casting',
-                'unit'               => 'Tables',
-                'target_qty'         => 384,
-                'sort_order'         => 6,
                 'has_before_after'   => true,
                 'has_table_tracking' => true,
                 'sub_sections'       => null,
-                'expected_images'    => 12,
-                'notes'              => 'G-20 concrete casting with vertical GI poles inserted (Check vertical level).',
-            ],
-            [
-                'category'           => 'PV Installation',
-                'name'               => 'Capping',
-                'unit'               => 'Tables',
-                'target_qty'         => 384,
-                'sort_order'         => 7,
-                'has_before_after'   => true,
-                'has_table_tracking' => true,
-                'sub_sections'       => null,
-                'expected_images'    => 12,
+                'checklist_rules'    => [
+                    'Pile head level and concrete condition inspection',
+                    'Pile trimming / surface preparation verification',
+                    'Cap / bracket material and dimensions inspection',
+                    'Capping installation and alignment verification',
+                    'Bolt tightening / connection inspection',
+                    'Final top elevation and level verification',
+                    'Photographic evidence – completed capping',
+                ],
+                'expected_images'    => 7,
                 'notes'              => 'Concrete pile top capping and curing protection.',
             ],
             [
                 'category'           => 'PV Installation',
-                'name'               => 'MMS Super Structure',
+                'name'               => '05 MMS Super Structure',
                 'unit'               => 'Tables',
                 'target_qty'         => 384,
-                'sort_order'         => 8,
+                'sort_order'         => 5,
                 'has_before_after'   => false,
                 'has_table_tracking' => true,
                 'sub_sections'       => ['Table-wise', 'Step-wise'],
-                'expected_images'    => 10,
-                'notes'              => 'Erection of structural steel framework, purlins, and check tilt angles.',
+                'checklist_rules'    => [
+                    'Column / post installation and alignment',
+                    'Rafter and purlin installation inspection',
+                    'Structural member spacing and dimensional verification',
+                    'Bolted connection and torque inspection',
+                    'Row alignment, tilt angle and structural level verification',
+                    'Final structural stability and workmanship inspection',
+                    'Photographic evidence – structural assembly',
+                ],
+                'expected_images'    => 7,
+                'notes'              => 'Erection of structural steel framework and purlins.',
             ],
             [
                 'category'           => 'PV Installation',
-                'name'               => 'Panel Installation',
+                'name'               => '06 Panel Installation',
                 'unit'               => 'Tables',
                 'target_qty'         => 384,
-                'sort_order'         => 9,
+                'sort_order'         => 6,
                 'has_before_after'   => false,
                 'has_table_tracking' => true,
                 'sub_sections'       => null,
-                'expected_images'    => 28,
-                'notes'              => 'Mounting 650W PV modules with clamps, star washers, and alignment.',
+                'checklist_rules'    => [
+                    'PV module model and rating verification',
+                    'Module visual inspection for cracks and damage',
+                    'Module orientation and positioning verification',
+                    'Module spacing and alignment inspection',
+                    'Clamping position and torque verification',
+                    'Module earthing / bonding inspection',
+                    'Final module row alignment inspection',
+                    'Photographic evidence – installed PV modules',
+                ],
+                'expected_images'    => 8,
+                'notes'              => 'Mounting PV modules with clamps, earthing, and alignment.',
             ],
             [
                 'category'           => 'PV Installation',
-                'name'               => 'DC Cabling',
+                'name'               => '07 DC Cabling',
                 'unit'               => 'Tables',
                 'target_qty'         => 384,
-                'sort_order'         => 10,
+                'sort_order'         => 7,
                 'has_before_after'   => false,
                 'has_table_tracking' => true,
                 'sub_sections'       => null,
-                'expected_images'    => 10,
-                'notes'              => '1x4mm2 / 1x6mm2 DC string cabling, cable tray & pipe support fixing.',
+                'checklist_rules'    => [
+                    'DC cable type, size and manufacturer verification',
+                    'Cable drum inspection and identification',
+                    'Cable routing and laying inspection',
+                    'Cable tray / conduit / HDPE installation inspection, as applicable',
+                    'Cable dressing, support and securing inspection',
+                    'Positive and negative polarity verification',
+                    'String identification and labelling inspection',
+                    'MC4 connector crimping and connection inspection',
+                    'Insulation resistance test recording',
+                    'String Voc / polarity verification',
+                    'Cable continuity and termination inspection',
+                    'Photographic evidence – cable routing, connections and completed installation',
+                ],
+                'expected_images'    => 12,
+                'notes'              => 'DC string cabling, MC4 crimping, polarity and testing.',
             ],
 
             // ─────────────────────────────────────────────────────────────
@@ -372,20 +404,36 @@ class SectionTemplatesSeeder extends Seeder
             ],
         ];
 
-        // Rename legacy names to official BOQ names
+        // Remove completely legacy milestones from PV Installation as requested
+        $obsoletePVNames = [
+            'Ground Cleaning',
+            'Ground Cleaning and Adjustment',
+            'Pile Testing',
+            'Total Setting-Out',
+        ];
+        SectionTemplate::whereIn('name', $obsoletePVNames)->delete();
+        SolarSection::whereIn('name', $obsoletePVNames)->delete();
+
+        // Rename legacy names to standard 01-07 sub-categories
         $legacyNameMap = [
-            'Ground Cleaning'                 => 'Ground Cleaning and Adjustment',
-            'Orgarin'                         => 'Drilling',
-            'MMS Super Structure'             => 'Structure - Installation (Tables)',
-            'Panel Installation'              => 'PV Module Installation',
-            'DC Cabling'                      => 'DC Cabling & Terminations',
-            'AC Cabling'                      => 'LV Cabling',
-            'Smart Transformer'               => 'Smart Transformer (MV Station) Equipment Installation',
-            'Final Termination'               => 'Final Termination & Testing',
-            'LV/MV Panel Board Installation'  => 'Switchyard & Panel Room Civil Works',
-            'Underground MV Cabling'          => 'Underground MV Cabling (33kV)',
-            'Four Paul Yard'                  => 'CEB Gantry Connection & Switchyard Accessories',
-            'Final Investigation'             => 'Testing, Commissioning & PAC',
+            'Pile Marking'                      => '01 Table Leg Marking',
+            'Drilling'                          => '02 Drilling',
+            'Orgarin'                           => '02 Drilling',
+            'Casting'                           => '03 Casting',
+            'Capping'                           => '04 Capping',
+            'MMS Super Structure'               => '05 MMS Super Structure',
+            'Structure - Installation (Tables)' => '05 MMS Super Structure',
+            'Panel Installation'                => '06 Panel Installation',
+            'PV Module Installation'            => '06 Panel Installation',
+            'DC Cabling'                        => '07 DC Cabling',
+            'DC Cabling & Terminations'         => '07 DC Cabling',
+            'AC Cabling'                        => 'LV Cabling',
+            'Smart Transformer'                 => 'Smart Transformer (MV Station) Equipment Installation',
+            'Final Termination'                 => 'Final Termination & Testing',
+            'LV/MV Panel Board Installation'    => 'Switchyard & Panel Room Civil Works',
+            'Underground MV Cabling'            => 'Underground MV Cabling (33kV)',
+            'Four Paul Yard'                    => 'CEB Gantry Connection & Switchyard Accessories',
+            'Final Investigation'               => 'Testing, Commissioning & PAC',
         ];
 
         foreach ($legacyNameMap as $oldName => $newName) {
@@ -396,28 +444,64 @@ class SectionTemplatesSeeder extends Seeder
         foreach ($templates as $template) {
             SectionTemplate::updateOrCreate(
                 ['name' => $template['name']],
-                array_merge($template, [
-                    'sub_sections' => $template['sub_sections'] ? json_encode($template['sub_sections']) : null,
-                ])
+                [
+                    'category'           => $template['category'],
+                    'unit'               => $template['unit'],
+                    'target_qty'         => $template['target_qty'],
+                    'sort_order'         => $template['sort_order'],
+                    'has_before_after'   => $template['has_before_after'],
+                    'has_table_tracking' => $template['has_table_tracking'],
+                    'sub_sections'       => $template['sub_sections'],
+                    'checklist_rules'    => $template['checklist_rules'] ?? null,
+                    'expected_images'    => $template['expected_images'],
+                    'notes'              => $template['notes'],
+                ]
             );
         }
 
-        // Remove any obsolete templates not in the 28 BOQ definitions
+        // Remove any obsolete templates not in the active definitions
         $validNames = array_column($templates, 'name');
         SectionTemplate::whereNotIn('name', $validNames)->delete();
 
-        // Backfill existing SolarSection records with category, unit, target_qty
+        // Backfill existing SolarSection records with category, unit, target_qty, sort_order, checklist_rules
         $allTemplates = SectionTemplate::all()->keyBy('name');
         foreach (SolarSection::all() as $section) {
             if ($tmpl = $allTemplates->get($section->name)) {
                 $section->update([
-                    'category'   => $tmpl->category,
-                    'unit'       => $tmpl->unit,
-                    'target_qty' => $section->target_qty ?: $tmpl->target_qty,
+                    'category'        => $tmpl->category,
+                    'unit'            => $tmpl->unit,
+                    'target_qty'      => $section->target_qty ?: $tmpl->target_qty,
+                    'sort_order'      => $tmpl->sort_order,
+                    'checklist_rules' => $tmpl->checklist_rules,
                 ]);
             }
         }
 
-        $this->command->info('Section templates seeded successfully: ' . SectionTemplate::count() . ' BOQ milestones ready.');
+        // Ensure all active projects have all 7 PV Installation sections
+        $pvTemplates = SectionTemplate::where('category', 'PV Installation')->orderBy('sort_order')->get();
+        foreach (\App\Models\SolarProject::all() as $project) {
+            foreach ($pvTemplates as $pvTmpl) {
+                SolarSection::firstOrCreate(
+                    [
+                        'solar_project_id' => $project->id,
+                        'name'             => $pvTmpl->name,
+                    ],
+                    [
+                        'category'           => $pvTmpl->category,
+                        'unit'               => $pvTmpl->unit,
+                        'target_qty'         => $pvTmpl->target_qty,
+                        'sort_order'         => $pvTmpl->sort_order,
+                        'has_before_after'   => $pvTmpl->has_before_after,
+                        'has_table_tracking' => $pvTmpl->has_table_tracking,
+                        'sub_sections'       => $pvTmpl->sub_sections,
+                        'checklist_rules'    => $pvTmpl->checklist_rules,
+                        'expected_images'    => $pvTmpl->expected_images,
+                        'notes'              => $pvTmpl->notes,
+                    ]
+                );
+            }
+        }
+
+        $this->command->info('Section templates seeded successfully: ' . SectionTemplate::count() . ' BOQ milestones ready with PV Installation hierarchy.');
     }
 }
