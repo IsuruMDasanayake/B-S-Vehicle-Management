@@ -45,4 +45,9 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function solarFinanceRole()
+    {
+        return $this->hasOne(\App\Models\SolarFinanceUserRole::class, 'user_id');
+    }
 }

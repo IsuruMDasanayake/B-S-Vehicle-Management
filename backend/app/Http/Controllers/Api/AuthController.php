@@ -44,6 +44,9 @@ class AuthController extends Controller
                 'permissions' => $user->getAllPermissions()->pluck('name'),
                 'force_password_change' => (bool) $user->force_password_change,
                 'is_approval_manager' => \App\Http\Controllers\Api\HR\HrSettingController::isApprovalManager($user),
+                'finance_role' => $user->solarFinanceRole ? $user->solarFinanceRole->finance_role : null,
+                'finance_can_approve' => $user->solarFinanceRole ? (bool) $user->solarFinanceRole->can_approve : false,
+                'finance_tier' => $user->solarFinanceRole ? $user->solarFinanceRole->approval_tier : null,
             ]
         ]);
     }
@@ -67,6 +70,9 @@ class AuthController extends Controller
                 'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
                 'force_password_change' => isset($user->force_password_change) ? (bool) $user->force_password_change : false,
                 'is_approval_manager' => \App\Http\Controllers\Api\HR\HrSettingController::isApprovalManager($user),
+                'finance_role' => $user->solarFinanceRole ? $user->solarFinanceRole->finance_role : null,
+                'finance_can_approve' => $user->solarFinanceRole ? (bool) $user->solarFinanceRole->can_approve : false,
+                'finance_tier' => $user->solarFinanceRole ? $user->solarFinanceRole->approval_tier : null,
             ]
         ]);
     }

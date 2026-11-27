@@ -10,7 +10,8 @@ import {
   LogOut,
   ExternalLink,
   Sun,
-  QrCode
+  QrCode,
+  Activity
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import api from '../../../services/api';
@@ -67,6 +68,7 @@ export const FinanceSidebar = ({ isMobileOpen, closeMobileOpen }) => {
         { name: 'User Roles & Limits', path: '/solar/finance/admin/roles', icon: ShieldCheck },
         { name: 'Project P&L Analytics', path: '/solar/finance/admin/projects-pnl', icon: TrendingUp },
         { name: 'Voucher Verification', path: '/solar/finance/vouchers/verify', icon: QrCode },
+        { name: 'Activity Logs', path: '/solar/finance/admin/activity-logs', icon: Activity },
       ],
     },
   ];

@@ -298,6 +298,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('projects-pnl', [\App\Http\Controllers\Api\Solar\Finance\SolarProjectPnlController::class, 'index']);
         Route::get('projects-pnl/{id}', [\App\Http\Controllers\Api\Solar\Finance\SolarProjectPnlController::class, 'show']);
         Route::put('projects-pnl/{id}/budget', [\App\Http\Controllers\Api\Solar\Finance\SolarProjectPnlController::class, 'updateBudget']);
+
+        // Activity Logs
+        Route::get('activity-logs', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceActivityLogController::class, 'index']);
+        Route::post('activity-logs', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceActivityLogController::class, 'store']);
     });
 });
 

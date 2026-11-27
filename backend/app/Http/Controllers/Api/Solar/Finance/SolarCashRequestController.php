@@ -90,6 +90,13 @@ class SolarCashRequestController extends Controller
             'comments'        => $validated['comments'] ?? 'Approved',
         ]);
 
+        \App\Services\SolarFinanceActivityService::log(
+            'cash_request_approved',
+            "Approved Cash Request #{$cashRequest->request_no} for LKR " . number_format($approvedAmount, 2) . " ({$roleName})",
+            $cashRequest,
+            ['request_no' => $cashRequest->request_no, 'amount' => $approvedAmount, 'status' => $nextStatus]
+        );
+
         return response()->json([
             'message'      => "Cash Request #{$cashRequest->request_no} approved successfully.",
             'cash_request' => $cashRequest->fresh(['approvals.approver:id,name']),
@@ -121,6 +128,13 @@ class SolarCashRequestController extends Controller
             'comments'        => $validated['comments'],
         ]);
 
+        \App\Services\SolarFinanceActivityService::log(
+            'cash_request_rejected',
+            "Rejected Cash Request #{$cashRequest->request_no}: {$validated['comments']}",
+            $cashRequest,
+            ['request_no' => $cashRequest->request_no]
+        );
+
         return response()->json([
             'message'      => "Cash Request #{$cashRequest->request_no} has been rejected.",
             'cash_request' => $cashRequest,
@@ -142,6 +156,13 @@ class SolarCashRequestController extends Controller
             'status'       => 'disbursed',
             'disbursed_at' => now(),
         ]);
+
+        \App\Services\SolarFinanceActivityService::log(
+            'cash_disbursed',
+            "Disbursed LKR " . number_format($cashRequest->amount_approved ?? $cashRequest->amount_requested, 2) . " for Request #{$cashRequest->request_no}",
+            $cashRequest,
+            ['request_no' => $cashRequest->request_no, 'amount' => $cashRequest->amount_approved ?? $cashRequest->amount_requested]
+        );
 
         return response()->json([
             'message'      => "Cash disbursed for Request #{$cashRequest->request_no}.",

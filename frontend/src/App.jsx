@@ -61,6 +61,7 @@ import PettyCashAnalytics from './pages/Solar/Finance/PettyCash/PettyCashAnalyti
 import SolarFinanceMobileRequest from './pages/Solar/Finance/Mobile/SolarFinanceMobileRequest';
 import ProjectsPnlReport from './pages/Solar/Finance/Pnl/ProjectsPnlReport';
 import VoucherVerificationPage from './pages/Solar/Finance/Vouchers/VoucherVerificationPage';
+import SolarFinanceActivityLogs from './pages/Solar/Finance/ActivityLogs/SolarFinanceActivityLogs';
 
 // Solar Admin
 import SolarLayout from './pages/Solar/Admin/SolarLayout';
@@ -116,7 +117,11 @@ const RoleProtectedRoute = ({ children, allowedRoles, fallbackLogin = "/vehicle/
   const user = useAuthStore(state => state.user);
   if (!user) return <Navigate to={fallbackLogin} replace />;
   
-  const hasRole = allowedRoles.some(role => user?.roles?.includes(role) || user?.role === role);
+  const hasRole = allowedRoles.some(role => 
+    user?.roles?.includes(role) || 
+    user?.role === role || 
+    user?.finance_role === role
+  );
   return hasRole ? children : <Navigate to={fallbackUnauthorized} replace />;
 };
 
@@ -231,7 +236,7 @@ function App() {
       <Route path="/solar/finance/dashboard" element={<Navigate to="/solar/finance/admin/dashboard" replace />} />
       <Route path="/solar/finance" element={<Navigate to="/solar/finance/admin/dashboard" replace />} />
 
-      <Route path="/solar/finance/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin', 'solar_finance_admin']} fallbackLogin="/solar/finance/login" fallbackUnauthorized="/solar/finance/login"><FinanceLayout /></RoleProtectedRoute>}>
+      <Route path="/solar/finance/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin', 'solar_finance_admin', 'finance_admin', 'director', 'project_director', 'project_manager', 'accountant']} fallbackLogin="/solar/finance/login" fallbackUnauthorized="/solar/finance/login"><FinanceLayout /></RoleProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<SolarFinanceDashboard />} />
         <Route path="roles" element={<FinanceRoles />} />
@@ -239,6 +244,7 @@ function App() {
         <Route path="petty-cash" element={<PettyCashList />} />
         <Route path="petty-cash-analytics" element={<PettyCashAnalytics />} />
         <Route path="projects-pnl" element={<ProjectsPnlReport />} />
+        <Route path="activity-logs" element={<SolarFinanceActivityLogs />} />
       </Route>
       
       {/* ── Solar HR Sub-Division ─────────────────────────────────── */}
