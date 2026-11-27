@@ -9,12 +9,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SolarProject extends Model
 {
     protected $fillable = [
-        'solar_site_id', 'name', 'client_name', 'status',
+        'solar_site_id', 'name', 'client_name', 'status', 'contract_value', 'budget_limit',
         'start_date', 'expected_completion', 'assigned_supervisors', 'notes',
     ];
 
     protected $casts = [
         'assigned_supervisors' => 'array',
+        'contract_value'       => 'decimal:2',
+        'budget_limit'         => 'decimal:2',
         'start_date'           => 'date',
         'expected_completion'  => 'date',
     ];
