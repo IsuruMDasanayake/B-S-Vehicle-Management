@@ -51,6 +51,16 @@ import useAuthStore from './store/authStore';
 import CircleGroupLanding from './pages/Home/CircleGroupLanding';
 import SolarLogin from './pages/Solar/SolarLogin';
 import SolarPortal from './pages/Solar/SolarPortal';
+import SolarFinanceLogin from './pages/Solar/Finance/SolarFinanceLogin';
+import FinanceLayout from './pages/Solar/Finance/FinanceLayout';
+import SolarFinanceDashboard from './pages/Solar/Finance/SolarFinanceDashboard';
+import FinanceRoles from './pages/Solar/Finance/Roles/FinanceRoles';
+import CashRequestsList from './pages/Solar/Finance/Requests/CashRequestsList';
+import PettyCashList from './pages/Solar/Finance/PettyCash/PettyCashList';
+import PettyCashAnalytics from './pages/Solar/Finance/PettyCash/PettyCashAnalytics';
+import SolarFinanceMobileRequest from './pages/Solar/Finance/Mobile/SolarFinanceMobileRequest';
+import ProjectsPnlReport from './pages/Solar/Finance/Pnl/ProjectsPnlReport';
+import VoucherVerificationPage from './pages/Solar/Finance/Vouchers/VoucherVerificationPage';
 
 // Solar Admin
 import SolarLayout from './pages/Solar/Admin/SolarLayout';
@@ -212,6 +222,24 @@ function App() {
       {/* ── Solar Division ─────────────────────────────────── */}
       <Route path="/solar/login" element={<SolarLogin />} />
       <Route path="/solar/portal" element={<SolarPortal />} />
+      
+      {/* ── Solar Finance Sub-Division ────────────────────────────── */}
+      <Route path="/solar/finance/login" element={<SolarFinanceLogin />} />
+      <Route path="/solar/finance/request/:token" element={<SolarFinanceMobileRequest />} />
+      <Route path="/solar/finance/vouchers/verify" element={<VoucherVerificationPage />} />
+      <Route path="/solar/finance/vouchers/verify/:ref" element={<VoucherVerificationPage />} />
+      <Route path="/solar/finance/dashboard" element={<Navigate to="/solar/finance/admin/dashboard" replace />} />
+      <Route path="/solar/finance" element={<Navigate to="/solar/finance/admin/dashboard" replace />} />
+
+      <Route path="/solar/finance/admin" element={<RoleProtectedRoute allowedRoles={['super_admin', 'solar_admin', 'solar_finance_admin']} fallbackLogin="/solar/finance/login" fallbackUnauthorized="/solar/finance/login"><FinanceLayout /></RoleProtectedRoute>}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<SolarFinanceDashboard />} />
+        <Route path="roles" element={<FinanceRoles />} />
+        <Route path="requests" element={<CashRequestsList />} />
+        <Route path="petty-cash" element={<PettyCashList />} />
+        <Route path="petty-cash-analytics" element={<PettyCashAnalytics />} />
+        <Route path="projects-pnl" element={<ProjectsPnlReport />} />
+      </Route>
       
       {/* ── Solar HR Sub-Division ─────────────────────────────────── */}
       <Route path="/solar/hr/login" element={<SolarHRLogin />} />

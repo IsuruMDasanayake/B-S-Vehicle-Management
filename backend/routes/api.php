@@ -268,6 +268,37 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('settings/approval-managers', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'getApprovalManagers']);
         Route::put('settings/approval-managers', [\App\Http\Controllers\Api\HR\HrSettingController::class, 'saveApprovalManagers']);
     });
+
+    // ── Solar Finance Division (Authenticated) ─────────────────────────────────
+    Route::prefix('solar/finance')->group(function () {
+        // Finance Roles Management
+        Route::get('roles/users', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceRoleController::class, 'index']);
+        Route::post('roles/users/{userId}', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceRoleController::class, 'updateUserRole']);
+        Route::post('roles/generate-token/{userId}', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceRoleController::class, 'generateMobileToken']);
+
+        // Petty Cash Accounts & Transactions
+        Route::get('petty-cash/accounts', [\App\Http\Controllers\Api\Solar\Finance\SolarPettyCashController::class, 'index']);
+        Route::post('petty-cash/accounts', [\App\Http\Controllers\Api\Solar\Finance\SolarPettyCashController::class, 'storeAccount']);
+        Route::get('petty-cash/transactions', [\App\Http\Controllers\Api\Solar\Finance\SolarPettyCashController::class, 'transactions']);
+        Route::post('petty-cash/transactions', [\App\Http\Controllers\Api\Solar\Finance\SolarPettyCashController::class, 'storeTransaction']);
+        Route::get('petty-cash/analytics', [\App\Http\Controllers\Api\Solar\Finance\SolarPettyCashController::class, 'analytics']);
+
+        // Cash Requests & Approvals
+        Route::get('cash-requests', [\App\Http\Controllers\Api\Solar\Finance\SolarCashRequestController::class, 'index']);
+        Route::post('cash-requests', [\App\Http\Controllers\Api\Solar\Finance\SolarCashRequestController::class, 'store']);
+        Route::get('cash-requests/{id}', [\App\Http\Controllers\Api\Solar\Finance\SolarCashRequestController::class, 'show']);
+        Route::post('cash-requests/{id}/approve', [\App\Http\Controllers\Api\Solar\Finance\SolarCashRequestController::class, 'approve']);
+        Route::post('cash-requests/{id}/reject', [\App\Http\Controllers\Api\Solar\Finance\SolarCashRequestController::class, 'reject']);
+        Route::post('cash-requests/{id}/disburse', [\App\Http\Controllers\Api\Solar\Finance\SolarCashRequestController::class, 'disburse']);
+
+        // Financial & P&L Dashboard
+        Route::get('dashboard/stats', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceDashboardController::class, 'stats']);
+
+        // Project-Level P&L Analytics
+        Route::get('projects-pnl', [\App\Http\Controllers\Api\Solar\Finance\SolarProjectPnlController::class, 'index']);
+        Route::get('projects-pnl/{id}', [\App\Http\Controllers\Api\Solar\Finance\SolarProjectPnlController::class, 'show']);
+        Route::put('projects-pnl/{id}/budget', [\App\Http\Controllers\Api\Solar\Finance\SolarProjectPnlController::class, 'updateBudget']);
+    });
 });
 
 // ── Solar Supervisor Upload (Public — no auth, token-based) ───────────────────
@@ -286,5 +317,18 @@ Route::prefix('upload')->group(function () {
     Route::get('{token}/notifications', [\App\Http\Controllers\Api\Solar\SolarSiteNotificationController::class, 'index']);
     Route::patch('{token}/notifications/{notificationId}/read', [\App\Http\Controllers\Api\Solar\SolarSiteNotificationController::class, 'markAsRead']);
 });
+
+// ── Solar Finance Mobile Portal (Public — token-based) ────────────────────────
+Route::prefix('solar/finance-mobile')->group(function () {
+    Route::get('token/{token}', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceMobileController::class, 'validateToken']);
+    Route::post('token/{token}/request', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceMobileController::class, 'submitRequest']);
+    Route::post('token/{token}/settle', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceMobileController::class, 'submitSettlement']);
+    Route::get('token/{token}/history', [\App\Http\Controllers\Api\Solar\Finance\SolarFinanceMobileController::class, 'getRequestHistory']);
+});
+
+// ── Solar Finance Voucher Verification (Public for QR code scans) ──────────────
+Route::get('solar/finance/vouchers/verify/{ref}', [\App\Http\Controllers\Api\Solar\Finance\SolarVoucherVerificationController::class, 'verify']);
+Route::get('solar/finance-vouchers/verify/{ref}', [\App\Http\Controllers\Api\Solar\Finance\SolarVoucherVerificationController::class, 'verify']);
+
 
 

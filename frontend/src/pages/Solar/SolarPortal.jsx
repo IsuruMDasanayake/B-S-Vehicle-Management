@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Sun, Users } from 'lucide-react';
+import { Sun, Users, Landmark } from 'lucide-react';
 
 const SolarPortal = () => {
   const navigate = useNavigate();
@@ -26,6 +26,17 @@ const SolarPortal = () => {
       iconBg: 'rgba(59,130,246,0.1)',
       iconColor: '#3b82f6',
       path: '/solar/hr/login',
+    },
+    {
+      id: 'finance',
+      title: 'Finance & Accounts',
+      subtitle: 'Cash Management',
+      description: 'Petty cash, site expenses, cash requests & approvals, and project P&L analytics.',
+      icon: <Landmark size={32} />,
+      hoverColor: '#10b981',
+      iconBg: 'rgba(16,185,129,0.1)',
+      iconColor: '#10b981',
+      path: '/solar/finance/login',
     }
   ];
 
@@ -54,12 +65,12 @@ const SolarPortal = () => {
         </div>
 
         <div
-          className="grid-cols-2"
+          className="grid-cols-3"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '2rem',
-            maxWidth: '700px',
+            maxWidth: '1050px',
             width: '100%',
           }}
         >
