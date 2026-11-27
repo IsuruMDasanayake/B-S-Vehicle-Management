@@ -9,6 +9,7 @@ import {
   Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../../../../services/api';
 import PrintableVoucher from './PrintableVoucher';
 
 export default function VoucherModal({
@@ -27,6 +28,11 @@ export default function VoucherModal({
     : (voucher.request_no || `PV-${voucher.id}`);
 
   const handlePrint = () => {
+    api.post('/solar/finance/activity-logs', {
+      event: 'voucher_printed',
+      description: `Printed official ${isPCV ? 'Petty Cash Voucher' : 'Payment Voucher'} #${voucherNo}`,
+      properties: { voucher_no: voucherNo, type: isPCV ? 'PCV' : 'PV' }
+    }).catch(() => {});
     window.print();
   };
 

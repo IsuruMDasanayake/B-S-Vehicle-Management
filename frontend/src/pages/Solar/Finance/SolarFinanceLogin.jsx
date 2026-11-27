@@ -16,8 +16,21 @@ const SolarFinanceLogin = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const hasFinanceRole = ['super_admin', 'solar_finance_admin', 'solar_admin']
-        .some(role => user?.roles?.includes(role) || user?.role === role);
+      const financeAllowed = [
+        'super_admin',
+        'solar_admin',
+        'solar_finance_admin',
+        'finance_admin',
+        'director',
+        'project_director',
+        'project_manager',
+        'accountant',
+      ];
+
+      const hasFinanceRole =
+        financeAllowed.includes(user?.role) ||
+        financeAllowed.includes(user?.finance_role) ||
+        (user?.roles && user.roles.some(r => financeAllowed.includes(r)));
 
       if (hasFinanceRole) {
         navigate('/solar/finance/admin/dashboard');

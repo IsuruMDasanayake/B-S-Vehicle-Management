@@ -122,6 +122,13 @@ class SolarPettyCashController extends Controller
                 'approved_by'      => auth()->id(),
             ]);
 
+            \App\Services\SolarFinanceActivityService::log(
+                'voucher_created',
+                "Created {$validated['type']} voucher #{$voucherNo} for LKR " . number_format($validated['amount'], 2) . " ({$validated['category']})",
+                $transaction,
+                ['voucher_no' => $voucherNo, 'amount' => $validated['amount'], 'type' => $validated['type']]
+            );
+
             // Update account balance
             if ($validated['type'] === 'expense') {
                 $account->current_balance -= $validated['amount'];

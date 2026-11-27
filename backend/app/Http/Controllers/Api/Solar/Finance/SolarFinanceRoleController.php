@@ -89,6 +89,14 @@ class SolarFinanceRoleController extends Controller
             ]
         );
 
+        $targetUser = User::find($userId);
+        \App\Services\SolarFinanceActivityService::log(
+            'role_updated',
+            "Updated Finance Role for {$targetUser?->name} to '{$validated['finance_role']}' (Tier: {$role->approval_tier}, Limit: LKR " . number_format($role->max_request_limit, 2) . ")",
+            $role,
+            ['target_user_id' => $userId, 'finance_role' => $role->finance_role, 'approval_tier' => $role->approval_tier]
+        );
+
         return response()->json([
             'message' => 'Finance role updated successfully',
             'role'    => $role,
@@ -115,6 +123,13 @@ class SolarFinanceRoleController extends Controller
         ]);
 
         $mobileUrl = url("/solar/finance/request/{$tokenStr}");
+
+        \App\Services\SolarFinanceActivityService::log(
+            'token_issued',
+            "Generated secure mobile cash request link for {$user->name}",
+            $token,
+            ['target_user_id' => $user->id, 'target_user' => $user->name]
+        );
 
         return response()->json([
             'message'    => "Mobile token generated for {$user->name}",
